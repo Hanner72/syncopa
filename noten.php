@@ -147,59 +147,63 @@ include 'includes/header.php';
     </div>
 </div>
 
+<?php include 'includes/footer.php'; ?>
+
 <script>
-$(document).ready(function() {
-    $('#notenTable').DataTable({
-        order: [[1, 'asc']],
-        language: {
-            url: 'https://cdn.datatables.net/plug-ins/1.13.7/i18n/de-DE.json'
-        }
-    });
-    
-    // PDF-Modal öffnen
-    $('.btn-show-pdfs').on('click', function() {
-        const notenId = $(this).data('id');
-        const titel = $(this).data('titel');
-        
-        $('#pdfModalTitel').text(titel);
-        $('#pdfModalListe').html('<div class="text-center"><div class="spinner-border text-primary" role="status"></div></div>');
-        
-        const modal = new bootstrap.Modal(document.getElementById('pdfModal'));
-        modal.show();
-        
-        // PDFs laden
-        $.ajax({
-            url: 'api/noten_dateien.php',
-            type: 'GET',
-            data: { noten_id: notenId },
-            dataType: 'json',
-            success: function(response) {
-                if (response.success && response.dateien.length > 0) {
-                    let html = '<ul class="list-group">';
-                    response.dateien.forEach(function(datei) {
-                        const size = (datei.dateigroesse / 1024).toFixed(1);
-                        html += '<li class="list-group-item d-flex justify-content-between align-items-center">';
-                        html += '<div>';
-                        html += '<i class="bi bi-file-earmark-pdf text-danger me-2"></i>';
-                        html += '<span>' + datei.original_name + '</span>';
-                        html += '<br><small class="text-muted">' + size + ' KB</small>';
-                        html += '</div>';
-                        html += '<a href="api/noten_download.php?id=' + datei.id + '" class="btn btn-sm btn-primary">';
-                        html += '<i class="bi bi-download"></i> Download</a>';
-                        html += '</li>';
-                    });
-                    html += '</ul>';
-                    $('#pdfModalListe').html(html);
-                } else {
-                    $('#pdfModalListe').html('<p class="text-muted text-center">Keine Dateien gefunden</p>');
-                }
-            },
-            error: function() {
-                $('#pdfModalListe').html('<p class="text-danger text-center">Fehler beim Laden</p>');
+// Script NACH footer.php, damit jQuery geladen ist
+(function() {
+    // DataTable initialisieren
+    if (typeof $ !== 'undefined' && $.fn.DataTable) {
+        $('#notenTable').DataTable({
+            order: [[1, 'asc']],
+            language: {
+                url: 'https://cdn.datatables.net/plug-ins/1.13.7/i18n/de-DE.json'
             }
         });
+    }
+    
+    // PDF-Modal öffnen
+    document.querySelectorAll('.btn-show-pdfs').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var notenId = this.getAttribute('data-id');
+            var titel = this.getAttribute('data-titel');
+            
+            document.getElementById('pdfModalTitel').textContent = titel;
+            document.getElementById('pdfModalListe').innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"></div></div>';
+            
+            // Modal öffnen
+            var modal = new bootstrap.Modal(document.getElementById('pdfModal'));
+            modal.show();
+            
+            // PDFs laden
+            fetch('api/noten_dateien.php?noten_id=' + notenId)
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    if (data.success && data.dateien.length > 0) {
+                        var html = '<ul class="list-group">';
+                        data.dateien.forEach(function(datei) {
+                            var size = (datei.dateigroesse / 1024).toFixed(1);
+                            html += '<li class="list-group-item d-flex justify-content-between align-items-center">';
+                            html += '<div>';
+                            html += '<i class="bi bi-file-earmark-pdf text-danger me-2"></i>';
+                            html += '<span>' + datei.original_name + '</span>';
+                            html += '<br><small class="text-muted">' + size + ' KB</small>';
+                            html += '</div>';
+                            html += '<a href="api/noten_download.php?id=' + datei.id + '" class="btn btn-sm btn-primary">';
+                            html += '<i class="bi bi-download"></i> Download</a>';
+                            html += '</li>';
+                        });
+                        html += '</ul>';
+                        document.getElementById('pdfModalListe').innerHTML = html;
+                    } else {
+                        document.getElementById('pdfModalListe').innerHTML = '<p class="text-muted text-center">Keine Dateien gefunden</p>';
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Fehler:', error);
+                    document.getElementById('pdfModalListe').innerHTML = '<p class="text-danger text-center">Fehler beim Laden</p>';
+                });
+        });
     });
-});
+})();
 </script>
-
-<?php include 'includes/footer.php'; ?>
