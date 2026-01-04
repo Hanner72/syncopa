@@ -188,13 +188,13 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
                         </li>
                         <?php endif; ?>
                         
-                        <!-- <?php if (Session::checkPermission('trachtenwart', 'lesen')): ?> -->
+                        <?php if (Session::checkPermission('uniformen', 'lesen')): ?>
                         <li class="nav-item">
                             <a class="nav-link <?php echo $currentPage === 'uniformen' ? 'active' : ''; ?>" href="uniformen.php">
                                 <i class="bi bi-diagram-3"></i> Uniformen
                             </a>
                         </li>
-                        <!-- <?php endif; ?> -->
+                        <?php endif; ?>
                         
                         <?php if (Session::checkPermission('finanzen', 'lesen')): ?>
                         <li class="nav-item">

@@ -24,8 +24,7 @@ if (!empty($filter['mitglied_id'])) {
     $params[] = $filter['mitglied_id'];
 }
 if (!empty($filter['groesse'])) {
-    $where[] = "(u.groesse = ? OR u.groesse_numerisch = ? OR u.groesse_text = ?)";
-    $params[] = $filter['groesse'];
+    $where[] = "(u.groesse_numerisch = ? OR u.groesse_text = ?)";
     $params[] = $filter['groesse'];
     $params[] = $filter['groesse'];
 }
@@ -35,7 +34,7 @@ $uniformen = $db->fetchAll("
     FROM uniformen u
     LEFT JOIN mitglieder m ON u.mitglied_id = m.id
     WHERE " . implode(' AND ', $where) . "
-    ORDER BY u.kategorie, u.groesse
+    ORDER BY u.kategorie, u.groesse_numerisch
 ", $params);
 
 $kategorien = $db->fetchAll("SELECT DISTINCT kategorie FROM uniformen WHERE aktiv = 1 ORDER BY kategorie");
