@@ -257,11 +257,12 @@ include 'includes/header.php';
                     <i class="bi bi-cloud-arrow-up"></i>
                     <p class="mb-1"><strong>PDF-Dateien hierher ziehen</strong></p>
                     <p class="text-muted small mb-2">oder klicken zum Auswählen</p>
-                    <input type="file" id="fileInput" multiple accept=".pdf,application/pdf">
                     <small class="text-muted d-block mt-2">
                         Erlaubt: PDF-Dateien bis max. <?php echo MAX_UPLOAD_SIZE / 1024 / 1024; ?> MB
                     </small>
                 </div>
+                <!-- Verstecktes File-Input -->
+                <input type="file" id="fileInput" multiple accept=".pdf,application/pdf" style="display:none !important;">
                 
                 <!-- Upload Progress -->
                 <div id="uploadProgress" class="mb-3" style="display: none;">
@@ -271,6 +272,9 @@ include 'includes/header.php';
                              role="progressbar" style="width: 0%;" id="progressBar">0%</div>
                     </div>
                 </div>
+                
+                <!-- Upload Fehler -->
+                <div id="uploadError" class="alert alert-danger mb-3" style="display: none;"></div>
                 
                 <!-- Dateiliste -->
                 <div id="dateiListe">
@@ -341,6 +345,7 @@ include 'includes/header.php';
     cursor: pointer;
     transition: all 0.3s ease;
     background-color: #fafafa;
+    position: relative;
 }
 
 .upload-zone:hover {
@@ -354,22 +359,11 @@ include 'includes/header.php';
     transform: scale(1.02);
 }
 
-.upload-zone i {
+.upload-zone i.bi-cloud-arrow-up {
     font-size: 3rem;
     color: #6c757d;
     display: block;
     margin-bottom: 0.5rem;
-}
-
-.upload-zone input[type="file"] {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    border: 0;
 }
 
 .list-group-item {
@@ -383,181 +377,218 @@ include 'includes/header.php';
 
 <?php if ($isEdit): ?>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('fileInput');
-    const uploadProgress = document.getElementById('uploadProgress');
-    const progressBar = document.getElementById('progressBar');
-    const dateiListe = document.getElementById('dateiListe');
-    const dateiAnzahl = document.getElementById('dateiAnzahl');
-    const notenId = <?php echo (int)$id; ?>;
+(function() {
+    // Warten bis DOM geladen ist
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initUpload);
+    } else {
+        initUpload();
+    }
     
-    // Klick auf Upload-Zone
-    dropZone.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        fileInput.click();
-    });
-    
-    // Datei-Input Change Event
-    fileInput.addEventListener('change', function(e) {
-        if (this.files && this.files.length > 0) {
-            handleFiles(this.files);
-            this.value = ''; // Reset für erneute Auswahl
+    function initUpload() {
+        var dropZone = document.getElementById('dropZone');
+        var fileInput = document.getElementById('fileInput');
+        var uploadProgress = document.getElementById('uploadProgress');
+        var progressBar = document.getElementById('progressBar');
+        var uploadError = document.getElementById('uploadError');
+        var dateiListe = document.getElementById('dateiListe');
+        var dateiAnzahl = document.getElementById('dateiAnzahl');
+        var notenId = <?php echo (int)$id; ?>;
+        
+        if (!dropZone || !fileInput) {
+            console.error('Upload-Elemente nicht gefunden');
+            return;
         }
-    });
-    
-    // Drag & Drop Events
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(function(eventName) {
-        dropZone.addEventListener(eventName, function(e) {
+        
+        console.log('Upload initialisiert für Noten-ID:', notenId);
+        
+        // ===== KLICK AUF UPLOAD-ZONE =====
+        dropZone.onclick = function(e) {
             e.preventDefault();
             e.stopPropagation();
-        }, false);
-    });
-    
-    dropZone.addEventListener('dragenter', function() {
-        this.classList.add('drag-over');
-    });
-    
-    dropZone.addEventListener('dragover', function() {
-        this.classList.add('drag-over');
-    });
-    
-    dropZone.addEventListener('dragleave', function(e) {
-        // Nur entfernen wenn wir wirklich die Zone verlassen
-        if (!this.contains(e.relatedTarget)) {
+            console.log('Dropzone geklickt');
+            fileInput.click();
+        };
+        
+        // ===== DATEI AUSGEWÄHLT =====
+        fileInput.onchange = function(e) {
+            console.log('Dateien ausgewählt:', this.files.length);
+            if (this.files && this.files.length > 0) {
+                handleFiles(this.files);
+            }
+            this.value = ''; // Reset
+        };
+        
+        // ===== DRAG & DROP =====
+        dropZone.ondragenter = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.add('drag-over');
+        };
+        
+        dropZone.ondragover = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.add('drag-over');
+        };
+        
+        dropZone.ondragleave = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
             this.classList.remove('drag-over');
-        }
-    });
-    
-    dropZone.addEventListener('drop', function(e) {
-        this.classList.remove('drag-over');
-        const files = e.dataTransfer.files;
-        if (files && files.length > 0) {
-            handleFiles(files);
-        }
-    });
-    
-    // Dateien verarbeiten
-    function handleFiles(files) {
-        const pdfFiles = [];
-        const skipped = [];
+        };
         
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-                pdfFiles.push(file);
-            } else {
-                skipped.push(file.name);
+        dropZone.ondrop = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.remove('drag-over');
+            console.log('Dateien gedroppt:', e.dataTransfer.files.length);
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                handleFiles(e.dataTransfer.files);
             }
-        }
+        };
         
-        if (skipped.length > 0) {
-            alert('Folgende Dateien wurden übersprungen (nur PDF erlaubt):\n' + skipped.join('\n'));
-        }
+        // Auch auf Body dragover verhindern
+        document.body.ondragover = function(e) {
+            e.preventDefault();
+        };
+        document.body.ondrop = function(e) {
+            e.preventDefault();
+        };
         
-        if (pdfFiles.length > 0) {
-            uploadFiles(pdfFiles);
-        }
-    }
-    
-    // Upload durchführen
-    function uploadFiles(files) {
-        const formData = new FormData();
-        formData.append('noten_id', notenId);
-        
-        for (let i = 0; i < files.length; i++) {
-            formData.append('dateien[]', files[i]);
-        }
-        
-        // Progress anzeigen
-        uploadProgress.style.display = 'block';
-        progressBar.style.width = '0%';
-        progressBar.textContent = '0%';
-        
-        const xhr = new XMLHttpRequest();
-        
-        xhr.upload.addEventListener('progress', function(e) {
-            if (e.lengthComputable) {
-                const percent = Math.round((e.loaded / e.total) * 100);
-                progressBar.style.width = percent + '%';
-                progressBar.textContent = percent + '%';
-            }
-        });
-        
-        xhr.addEventListener('load', function() {
-            uploadProgress.style.display = 'none';
+        // ===== DATEIEN VERARBEITEN =====
+        function handleFiles(files) {
+            var pdfFiles = [];
+            var skipped = [];
             
-            if (xhr.status === 200) {
-                try {
-                    const response = JSON.parse(xhr.responseText);
-                    if (response.success) {
-                        // Seite neu laden um Dateiliste zu aktualisieren
-                        window.location.reload();
-                    } else {
-                        alert('Fehler: ' + (response.error || 'Unbekannter Fehler'));
-                    }
-                } catch (e) {
-                    alert('Fehler beim Verarbeiten der Antwort');
+            for (var i = 0; i < files.length; i++) {
+                var file = files[i];
+                var isPdf = file.type === 'application/pdf' || 
+                           file.name.toLowerCase().indexOf('.pdf') === file.name.length - 4;
+                
+                if (isPdf) {
+                    pdfFiles.push(file);
+                } else {
+                    skipped.push(file.name);
                 }
-            } else {
-                alert('Upload fehlgeschlagen (HTTP ' + xhr.status + ')');
-            }
-        });
-        
-        xhr.addEventListener('error', function() {
-            uploadProgress.style.display = 'none';
-            alert('Netzwerkfehler beim Upload');
-        });
-        
-        xhr.open('POST', 'api/noten_upload.php', true);
-        xhr.send(formData);
-    }
-    
-    // Datei löschen
-    document.querySelectorAll('.btn-delete-datei').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            const dateiId = this.dataset.id;
-            const dateiName = this.dataset.name;
-            const listItem = this.closest('li');
-            
-            if (!confirm('Datei "' + dateiName + '" wirklich löschen?')) {
-                return;
             }
             
-            const formData = new FormData();
-            formData.append('datei_id', dateiId);
+            if (skipped.length > 0) {
+                alert('Folgende Dateien wurden übersprungen (nur PDF erlaubt):\n' + skipped.join('\n'));
+            }
             
-            fetch('api/noten_datei_loeschen.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    listItem.remove();
-                    
-                    // Anzahl aktualisieren
-                    const remaining = document.querySelectorAll('#dateiListeUl li').length;
-                    dateiAnzahl.textContent = remaining + ' Datei(en)';
-                    
-                    // Wenn keine Dateien mehr, Hinweis anzeigen
-                    if (remaining === 0) {
-                        dateiListe.innerHTML = '<div id="keineDateien" class="text-center text-muted py-4">' +
-                            '<i class="bi bi-inbox fs-1"></i>' +
-                            '<p class="mb-0">Noch keine Dateien hochgeladen</p></div>';
+            if (pdfFiles.length > 0) {
+                uploadFiles(pdfFiles);
+            }
+        }
+        
+        // ===== UPLOAD DURCHFÜHREN =====
+        function uploadFiles(files) {
+            var formData = new FormData();
+            formData.append('noten_id', notenId);
+            
+            for (var i = 0; i < files.length; i++) {
+                formData.append('dateien[]', files[i]);
+            }
+            
+            // UI aktualisieren
+            uploadProgress.style.display = 'block';
+            uploadError.style.display = 'none';
+            progressBar.style.width = '0%';
+            progressBar.textContent = '0%';
+            
+            var xhr = new XMLHttpRequest();
+            
+            // Progress
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    var percent = Math.round((e.loaded / e.total) * 100);
+                    progressBar.style.width = percent + '%';
+                    progressBar.textContent = percent + '%';
+                }
+            };
+            
+            // Fertig
+            xhr.onload = function() {
+                uploadProgress.style.display = 'none';
+                console.log('Upload Response:', xhr.status, xhr.responseText);
+                
+                if (xhr.status === 200) {
+                    try {
+                        var response = JSON.parse(xhr.responseText);
+                        if (response.success) {
+                            // Seite neu laden
+                            window.location.reload();
+                        } else {
+                            showError(response.error || 'Unbekannter Fehler');
+                        }
+                    } catch (e) {
+                        console.error('JSON Parse Error:', e);
+                        console.error('Response Text:', xhr.responseText);
+                        showError('Server-Antwort konnte nicht verarbeitet werden. Siehe Browser-Konsole (F12).');
                     }
                 } else {
-                    alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
+                    showError('HTTP-Fehler ' + xhr.status);
                 }
-            })
-            .catch(error => {
-                alert('Fehler beim Löschen');
-                console.error(error);
-            });
+            };
+            
+            // Fehler
+            xhr.onerror = function() {
+                uploadProgress.style.display = 'none';
+                showError('Netzwerkfehler beim Upload');
+            };
+            
+            xhr.open('POST', 'api/noten_upload.php', true);
+            xhr.send(formData);
+        }
+        
+        function showError(message) {
+            uploadError.textContent = message;
+            uploadError.style.display = 'block';
+        }
+        
+        // ===== DATEI LÖSCHEN =====
+        document.querySelectorAll('.btn-delete-datei').forEach(function(btn) {
+            btn.onclick = function() {
+                var dateiId = this.getAttribute('data-id');
+                var dateiName = this.getAttribute('data-name');
+                var listItem = this.closest('li');
+                
+                if (!confirm('Datei "' + dateiName + '" wirklich löschen?')) {
+                    return;
+                }
+                
+                var formData = new FormData();
+                formData.append('datei_id', dateiId);
+                
+                fetch('api/noten_datei_loeschen.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        listItem.remove();
+                        var remaining = document.querySelectorAll('#dateiListeUl li').length;
+                        dateiAnzahl.textContent = remaining + ' Datei(en)';
+                        
+                        if (remaining === 0) {
+                            dateiListe.innerHTML = '<div id="keineDateien" class="text-center text-muted py-4">' +
+                                '<i class="bi bi-inbox fs-1"></i>' +
+                                '<p class="mb-0">Noch keine Dateien hochgeladen</p></div>';
+                        }
+                    } else {
+                        alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
+                    }
+                })
+                .catch(function(error) {
+                    alert('Fehler beim Löschen');
+                    console.error(error);
+                });
+            };
         });
-    });
-});
+    }
+})();
 </script>
 <?php endif; ?>
 
