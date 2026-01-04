@@ -149,11 +149,12 @@ CREATE TABLE `benutzer` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Standard-Admin: Benutzername: admin, Passwort: admin123
+-- Hash generiert mit: password_hash('admin123', PASSWORD_BCRYPT)
 INSERT INTO `benutzer` (`id`, `benutzername`, `email`, `passwort_hash`, `rolle`, `rolle_id`, `aktiv`) VALUES
-(1, 'admin', 'admin@musikverein.at', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', 1, 1),
-(2, 'obmann', 'obmann@musikverein.at', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'obmann', 2, 1),
-(3, 'kapellmeister', 'kapellmeister@musikverein.at', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'kapellmeister', 3, 1),
-(4, 'kassier', 'kassier@musikverein.at', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'kassier', 4, 1);
+(1, 'admin', 'admin@musikverein.at', '$2a$12$V3H/Yxfr3hyjpyE299xFLuVdUofhCSep7Knduu4.AN/LzXwfyHcRm', 'admin', 1, 1),
+(2, 'obmann', 'obmann@musikverein.at', '$2a$12$V3H/Yxfr3hyjpyE299xFLuVdUofhCSep7Knduu4.AN/LzXwfyHcRm', 'obmann', 2, 1),
+(3, 'kapellmeister', 'kapellmeister@musikverein.at', '$2a$12$V3H/Yxfr3hyjpyE299xFLuVdUofhCSep7Knduu4.AN/LzXwfyHcRm', 'kapellmeister', 3, 1),
+(4, 'kassier', 'kassier@musikverein.at', '$2a$12$V3H/Yxfr3hyjpyE299xFLuVdUofhCSep7Knduu4.AN/LzXwfyHcRm', 'kassier', 4, 1);
 
 -- ============================================================================
 -- TABELLE: mitglieder
@@ -346,6 +347,28 @@ INSERT INTO `noten` (`titel`, `untertitel`, `komponist`, `arrangeur`, `verlag`, 
 ('Gabriel\'s Oboe', 'aus "The Mission"', 'Ennio Morricone', 'Johan de Meij', 'Amstel Music', 'Blasorchester', '4', 5, 'Filmmusik', 'C-002', 30, 'gut', 'Schrank C'),
 ('Music', NULL, 'John Miles', 'Thijs Oud', 'De Haske', 'Blasorchester', '5', 7, 'Pop', 'C-003', 32, 'gut', 'Schrank C'),
 ('Florentiner Marsch', NULL, 'Julius Fučík', 'Fritz Neuböck', 'Rundel', 'Blasorchester', '4', 5, 'Marsch', 'C-004', 28, 'sehr gut', 'Schrank C');
+
+-- ============================================================================
+-- TABELLE: noten_dateien (für mehrere PDFs pro Notenstück)
+-- ============================================================================
+
+CREATE TABLE `noten_dateien` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `noten_id` int NOT NULL,
+  `dateiname` varchar(255) NOT NULL,
+  `original_name` varchar(255) NOT NULL,
+  `dateityp` varchar(50) DEFAULT 'application/pdf',
+  `dateigroesse` int DEFAULT NULL,
+  `beschreibung` varchar(255) DEFAULT NULL,
+  `sortierung` int DEFAULT '0',
+  `hochgeladen_von` int DEFAULT NULL,
+  `erstellt_am` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `noten_id` (`noten_id`),
+  KEY `hochgeladen_von` (`hochgeladen_von`),
+  CONSTRAINT `noten_dateien_ibfk_1` FOREIGN KEY (`noten_id`) REFERENCES `noten` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `noten_dateien_ibfk_2` FOREIGN KEY (`hochgeladen_von`) REFERENCES `benutzer` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
 -- TABELLE: ausrueckungen

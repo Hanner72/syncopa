@@ -32,7 +32,9 @@ class Noten {
         
         $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
         
-        $sql = "SELECT * FROM noten 
+        $sql = "SELECT n.*, 
+                       (SELECT COUNT(*) FROM noten_dateien WHERE noten_id = n.id) as anzahl_dateien
+                FROM noten n
                 {$whereClause}
                 ORDER BY titel";
         
@@ -105,6 +107,12 @@ class Noten {
     }
     
     public function delete($id) {
+        // Dateien löschen
+        $dateien = $this->getDateien($id);
+        foreach ($dateien as $datei) {
+            $this->deleteDatei($datei['id']);
+        }
+        
         $sql = "DELETE FROM noten WHERE id = ?";
         return $this->db->execute($sql, [$id]);
     }
@@ -158,32 +166,211 @@ class Noten {
         return $stats;
     }
     
-    public function uploadPDF($notenId, $file) {
+    // ========================================================================
+    // DATEIEN-VERWALTUNG (Mehrere PDFs pro Notenstück)
+    // ========================================================================
+    
+    /**
+     * Alle Dateien zu einem Notenstück abrufen
+     */
+    public function getDateien($notenId) {
+        $sql = "SELECT nd.*, b.benutzername as hochgeladen_von_name
+                FROM noten_dateien nd
+                LEFT JOIN benutzer b ON nd.hochgeladen_von = b.id
+                WHERE nd.noten_id = ?
+                ORDER BY nd.sortierung, nd.erstellt_am";
+        return $this->db->fetchAll($sql, [$notenId]);
+    }
+    
+    /**
+     * Eine einzelne Datei abrufen
+     */
+    public function getDateiById($dateiId) {
+        $sql = "SELECT nd.*, n.titel as noten_titel
+                FROM noten_dateien nd
+                JOIN noten n ON nd.noten_id = n.id
+                WHERE nd.id = ?";
+        return $this->db->fetchOne($sql, [$dateiId]);
+    }
+    
+    /**
+     * PDF-Datei hochladen
+     */
+    public function uploadDatei($notenId, $file, $beschreibung = null, $benutzerId = null) {
         if ($file['error'] !== UPLOAD_ERR_OK) {
-            throw new Exception('Upload fehlgeschlagen');
+            $errorMessages = [
+                UPLOAD_ERR_INI_SIZE => 'Datei überschreitet upload_max_filesize',
+                UPLOAD_ERR_FORM_SIZE => 'Datei überschreitet MAX_FILE_SIZE',
+                UPLOAD_ERR_PARTIAL => 'Datei nur teilweise hochgeladen',
+                UPLOAD_ERR_NO_FILE => 'Keine Datei hochgeladen',
+                UPLOAD_ERR_NO_TMP_DIR => 'Temporärer Ordner fehlt',
+                UPLOAD_ERR_CANT_WRITE => 'Schreiben auf Festplatte fehlgeschlagen',
+                UPLOAD_ERR_EXTENSION => 'Upload durch Extension gestoppt'
+            ];
+            throw new Exception($errorMessages[$file['error']] ?? 'Upload fehlgeschlagen');
         }
         
-        $fileExtension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-        if ($fileExtension !== 'pdf') {
-            throw new Exception('Nur PDF-Dateien erlaubt');
+        // Dateityp prüfen
+        $allowedTypes = ['application/pdf'];
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($file['tmp_name']);
+        
+        if (!in_array($mimeType, $allowedTypes)) {
+            throw new Exception('Nur PDF-Dateien sind erlaubt');
         }
         
+        // Größe prüfen
         if ($file['size'] > MAX_UPLOAD_SIZE) {
             throw new Exception('Datei zu groß (max. ' . (MAX_UPLOAD_SIZE / 1024 / 1024) . ' MB)');
         }
         
-        $fileName = $notenId . '_' . time() . '.pdf';
-        $filePath = NOTEN_DIR . '/' . $fileName;
+        // Sicheren Dateinamen generieren
+        $originalName = basename($file['name']);
+        $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        $uniqueName = $notenId . '_' . uniqid() . '_' . time() . '.' . $extension;
+        $filePath = NOTEN_DIR . DIRECTORY_SEPARATOR . $uniqueName;
         
+        // Upload-Verzeichnis erstellen falls nötig
+        if (!is_dir(NOTEN_DIR)) {
+            mkdir(NOTEN_DIR, 0755, true);
+        }
+        
+        // Datei verschieben
         if (!move_uploaded_file($file['tmp_name'], $filePath)) {
             throw new Exception('Datei konnte nicht gespeichert werden');
         }
         
-        // Update Datenbank
-        $sql = "UPDATE noten SET pdf_datei = ? WHERE id = ?";
-        $this->db->execute($sql, [$fileName, $notenId]);
+        // Nächste Sortierung ermitteln
+        $sql = "SELECT COALESCE(MAX(sortierung), 0) + 1 as next FROM noten_dateien WHERE noten_id = ?";
+        $result = $this->db->fetchOne($sql, [$notenId]);
+        $sortierung = $result['next'];
         
-        return $fileName;
+        // In Datenbank speichern
+        $sql = "INSERT INTO noten_dateien (noten_id, dateiname, original_name, dateityp, dateigroesse, beschreibung, sortierung, hochgeladen_von)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        $this->db->execute($sql, [
+            $notenId,
+            $uniqueName,
+            $originalName,
+            $mimeType,
+            $file['size'],
+            $beschreibung,
+            $sortierung,
+            $benutzerId
+        ]);
+        
+        return $this->db->lastInsertId();
+    }
+    
+    /**
+     * Mehrere Dateien auf einmal hochladen
+     */
+    public function uploadMultipleDateien($notenId, $files, $benutzerId = null) {
+        $uploaded = [];
+        $errors = [];
+        
+        // $_FILES Array normalisieren
+        $fileCount = count($files['name']);
+        
+        for ($i = 0; $i < $fileCount; $i++) {
+            $file = [
+                'name' => $files['name'][$i],
+                'type' => $files['type'][$i],
+                'tmp_name' => $files['tmp_name'][$i],
+                'error' => $files['error'][$i],
+                'size' => $files['size'][$i]
+            ];
+            
+            // Leere Einträge überspringen
+            if ($file['error'] === UPLOAD_ERR_NO_FILE) {
+                continue;
+            }
+            
+            try {
+                $id = $this->uploadDatei($notenId, $file, null, $benutzerId);
+                $uploaded[] = [
+                    'id' => $id,
+                    'name' => $file['name']
+                ];
+            } catch (Exception $e) {
+                $errors[] = [
+                    'name' => $file['name'],
+                    'error' => $e->getMessage()
+                ];
+            }
+        }
+        
+        return ['uploaded' => $uploaded, 'errors' => $errors];
+    }
+    
+    /**
+     * Datei löschen
+     */
+    public function deleteDatei($dateiId) {
+        // Datei-Info holen
+        $datei = $this->getDateiById($dateiId);
+        if (!$datei) {
+            return false;
+        }
+        
+        // Physische Datei löschen
+        $filePath = NOTEN_DIR . DIRECTORY_SEPARATOR . $datei['dateiname'];
+        if (file_exists($filePath)) {
+            unlink($filePath);
+        }
+        
+        // Aus Datenbank löschen
+        $sql = "DELETE FROM noten_dateien WHERE id = ?";
+        return $this->db->execute($sql, [$dateiId]);
+    }
+    
+    /**
+     * Datei-Beschreibung aktualisieren
+     */
+    public function updateDateiBeschreibung($dateiId, $beschreibung) {
+        $sql = "UPDATE noten_dateien SET beschreibung = ? WHERE id = ?";
+        return $this->db->execute($sql, [$beschreibung, $dateiId]);
+    }
+    
+    /**
+     * Sortierung der Dateien aktualisieren
+     */
+    public function updateDateiSortierung($dateiIds) {
+        foreach ($dateiIds as $sortierung => $dateiId) {
+            $sql = "UPDATE noten_dateien SET sortierung = ? WHERE id = ?";
+            $this->db->execute($sql, [$sortierung, $dateiId]);
+        }
+        return true;
+    }
+    
+    /**
+     * Dateipfad für Download ermitteln
+     */
+    public function getDateiPfad($dateiId) {
+        $datei = $this->getDateiById($dateiId);
+        if (!$datei) {
+            return null;
+        }
+        
+        $filePath = NOTEN_DIR . DIRECTORY_SEPARATOR . $datei['dateiname'];
+        if (!file_exists($filePath)) {
+            return null;
+        }
+        
+        return [
+            'path' => $filePath,
+            'name' => $datei['original_name'],
+            'type' => $datei['dateityp'],
+            'size' => $datei['dateigroesse']
+        ];
+    }
+    
+    // ========================================================================
+    // LEGACY: Einzelne PDF (Rückwärtskompatibilität)
+    // ========================================================================
+    
+    public function uploadPDF($notenId, $file) {
+        return $this->uploadDatei($notenId, $file);
     }
     
     private function generateArchivNummer() {

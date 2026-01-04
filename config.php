@@ -10,16 +10,16 @@
 // FEHLERBEHANDLUNG
 // ============================================================================
 // Für Produktion: error_reporting(0); ini_set('display_errors', 0);
-//error_reporting(E_ALL);
-//ini_set('display_errors', 1);
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
 // ============================================================================
 // DATENBANK-KONFIGURATION
 // ============================================================================
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'syncopa');
-define('DB_USER', 'Hanner72');
-define('DB_PASS', 'Da05nnerj12');
+define('DB_NAME', 'syncopa_db');
+define('DB_USER', 'syncopa_user');
+define('DB_PASS', 'HIER_PASSWORT_EINTRAGEN');
 define('DB_CHARSET', 'utf8mb4');
 
 // ============================================================================
@@ -27,7 +27,7 @@ define('DB_CHARSET', 'utf8mb4');
 // ============================================================================
 define('APP_NAME', 'Syncopa');
 define('APP_VERSION', '2.0.0');
-define('BASE_URL', 'http://10.0.0.153/syncopa2'); // Anpassen an Ihr Setup
+define('BASE_URL', 'http://localhost/syncopa'); // Anpassen an Ihr Setup
 define('BASE_PATH', __DIR__);
 
 // ============================================================================
