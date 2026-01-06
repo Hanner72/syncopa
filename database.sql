@@ -565,40 +565,46 @@ INSERT INTO `beitraege` (`mitglied_id`, `jahr`, `betrag`, `bezahlt_am`, `bezahlt
 
 CREATE TABLE `uniformen` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `mitglied_id` int NOT NULL,
-  `typ` enum('Parade','Ausgehuniform','Probe','Sommer','Winter') NOT NULL,
-  `jacke_groesse` varchar(10) DEFAULT NULL,
-  `hose_groesse` varchar(10) DEFAULT NULL,
-  `hemd_groesse` varchar(10) DEFAULT NULL,
-  `schuhgroesse` varchar(10) DEFAULT NULL,
+  `inventar_nummer` varchar(20) NOT NULL,
+  `kategorie_id` int DEFAULT NULL,
+  `bezeichnung` varchar(100) DEFAULT NULL,
+  `groesse` varchar(20) DEFAULT NULL,
+  `farbe` varchar(50) DEFAULT NULL,
+  `mitglied_id` int DEFAULT NULL,
   `ausgabe_datum` date DEFAULT NULL,
-  `rueckgabe_datum` date DEFAULT NULL,
-  `zustand` enum('sehr gut','gut','befriedigend','schlecht') DEFAULT 'gut',
-  `anzahl_vorhanden` int DEFAULT '1',
-  `standort` varchar(100) DEFAULT NULL,
-  `notizen` text,
-  `groesse_numerisch` varchar(10) DEFAULT NULL,
-  `groesse_text` varchar(50) DEFAULT NULL,
   `anschaffungsdatum` date DEFAULT NULL,
   `anschaffungspreis` decimal(10,2) DEFAULT NULL,
-  `zustand_beschreibung` text,
-  `bild_pfad` varchar(255) DEFAULT NULL,
-  `kategorie` varchar(50) DEFAULT 'Uniform',
+  `zustand` enum('sehr gut','gut','befriedigend','schlecht') DEFAULT 'gut',
+  `standort` varchar(100) DEFAULT NULL,
+  `notizen` text,
   `aktiv` tinyint(1) DEFAULT '1',
+  `erstellt_am` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `aktualisiert_am` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  KEY `mitglied_id` (`mitglied_id`),
-  CONSTRAINT `uniformen_ibfk_1` FOREIGN KEY (`mitglied_id`) REFERENCES `mitglieder` (`id`) ON DELETE CASCADE
+  UNIQUE KEY `inventar_nummer` (`inventar_nummer`),
+  KEY `kategorie_id` (`kategorie_id`),
+  KEY `mitglied_id` (`mitglied_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `uniformen` (`mitglied_id`, `typ`, `jacke_groesse`, `hose_groesse`, `hemd_groesse`, `ausgabe_datum`, `zustand`) VALUES
-(1, 'Parade', 'L', '50', 'L', '2018-09-01', 'gut'),
-(2, 'Parade', 'S', '36', 'S', '2019-09-01', 'sehr gut'),
-(3, 'Parade', 'XL', '52', 'XL', '2015-09-01', 'befriedigend'),
-(4, 'Parade', 'M', '38', 'M', '2021-09-01', 'sehr gut'),
-(5, 'Parade', 'L', '50', 'L', '2017-09-01', 'gut'),
-(6, 'Parade', 'M', '40', 'M', '2018-09-01', 'gut'),
-(7, 'Parade', 'XXL', '56', 'XXL', '2010-09-01', 'befriedigend'),
-(8, 'Parade', 'S', '36', 'S', '2020-09-01', 'sehr gut');
+INSERT INTO `uniformen` (`inventar_nummer`, `kategorie_id`, `bezeichnung`, `groesse`, `farbe`, `zustand`, `standort`, `mitglied_id`, `ausgabe_datum`) VALUES
+('TRA-0001', 1, 'Trachtenjacke Herren', 'L', 'Grün', 'gut', 'Schrank A', 1, '2024-01-15'),
+('TRA-0002', 1, 'Trachtenjacke Herren', 'M', 'Grün', 'sehr gut', 'Schrank A', NULL, NULL),
+('TRA-0003', 1, 'Trachtenjacke Herren', 'XL', 'Grün', 'befriedigend', 'Schrank A', 3, '2024-01-20'),
+('TRA-0004', 1, 'Trachtenjacke Damen', 'S', 'Grün', 'sehr gut', 'Schrank A', 2, '2024-02-01'),
+('TRA-0005', 1, 'Trachtenjacke Damen', 'M', 'Grün', 'gut', 'Schrank A', NULL, NULL),
+('TRA-0006', 1, 'Trachtenhose Herren', '50', 'Schwarz', 'gut', 'Schrank B', 1, '2024-01-15'),
+('TRA-0007', 1, 'Trachtenhose Herren', '52', 'Schwarz', 'gut', 'Schrank B', NULL, NULL),
+('TRA-0008', 1, 'Trachtenrock Damen', '38', 'Grün', 'sehr gut', 'Schrank B', NULL, NULL),
+('FES-0001', 2, 'Festjacke Herren', 'L', 'Dunkelblau', 'gut', 'Schrank C', NULL, NULL),
+('FES-0002', 2, 'Festjacke Herren', 'M', 'Dunkelblau', 'sehr gut', 'Schrank C', NULL, NULL),
+('SOM-0001', 3, 'Sommerhemd Herren', 'L', 'Weiß', 'gut', 'Schrank D', NULL, NULL),
+('SOM-0002', 3, 'Sommerhemd Herren', 'M', 'Weiß', 'gut', 'Schrank D', NULL, NULL),
+('SOM-0003', 3, 'Sommerbluse Damen', 'S', 'Weiß', 'sehr gut', 'Schrank D', NULL, NULL),
+('REG-0001', 4, 'Regencape', 'Einheitsgröße', 'Transparent', 'gut', 'Schrank E', NULL, NULL),
+('REG-0002', 4, 'Regencape', 'Einheitsgröße', 'Transparent', 'gut', 'Schrank E', NULL, NULL),
+('ACC-0001', 5, 'Hut mit Gamsbart', '58', 'Grün', 'gut', 'Regal F', NULL, NULL),
+('ACC-0002', 5, 'Hut mit Gamsbart', '56', 'Grün', 'sehr gut', 'Regal F', NULL, NULL),
+('ACC-0003', 5, 'Vereinsabzeichen', 'Einheitsgröße', 'Gold', 'sehr gut', 'Schublade G', NULL, NULL);
 
 -- ============================================================================
 -- TABELLE: uniform_kategorien
