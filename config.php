@@ -59,6 +59,16 @@ define('GOOGLE_CALENDAR_API_KEY', '');
 define('GOOGLE_CALENDAR_ID', '');
 
 // ============================================================================
+// GOOGLE OAUTH LOGIN (optional)
+// ============================================================================
+// Erstelle Client-ID unter: https://console.cloud.google.com/apis/credentials
+// Redirect URI: https://deine-domain.at/syncopa/login_google_callback.php
+define('GOOGLE_OAUTH_ENABLED', false);
+define('GOOGLE_CLIENT_ID', '855714162608-grcqc3a3uiups7h9n1721kop3ailfruv.apps.googleusercontent.com');
+define('GOOGLE_CLIENT_SECRET', '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');
+define('GOOGLE_REDIRECT_URI', BASE_URL . '/login_google_callback.php');
+
+// ============================================================================
 // E-MAIL-KONFIGURATION (optional)
 // ============================================================================
 define('EMAIL_ENABLED', false);
