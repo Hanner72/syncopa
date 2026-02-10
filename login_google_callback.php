@@ -119,7 +119,7 @@ if ($benutzer) {
     $benutzername = $benutzer['benutzername'];
     
 } else {
-    // Neuen Benutzer anlegen mit Standard-Rolle "mitglied"
+    // Neuen Benutzer anlegen mit Standard-Rolle "user" (noch nicht freigeschaltet)
     $benutzername = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $name));
     if (empty($benutzername)) {
         $benutzername = 'user_' . substr($googleId, 0, 8);
@@ -133,9 +133,9 @@ if ($benutzer) {
         $counter++;
     }
     
-    // Standard-Rolle "mitglied" (rolle_id = 9)
-    $standardRolleId = 9;
-    $standardRolle = 'mitglied';
+    // Standard-Rolle "user" (rolle_id = 11) - nur Dashboard, noch nicht freigeschaltet
+    $standardRolleId = 11;
+    $standardRolle = 'user';
     
     // Benutzer erstellen (ohne Passwort - nur Google Login möglich)
     $db->execute(
@@ -146,9 +146,6 @@ if ($benutzer) {
     
     $userId = $db->lastInsertId();
     $rolle = $standardRolle;
-    
-    // Info-Nachricht für neuen Benutzer
-    Session::setFlashMessage('info', 'Willkommen! Ihr Konto wurde erstellt. Ein Administrator wird Ihnen die entsprechende Rolle zuweisen.');
 }
 
 // Login durchführen

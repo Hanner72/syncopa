@@ -27,6 +27,14 @@ $sql = "SELECT vorname, nachname, geburtsdatum,
         ORDER BY DAY(geburtsdatum)";
 $geburtstage = $db->fetchAll($sql);
 
+// Neue Benutzer mit Rolle "user" (nur für Admin und Obmann)
+$neueBenutzer = [];
+$currentRole = Session::getRole();
+if ($currentRole === 'admin' || $currentRole === 'obmann') {
+    $sql = "SELECT id, benutzername, email, erstellt_am FROM benutzer WHERE rolle = 'user' AND aktiv = 1 ORDER BY erstellt_am DESC";
+    $neueBenutzer = $db->fetchAll($sql);
+}
+
 include 'includes/header.php';
 ?>
 
@@ -38,6 +46,60 @@ include 'includes/header.php';
         <i class="bi bi-calendar3"></i> <?php echo format_date_german(new DateTime()); ?>
     </div>
 </div>
+
+<?php if (Session::getRole() === 'user'): ?>
+<!-- Hinweis für noch nicht freigeschaltete Benutzer -->
+<div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
+    <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+    <div>
+        <strong>Konto noch nicht freigeschaltet!</strong><br>
+        Ihr Benutzerkonto muss erst von einem Administrator freigeschaltet werden. 
+        Bitte wenden Sie sich an den Vorstand oder Administrator des Musikvereins.
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if (!empty($neueBenutzer)): ?>
+<!-- Hinweis für Admin/Obmann: Neue Benutzer warten auf Freischaltung -->
+<div class="alert alert-warning mb-4" role="alert">
+    <div class="d-flex align-items-center mb-2">
+        <i class="bi bi-person-plus-fill fs-4 me-2"></i>
+        <strong><?php echo count($neueBenutzer); ?> neue(r) Benutzer warte(n) auf Freischaltung</strong>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm table-borderless mb-0">
+            <thead>
+                <tr>
+                    <th>Benutzername</th>
+                    <th>E-Mail</th>
+                    <th>Registriert am</th>
+                    <th class="text-end">Aktion</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($neueBenutzer as $neuerUser): ?>
+                <tr>
+                    <td><strong><?php echo htmlspecialchars($neuerUser['benutzername']); ?></strong></td>
+                    <td><?php echo htmlspecialchars($neuerUser['email']); ?></td>
+                    <td><?php echo date('d.m.Y H:i', strtotime($neuerUser['erstellt_am'])); ?></td>
+                    <td class="text-end">
+                        <form method="POST" action="benutzer_befoerdern.php" class="d-inline">
+                            <input type="hidden" name="id" value="<?php echo $neuerUser['id']; ?>">
+                            <button type="submit" class="btn btn-success btn-sm" title="Zum Mitglied befördern">
+                                <i class="bi bi-person-check"></i> Freischalten
+                            </button>
+                        </form>
+                        <a href="benutzer_bearbeiten.php?id=<?php echo $neuerUser['id']; ?>" class="btn btn-outline-primary btn-sm" title="Bearbeiten">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Statistik-Karten -->
 <div class="row mb-4">
