@@ -141,7 +141,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <i class="bi bi-box-arrow-in-right"></i> Anmelden
                 </button>
                 
-                <?php if (defined('GOOGLE_OAUTH_ENABLED') && GOOGLE_OAUTH_ENABLED): ?>
+                <!-- Debug: Google OAuth Status -->
+                <!-- GOOGLE_OAUTH_ENABLED: <?php echo defined('GOOGLE_OAUTH_ENABLED') ? (GOOGLE_OAUTH_ENABLED ? 'true' : 'false') : 'nicht definiert'; ?> -->
+                
+                <?php if (defined('GOOGLE_OAUTH_ENABLED') && GOOGLE_OAUTH_ENABLED === true): ?>
                 <div class="mt-3">
                     <div class="d-flex align-items-center mb-3">
                         <hr class="flex-grow-1">
