@@ -36,7 +36,12 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f8f9fa;
         }
-        
+
+        a {
+            color: rgba(var(--bs-link-color-rgb), var(--bs-link-opacity, 1));
+            text-decoration: none !important;
+        }
+                
         .sidebar {
             min-height: calc(100vh - 56px);
             background: linear-gradient(180deg, #1a2332 0%, #2c3e50 100%);

@@ -9,6 +9,13 @@ Session::requirePermission('ausrueckungen', 'lesen');
 include 'includes/header.php';
 ?>
 
+<style>
+    a.fc-event, a.fc-event:hover {
+        text-decoration: none;
+        cursor: pointer !important;
+    }
+</style>
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h2">
         <i class="bi bi-calendar-event"></i> Kalender
