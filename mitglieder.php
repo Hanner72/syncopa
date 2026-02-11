@@ -103,6 +103,7 @@ include 'includes/header.php';
                         <th>Mitgliedsnr.</th>
                         <th>Name</th>
                         <th>Register</th>
+                        <th>Instrumente</th>
                         <th>Kontakt</th>
                         <th>Status</th>
                         <th class="text-end no-print">Aktionen</th>
@@ -126,6 +127,19 @@ include 'includes/header.php';
                         <td>
                             <?php if ($m['register_name']): ?>
                                 <span class="badge bg-info"><?php echo htmlspecialchars($m['register_name']); ?></span>
+                            <?php else: ?>
+                                <span class="text-muted">–</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if (!empty($m['instrumente_anzahl']) && $m['instrumente_anzahl'] > 0): ?>
+                                <span class="badge bg-secondary" 
+                                      data-bs-toggle="tooltip" 
+                                      data-bs-placement="top" 
+                                      data-bs-html="true"
+                                      title="<?php echo htmlspecialchars($m['instrumente_liste']); ?>">
+                                    <i class="bi bi-music-note"></i> <?php echo $m['instrumente_anzahl']; ?>
+                                </span>
                             <?php else: ?>
                                 <span class="text-muted">–</span>
                             <?php endif; ?>
@@ -220,6 +234,12 @@ $(document).ready(function() {
         columnDefs: [
             { targets: -1, orderable: false }
         ]
+    });
+    
+    // Bootstrap Tooltips initialisieren
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 });
 
