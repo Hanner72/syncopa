@@ -2,7 +2,8 @@
 /**
  * SYNCOPA - Musikvereinsverwaltung
  * Konfigurationsdatei
- * @author Johann Danner
+ * 
+ * @version 2.0.6
  */
 
 // ============================================================================

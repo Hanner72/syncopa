@@ -98,7 +98,7 @@ include 'includes/header.php';
 <!-- Liste -->
 <div class="card">
     <div class="card-body">
-        <div class="table-responsive">
+        <div class="table-responsive p-2">
             <table class="table table-hover" id="ausrueckungenTable">
                 <thead>
                     <tr>

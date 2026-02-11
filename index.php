@@ -35,44 +35,50 @@ if ($currentRole === 'admin' || $currentRole === 'obmann') {
     $neueBenutzer = $db->fetchAll($sql);
 }
 
+// Daten für Charts vorbereiten
+$registerLabels = array_column($mitgliederStats['register'] ?? [], 'name');
+$registerData = array_column($mitgliederStats['register'] ?? [], 'anzahl');
+
+// Monatsname
+$monatsnamen = ['', 'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 
+                'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+$aktuellerMonat = $monatsnamen[date('n')];
+
 include 'includes/header.php';
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h2">
-        <i class="bi bi-speedometer2"></i> Dashboard
+        <i class="bi bi-grid"></i> Dashboard
     </h1>
-    <div class="text-muted">
-        <i class="bi bi-calendar3"></i> <?php echo format_date_german(new DateTime()); ?>
+    <div class="text-muted" style="font-size: 12px;">
+        <i class="bi bi-calendar3"></i> <?php echo date('d.m.Y'); ?>
     </div>
 </div>
 
 <?php if (Session::getRole() === 'user'): ?>
-<!-- Hinweis für noch nicht freigeschaltete Benutzer -->
-<div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
-    <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+<div class="alert alert-danger d-flex align-items-center mb-4">
+    <i class="bi bi-exclamation-triangle-fill me-3" style="font-size: 20px;"></i>
     <div>
         <strong>Konto noch nicht freigeschaltet!</strong><br>
-        Ihr Benutzerkonto muss erst von einem Administrator freigeschaltet werden. 
-        Bitte wenden Sie sich an den Vorstand oder Administrator des Musikvereins.
+        <small>Ihr Benutzerkonto muss erst von einem Administrator freigeschaltet werden.</small>
     </div>
 </div>
 <?php endif; ?>
 
 <?php if (!empty($neueBenutzer)): ?>
-<!-- Hinweis für Admin/Obmann: Neue Benutzer warten auf Freischaltung -->
-<div class="alert alert-warning mb-4" role="alert">
+<div class="alert alert-warning mb-4">
     <div class="d-flex align-items-center mb-2">
-        <i class="bi bi-person-plus-fill fs-4 me-2"></i>
+        <i class="bi bi-person-plus-fill me-2" style="font-size: 18px;"></i>
         <strong><?php echo count($neueBenutzer); ?> neue(r) Benutzer warte(n) auf Freischaltung</strong>
     </div>
     <div class="table-responsive">
-        <table class="table table-sm table-borderless mb-0">
+        <table class="table table-sm mb-0" style="font-size: 12px;">
             <thead>
                 <tr>
                     <th>Benutzername</th>
                     <th>E-Mail</th>
-                    <th>Registriert am</th>
+                    <th>Registriert</th>
                     <th class="text-end">Aktion</th>
                 </tr>
             </thead>
@@ -81,17 +87,14 @@ include 'includes/header.php';
                 <tr>
                     <td><strong><?php echo htmlspecialchars($neuerUser['benutzername']); ?></strong></td>
                     <td><?php echo htmlspecialchars($neuerUser['email']); ?></td>
-                    <td><?php echo date('d.m.Y H:i', strtotime($neuerUser['erstellt_am'])); ?></td>
+                    <td><?php echo date('d.m.Y', strtotime($neuerUser['erstellt_am'])); ?></td>
                     <td class="text-end">
                         <form method="POST" action="benutzer_befoerdern.php" class="d-inline">
                             <input type="hidden" name="id" value="<?php echo $neuerUser['id']; ?>">
-                            <button type="submit" class="btn btn-success btn-sm" title="Zum Mitglied befördern">
-                                <i class="bi bi-person-check"></i> Freischalten
+                            <button type="submit" class="btn btn-success btn-sm">
+                                <i class="bi bi-check"></i> Freischalten
                             </button>
                         </form>
-                        <a href="benutzer_bearbeiten.php?id=<?php echo $neuerUser['id']; ?>" class="btn btn-outline-primary btn-sm" title="Bearbeiten">
-                            <i class="bi bi-pencil"></i>
-                        </a>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -103,66 +106,58 @@ include 'includes/header.php';
 
 <!-- Statistik-Karten -->
 <div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card stat-card border-start border-primary border-4">
+    <div class="col-6 col-md-3 mb-3">
+        <div class="card stat-card border-primary">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-muted mb-1">Aktive Mitglieder</h6>
-                        <h2 class="mb-0"><?php echo $mitgliederStats['total']; ?></h2>
-                    </div>
-                    <div class="text-primary" style="font-size: 3rem;">
-                        <i class="bi bi-people"></i>
-                    </div>
+                <div>
+                    <h6>Aktive Mitglieder</h6>
+                    <h2><?php echo $mitgliederStats['total'] ?? 0; ?></h2>
+                </div>
+                <div class="stat-icon text-primary">
+                    <i class="bi bi-people"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-md-3 mb-3">
+        <div class="card stat-card border-success">
+            <div class="card-body">
+                <div>
+                    <h6>Noten im Archiv</h6>
+                    <h2><?php echo $notenStats['total'] ?? 0; ?></h2>
+                </div>
+                <div class="stat-icon text-success">
+                    <i class="bi bi-music-note-list"></i>
                 </div>
             </div>
         </div>
     </div>
     
-    <div class="col-md-3">
-        <div class="card stat-card border-start border-success border-4">
+    <div class="col-6 col-md-3 mb-3">
+        <div class="card stat-card border-warning">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-muted mb-1">Noten im Archiv</h6>
-                        <h2 class="mb-0"><?php echo $notenStats['total']; ?></h2>
-                    </div>
-                    <div class="text-success" style="font-size: 3rem;">
-                        <i class="bi bi-music-note-list"></i>
-                    </div>
+                <div>
+                    <h6>Instrumente</h6>
+                    <h2><?php echo $instrumentStats['total'] ?? 0; ?></h2>
+                    <small><?php echo $instrumentStats['ausgeliehen'] ?? 0; ?> verliehen</small>
+                </div>
+                <div class="stat-icon text-warning">
+                    <i class="bi bi-disc"></i>
                 </div>
             </div>
         </div>
     </div>
     
-    <div class="col-md-3">
-        <div class="card stat-card border-start border-warning border-4">
+    <div class="col-6 col-md-3 mb-3">
+        <div class="card stat-card border-info">
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-muted mb-1">Instrumente</h6>
-                        <h2 class="mb-0"><?php echo $instrumentStats['total']; ?></h2>
-                        <small class="text-muted"><?php echo $instrumentStats['ausgeliehen']; ?> ausgeliehen</small>
-                    </div>
-                    <div class="text-warning" style="font-size: 3rem;">
-                        <i class="bi bi-diagram-3"></i>
-                    </div>
+                <div>
+                    <h6>Instrumentenwert</h6>
+                    <h2>€ <?php echo number_format($instrumentStats['gesamtwert'] ?? 0, 0, ',', '.'); ?></h2>
                 </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-3">
-        <div class="card stat-card border-start border-info border-4">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-muted mb-1">Instrumentenwert</h6>
-                        <h2 class="mb-0">€ <?php echo number_format($instrumentStats['gesamtwert'], 0, ',', '.'); ?></h2>
-                    </div>
-                    <div class="text-info" style="font-size: 3rem;">
-                        <i class="bi bi-cash-coin"></i>
-                    </div>
+                <div class="stat-icon text-info">
+                    <i class="bi bi-currency-euro"></i>
                 </div>
             </div>
         </div>
@@ -174,36 +169,29 @@ include 'includes/header.php';
     <div class="col-lg-6">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-calendar-event"></i> Nächste Termine</h5>
-                <a href="kalender.php" class="btn btn-sm btn-primary">Zum Kalender</a>
+                <span><i class="bi bi-calendar-event me-2"></i>Nächste Termine</span>
+                <a href="kalender.php" class="btn btn-sm btn-primary">Kalender</a>
             </div>
             <div class="card-body">
                 <?php if (empty($naechsteAusrueckungen)): ?>
-                    <p class="text-muted">Keine bevorstehenden Termine</p>
+                    <p class="text-muted mb-0">Keine bevorstehenden Termine</p>
                 <?php else: ?>
                     <div class="list-group list-group-flush">
                         <?php foreach ($naechsteAusrueckungen as $termin): ?>
-                        <div class="list-group-item px-0">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <h6 class="mb-1"><?php echo htmlspecialchars($termin['titel']); ?></h6>
-                                    <small class="text-muted">
-                                        <i class="bi bi-calendar"></i> 
-                                        <?php echo date('d.m.Y H:i', strtotime($termin['start_datum'])); ?>
-                                    </small>
+                        <div class="list-group-item d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong style="font-size: 13px;"><?php echo htmlspecialchars($termin['titel']); ?></strong>
+                                <div class="text-muted" style="font-size: 11px;">
+                                    <i class="bi bi-clock"></i> <?php echo date('d.m.Y H:i', strtotime($termin['start_datum'])); ?>
                                     <?php if ($termin['ort']): ?>
-                                    <br><small class="text-muted">
-                                        <i class="bi bi-geo-alt"></i> <?php echo htmlspecialchars($termin['ort']); ?>
-                                    </small>
+                                    · <i class="bi bi-geo-alt"></i> <?php echo htmlspecialchars($termin['ort']); ?>
                                     <?php endif; ?>
                                 </div>
-                                <span class="badge bg-<?php 
-                                    echo $termin['typ'] === 'Probe' ? 'secondary' : 
-                                        ($termin['typ'] === 'Konzert' ? 'primary' : 'success'); 
-                                ?>">
-                                    <?php echo htmlspecialchars($termin['typ']); ?>
-                                </span>
                             </div>
+                            <span class="badge bg-<?php 
+                                echo $termin['typ'] === 'Probe' ? 'secondary' : 
+                                    ($termin['typ'] === 'Konzert' ? 'primary' : 'success'); 
+                            ?>"><?php echo htmlspecialchars($termin['typ']); ?></span>
                         </div>
                         <?php endforeach; ?>
                     </div>
@@ -211,23 +199,21 @@ include 'includes/header.php';
             </div>
         </div>
         
-        <!-- Geburtstage -->
         <?php if (!empty($geburtstage)): ?>
-        <div class="card mt-3">
+        <div class="card">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-cake"></i> Geburtstage im <?php echo strftime('%B'); ?></h5>
+                <i class="bi bi-gift me-2"></i>Geburtstage im <?php echo $aktuellerMonat; ?>
             </div>
             <div class="card-body">
                 <div class="list-group list-group-flush">
                     <?php foreach ($geburtstage as $geburtstag): ?>
-                    <div class="list-group-item px-0">
-                        <i class="bi bi-gift text-danger"></i>
+                    <div class="list-group-item" style="font-size: 12px;">
+                        <i class="bi bi-balloon text-danger me-1"></i>
                         <strong><?php echo htmlspecialchars($geburtstag['vorname'] . ' ' . $geburtstag['nachname']); ?></strong>
-                        - <?php echo $geburtstag['tag']; ?>. <?php echo strftime('%B', mktime(0, 0, 0, $geburtstag['monat'], 1)); ?>
-                        <?php 
-                        $alter = date('Y') - date('Y', strtotime($geburtstag['geburtsdatum']));
-                        echo " ({$alter} Jahre)";
-                        ?>
+                        – <?php echo $geburtstag['tag']; ?>. <?php echo $aktuellerMonat; ?>
+                        <span class="text-muted">
+                            (<?php echo date('Y') - date('Y', strtotime($geburtstag['geburtsdatum'])); ?> Jahre)
+                        </span>
                     </div>
                     <?php endforeach; ?>
                 </div>
@@ -240,64 +226,60 @@ include 'includes/header.php';
     <div class="col-lg-6">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Registerverteilung</h5>
+                <i class="bi bi-pie-chart me-2"></i>Registerverteilung
             </div>
             <div class="card-body">
-                <canvas id="registerChart" height="200"></canvas>
+                <div class="chart-container">
+                    <canvas id="registerChart"></canvas>
+                </div>
             </div>
         </div>
         
-        <!-- Fällige Wartungen -->
         <?php if (!empty($faelligeWartungen)): ?>
-        <div class="card mt-3">
-            <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0">
-                    <i class="bi bi-exclamation-triangle"></i> 
-                    Fällige Wartungen (<?php echo count($faelligeWartungen); ?>)
-                </h5>
+        <div class="card">
+            <div class="card-header" style="background: #fef6e6; color: #8a6d1b;">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                Fällige Wartungen (<?php echo count($faelligeWartungen); ?>)
             </div>
             <div class="card-body">
                 <div class="list-group list-group-flush">
-                    <?php foreach ($faelligeWartungen as $wartung): ?>
-                    <div class="list-group-item px-0">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <strong><?php echo htmlspecialchars($wartung['inventar_nummer']); ?></strong>
-                                - <?php echo htmlspecialchars($wartung['instrument_name']); ?>
-                            </div>
-                            <small class="text-muted">
-                                <?php echo date('d.m.Y', strtotime($wartung['naechste_wartung'])); ?>
-                            </small>
+                    <?php foreach (array_slice($faelligeWartungen, 0, 5) as $wartung): ?>
+                    <div class="list-group-item d-flex justify-content-between" style="font-size: 12px;">
+                        <div>
+                            <strong><?php echo htmlspecialchars($wartung['inventar_nummer']); ?></strong>
+                            – <?php echo htmlspecialchars($wartung['instrument_name']); ?>
                         </div>
+                        <small class="text-muted">
+                            <?php echo date('d.m.Y', strtotime($wartung['naechste_wartung'])); ?>
+                        </small>
                     </div>
                     <?php endforeach; ?>
                 </div>
-                <a href="instrumente.php" class="btn btn-sm btn-warning mt-2">
-                    Alle Wartungen anzeigen
+                <a href="instrumente.php" class="btn btn-sm btn-warning mt-3">
+                    <i class="bi bi-tools"></i> Alle anzeigen
                 </a>
             </div>
         </div>
         <?php endif; ?>
         
-        <!-- Schnellaktionen -->
         <?php if (Session::checkPermission('ausrueckungen', 'schreiben')): ?>
-        <div class="card mt-3">
+        <div class="card">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-lightning"></i> Schnellaktionen</h5>
+                <i class="bi bi-lightning me-2"></i>Schnellaktionen
             </div>
             <div class="card-body">
-                <div class="d-grid gap-2">
-                    <a href="ausrueckungen.php?action=new" class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Neue Ausrückung
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="ausrueckung_bearbeiten.php" class="btn btn-primary btn-sm">
+                        <i class="bi bi-plus"></i> Ausrückung
                     </a>
                     <?php if (Session::checkPermission('mitglieder', 'schreiben')): ?>
-                    <a href="mitglieder.php?action=new" class="btn btn-success">
-                        <i class="bi bi-person-plus"></i> Neues Mitglied
+                    <a href="mitglied_bearbeiten.php" class="btn btn-success btn-sm">
+                        <i class="bi bi-person-plus"></i> Mitglied
                     </a>
                     <?php endif; ?>
                     <?php if (Session::checkPermission('noten', 'schreiben')): ?>
-                    <a href="noten.php?action=new" class="btn btn-info">
-                        <i class="bi bi-music-note"></i> Neue Noten
+                    <a href="noten_bearbeiten.php" class="btn btn-info btn-sm">
+                        <i class="bi bi-music-note"></i> Noten
                     </a>
                     <?php endif; ?>
                 </div>
@@ -307,32 +289,49 @@ include 'includes/header.php';
     </div>
 </div>
 
-<script>
-// Registerverteilung Chart
-const registerData = {
-    labels: <?php echo json_encode(array_column($mitgliederStats['register'], 'name')); ?>,
-    datasets: [{
-        data: <?php echo json_encode(array_column($mitgliederStats['register'], 'anzahl')); ?>,
-        backgroundColor: [
-            '#0d6efd', '#6c757d', '#198754', '#ffc107', 
-            '#dc3545', '#0dcaf0', '#6f42c1', '#fd7e14'
-        ]
-    }]
-};
+<?php include 'includes/footer.php'; ?>
 
-new Chart(document.getElementById('registerChart'), {
-    type: 'doughnut',
-    data: registerData,
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                position: 'right'
-            }
+<script>
+// Chart nach DOM-Load initialisieren
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('registerChart');
+    if (ctx && typeof Chart !== 'undefined') {
+        const labels = <?php echo json_encode($registerLabels); ?>;
+        const data = <?php echo json_encode($registerData); ?>;
+        
+        // Prüfen ob Daten vorhanden sind
+        if (labels.length > 0 && data.some(v => v > 0)) {
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: [
+                            '#4f6d7a', '#5b8a72', '#c9a227', '#6b8cae',
+                            '#b54a4a', '#7a8f6d', '#8a6d5b', '#5a7a8f'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 10,
+                                font: { size: 11 }
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            ctx.parentElement.innerHTML = '<p class="text-muted text-center mb-0" style="padding: 40px 0;">Keine Registerdaten vorhanden</p>';
         }
     }
 });
 </script>
-
-<?php include 'includes/footer.php'; ?>
