@@ -45,14 +45,14 @@ function isActive($page, $pages, $current) {
         :root {
             /* Einheitliche, ruhige Farbpalette für Verwaltung */
             --c-primary: #4471A3;      /* Gedämpftes Petrol */
-            --c-primary-light: #649FCF;
+            --c-primary-light: #5496cb;
             --c-success: #5b8a72;       /* Gedämpftes Grün */
             --c-warning: #D19A3E;       /* Gedämpftes Gold */
             --c-danger: #F44336;        /* Gedämpftes Rot */
-            --c-info: #9ECDE2;          /* Gedämpftes Blau */
+            --c-info: #77bad7;          /* Gedämpftes Blau */
             
             --sidebar-w: 210px;
-            --topbar-h: 52px;
+            --topbar-h: 60px;
             --radius: 4px;
             --radius-lg: 6px;
             --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
@@ -62,7 +62,7 @@ function isActive($page, $pages, $current) {
         [data-theme="light"] {
             --bg-body: #f5f6f8;
             --bg-card: #ffffff;
-            --bg-sidebar: #315175;
+            --bg-sidebar: #2d4a6a;
             --bg-input: #ffffff;
             --border: #e0e4e8;
             --border-light: #eef0f2;
