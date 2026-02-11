@@ -3,7 +3,7 @@
  * SYNCOPA - Musikvereinsverwaltung
  * Konfigurationsdatei
  * 
- * @version 2.0.0
+ * @version 2.0.5
  */
 
 // ============================================================================
@@ -17,9 +17,9 @@ ini_set('display_errors', 1);
 // DATENBANK-KONFIGURATION
 // ============================================================================
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'mvpalfau_syncopa');
-define('DB_USER', 'mvpalfau_syncopa');
-define('DB_PASS', 'Da05nnerj12');
+define('DB_NAME', 'XXX');
+define('DB_USER', 'XXX');
+define('DB_PASS', 'XXX');
 define('DB_CHARSET', 'utf8mb4');
 
 // ============================================================================
@@ -27,7 +27,7 @@ define('DB_CHARSET', 'utf8mb4');
 // ============================================================================
 define('APP_NAME', 'Syncopa');
 define('APP_VERSION', '2.0.0');
-define('BASE_URL', 'https://app.mv-palfau.at'); // Anpassen an Ihr Setup
+define('BASE_URL', 'https://MEINE-DOMAIN/UNTERORDNER'); // Anpassen an Ihr Setup
 define('BASE_PATH', __DIR__);
 
 // ============================================================================
@@ -64,8 +64,8 @@ define('GOOGLE_CALENDAR_ID', '');
 // Erstelle Client-ID unter: https://console.cloud.google.com/apis/credentials
 // Redirect URI: https://deine-domain.at/syncopa/login_google_callback.php
 define('GOOGLE_OAUTH_ENABLED', true);
-define('GOOGLE_CLIENT_ID', '27789021745-q6933qnancq53lkkduc59d38sqmfasck.apps.googleusercontent.com');
-define('GOOGLE_CLIENT_SECRET', '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');
+define('GOOGLE_CLIENT_ID', 'XXXXXXXXXXXXXXXXXXXX');
+define('GOOGLE_CLIENT_SECRET', 'XXXXXXXXXXXXXXXXXXXX');
 define('GOOGLE_REDIRECT_URI', BASE_URL . '/login_google_callback.php');
 
 // ============================================================================
