@@ -3,7 +3,7 @@
  * SYNCOPA - Musikvereinsverwaltung
  * Konfigurationsdatei
  * 
- * @version 2.0.0
+ * @version 2.0.5
  */
 
 // ============================================================================
@@ -50,6 +50,23 @@ define('MAX_UPLOAD_SIZE', 10485760); // 10 MB
 // ZEITZONE
 // ============================================================================
 date_default_timezone_set('Europe/Vienna');
+
+// ============================================================================
+// GOOGLE CALENDAR API (optional)
+// ============================================================================
+define('GOOGLE_CALENDAR_ENABLED', false);
+define('GOOGLE_CALENDAR_API_KEY', '');
+define('GOOGLE_CALENDAR_ID', '');
+
+// ============================================================================
+// GOOGLE OAUTH LOGIN (optional)
+// ============================================================================
+// Erstelle Client-ID unter: https://console.cloud.google.com/apis/credentials
+// Redirect URI: https://deine-domain.at/syncopa/login_google_callback.php
+define('GOOGLE_OAUTH_ENABLED', true);
+define('GOOGLE_CLIENT_ID', 'XXXXXXXXXXXXXXXXXXX');
+define('GOOGLE_CLIENT_SECRET', 'XXXXXXXXXXXXXXXXX');
+define('GOOGLE_REDIRECT_URI', BASE_URL . '/login_google_callback.php');
 
 // ============================================================================
 // GOOGLE CALENDAR API (optional)
