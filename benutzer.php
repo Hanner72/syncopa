@@ -211,17 +211,6 @@ include 'includes/header.php';
     </div>
 </div>
 
-<script>
-$(document).ready(function() {
-    $('#benutzerTable').DataTable({
-        order: [[0, 'asc']],
-        language: {
-            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/de-DE.json'
-        }
-    });
-});
-</script>
-
 <style>
 .badge.bg-purple {
     background-color: #6f42c1 !important;
@@ -237,3 +226,14 @@ $(document).ready(function() {
 </style>
 
 <?php include 'includes/footer.php'; ?>
+
+<script>
+$(document).ready(function() {
+    $('#benutzerTable').DataTable({
+        order: [[0, 'asc']],
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/de-DE.json'
+        }
+    });
+});
+</script>

@@ -118,10 +118,10 @@ include 'includes/header.php';
     </div>
 </div>
 
+<?php include 'includes/footer.php'; ?>
+
 <script>
 $(document).ready(function() {
     $('#instrumenteTable').DataTable({order: [[0, 'asc']]});
 });
 </script>
-
-<?php include 'includes/footer.php'; ?>

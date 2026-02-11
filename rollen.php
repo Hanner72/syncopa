@@ -192,6 +192,8 @@ include 'includes/header.php';
 }
 </style>
 
+<?php include 'includes/footer.php'; ?>
+
 <script>
 $(document).ready(function() {
     $('#rollenTable').DataTable({
@@ -202,5 +204,3 @@ $(document).ready(function() {
     });
 });
 </script>
-
-<?php include 'includes/footer.php'; ?>

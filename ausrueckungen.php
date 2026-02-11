@@ -202,6 +202,8 @@ include 'includes/header.php';
     </div>
 </div>
 
+<?php include 'includes/footer.php'; ?>
+
 <script>
 $(document).ready(function() {
     $('#ausrueckungenTable').DataTable({
@@ -209,5 +211,3 @@ $(document).ready(function() {
     });
 });
 </script>
-
-<?php include 'includes/footer.php'; ?>

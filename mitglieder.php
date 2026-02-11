@@ -215,14 +215,6 @@ include 'includes/header.php';
 </div>
 
 <script>
-$(document).ready(function() {
-    $('#mitgliederTable').DataTable({
-        order: [[1, 'asc']], // Nach Name sortieren
-        columnDefs: [
-            { targets: -1, orderable: false } // Aktionen-Spalte nicht sortierbar
-        ]
-    });
-});
 
 // Statistik-Charts
 <?php
@@ -270,3 +262,14 @@ new Chart(document.getElementById('registerChart'), {
 </script>
 
 <?php include 'includes/footer.php'; ?>
+
+<script>
+$(document).ready(function() {
+    $('#mitgliederTable').DataTable({
+        order: [[1, 'asc']], // Nach Name sortieren
+        columnDefs: [
+            { targets: -1, orderable: false } // Aktionen-Spalte nicht sortierbar
+        ]
+    });
+});
+</script>
