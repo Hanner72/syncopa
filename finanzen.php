@@ -245,11 +245,11 @@ include 'includes/header.php';
     </div>
 </div>
 
+<?php include 'includes/footer.php'; ?>
+
 <script>
 $(document).ready(function() {
     $('#transaktionenTable').DataTable({order: [[0, 'desc']]});
     $('#beitraegeTable').DataTable({order: [[3, 'asc'], [0, 'asc']]});
 });
 </script>
-
-<?php include 'includes/footer.php'; ?>
