@@ -474,6 +474,9 @@ function isActive($page, $pages, $current) {
                     <li><a class="nav-link <?php echo in_array($currentPage, ['rollen', 'rolle_bearbeiten', 'berechtigungen_bearbeiten']) ? 'active' : ''; ?>" href="rollen.php">
                         <i class="bi bi-shield-check"></i> Rollen
                     </a></li>
+                    <li><a class="nav-link <?php echo $currentPage === 'stammdaten' ? 'active' : ''; ?>" href="stammdaten.php">
+                        <i class="bi bi-database-gear"></i> Stammdaten
+                    </a></li>
                     <li><a class="nav-link <?php echo $currentPage === 'einstellungen' ? 'active' : ''; ?>" href="einstellungen.php">
                         <i class="bi bi-gear"></i> Einstellungen
                     </a></li>

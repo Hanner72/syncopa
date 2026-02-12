@@ -114,6 +114,12 @@ include 'includes/header.php';
                             <i class="bi bi-pencil"></i>
                         </a>
                         <?php endif; ?>
+                        <?php if (Session::checkPermission('noten', 'loeschen')): ?>
+                        <a href="noten_loeschen.php?id=<?php echo $note['id']; ?>" class="btn btn-sm btn-danger" title="Löschen"
+                           onclick="return confirm('Noten wirklich löschen? Alle zugehörigen Dateien werden ebenfalls gelöscht!')">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>

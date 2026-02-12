@@ -105,9 +105,18 @@ include 'includes/header.php';
                         <?php endif; ?>
                     </td>
                     <td class="text-end">
+                        <a href="instrument_detail.php?id=<?php echo $instr['id']; ?>" class="btn btn-sm btn-info" title="Details">
+                            <i class="bi bi-eye"></i>
+                        </a>
                         <?php if (Session::checkPermission('instrumente', 'schreiben')): ?>
-                        <a href="instrument_bearbeiten.php?id=<?php echo $instr['id']; ?>" class="btn btn-sm btn-primary">
+                        <a href="instrument_bearbeiten.php?id=<?php echo $instr['id']; ?>" class="btn btn-sm btn-primary" title="Bearbeiten">
                             <i class="bi bi-pencil"></i>
+                        </a>
+                        <?php endif; ?>
+                        <?php if (Session::checkPermission('instrumente', 'loeschen')): ?>
+                        <a href="instrument_loeschen.php?id=<?php echo $instr['id']; ?>" class="btn btn-sm btn-danger" title="Löschen"
+                           onclick="return confirm('Instrument wirklich löschen?')">
+                            <i class="bi bi-trash"></i>
                         </a>
                         <?php endif; ?>
                     </td>
