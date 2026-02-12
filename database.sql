@@ -1,11 +1,24 @@
--- phpMyAdmin SQL Dump
--- version 5.2.2
--- https://www.phpmyadmin.net/
+-- ============================================================
+-- SYNCOPA - Musikvereinsverwaltung
+-- Datenbank-Schema und Beispieldaten
+-- Version: 2.1.0
+-- 
+-- Installation:
+--   1. Datenbank erstellen:
+--      CREATE DATABASE syncopa CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+--   
+--   2. Schema importieren:
+--      mysql -u benutzername -p syncopa < database.sql
 --
--- Host: localhost:3306
--- Erstellungszeit: 10. Feb 2026 um 13:10
--- Server-Version: 10.4.34-MariaDB-cll-lve
--- PHP-Version: 7.4.27
+-- Standard-Login:
+--   Benutzer: admin
+--   Passwort: admin123
+--
+-- Weitere Test-Benutzer (gleiches Passwort):
+--   - obmann
+--   - kapellmeister
+--   - kassier
+-- ============================================================
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,7 +31,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Datenbank: `mvpalfau_syncopa`
+-- Datenbank: `Hanner72_syncopa`
 --
 
 -- --------------------------------------------------------
@@ -28,13 +41,13 @@ SET time_zone = "+00:00";
 --
 
 CREATE TABLE `aktivitaetslog` (
-  `id` int(11) NOT NULL,
-  `benutzer_id` int(11) DEFAULT NULL,
-  `aktion` varchar(100) NOT NULL,
-  `modul` varchar(50) DEFAULT NULL,
-  `beschreibung` text DEFAULT NULL,
-  `ip_adresse` varchar(45) DEFAULT NULL,
-  `erstellt_am` datetime DEFAULT current_timestamp()
+  `id` int NOT NULL,
+  `benutzer_id` int DEFAULT NULL,
+  `aktion` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `modul` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `beschreibung` text COLLATE utf8mb4_unicode_ci,
+  `ip_adresse` varchar(45) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `erstellt_am` datetime DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -51,7 +64,16 @@ INSERT INTO `aktivitaetslog` (`id`, `benutzer_id`, `aktion`, `modul`, `beschreib
 (7, 1, 'login', NULL, 'Benutzer hat sich angemeldet', '46.124.148.41', '2026-02-10 11:39:20'),
 (8, 1, 'logout', NULL, 'Benutzer hat sich abgemeldet', '46.124.148.41', '2026-02-10 11:39:40'),
 (9, 3, 'login', NULL, 'Benutzer hat sich angemeldet', '46.124.148.41', '2026-02-10 11:39:42'),
-(10, 3, 'logout', NULL, 'Benutzer hat sich abgemeldet', '46.124.148.41', '2026-02-10 11:40:37');
+(10, 3, 'logout', NULL, 'Benutzer hat sich abgemeldet', '46.124.148.41', '2026-02-10 11:40:37'),
+(11, NULL, 'login_google', NULL, 'Benutzer hat sich via Google angemeldet', '213.162.95.70', '2026-02-12 09:37:13'),
+(12, NULL, 'logout', NULL, 'Benutzer hat sich abgemeldet', '213.162.95.70', '2026-02-12 09:37:24'),
+(13, 1, 'login', NULL, 'Login', '213.162.95.70', '2026-02-12 09:37:33'),
+(14, 1, 'logout', NULL, 'Benutzer hat sich abgemeldet', '213.162.95.70', '2026-02-12 09:46:40'),
+(15, 1, 'login', NULL, 'Login', '213.162.95.70', '2026-02-12 09:55:41'),
+(16, 1, 'logout', NULL, 'Benutzer hat sich abgemeldet', '213.162.95.70', '2026-02-12 09:55:45'),
+(17, 1, 'login', NULL, 'Login', '213.162.95.70', '2026-02-12 09:55:50'),
+(18, 1, 'login', NULL, 'Login', '176.199.194.135', '2026-02-12 11:24:19'),
+(19, 1, 'login', NULL, 'Login', '213.162.95.70', '2026-02-12 13:48:00');
 
 -- --------------------------------------------------------
 
@@ -60,11 +82,11 @@ INSERT INTO `aktivitaetslog` (`id`, `benutzer_id`, `aktion`, `modul`, `beschreib
 --
 
 CREATE TABLE `anwesenheit` (
-  `id` int(11) NOT NULL,
-  `ausrueckung_id` int(11) NOT NULL,
-  `mitglied_id` int(11) NOT NULL,
-  `status` enum('zugesagt','abgesagt','keine_antwort','anwesend','abwesend') DEFAULT 'keine_antwort',
-  `grund` text DEFAULT NULL,
+  `id` int NOT NULL,
+  `ausrueckung_id` int NOT NULL,
+  `mitglied_id` int NOT NULL,
+  `status` enum('zugesagt','abgesagt','keine_antwort','anwesend','abwesend') COLLATE utf8mb4_unicode_ci DEFAULT 'keine_antwort',
+  `grund` text COLLATE utf8mb4_unicode_ci,
   `gemeldet_am` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -92,24 +114,24 @@ INSERT INTO `anwesenheit` (`id`, `ausrueckung_id`, `mitglied_id`, `status`, `gru
 --
 
 CREATE TABLE `ausrueckungen` (
-  `id` int(11) NOT NULL,
-  `titel` varchar(200) NOT NULL,
-  `beschreibung` text DEFAULT NULL,
-  `typ` enum('Probe','Konzert','Ausrückung','Fest','Wertung','Sonstiges') NOT NULL,
+  `id` int NOT NULL,
+  `titel` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `beschreibung` text COLLATE utf8mb4_unicode_ci,
+  `typ` enum('Probe','Konzert','Ausrückung','Fest','Wertung','Sonstiges') COLLATE utf8mb4_unicode_ci NOT NULL,
   `start_datum` datetime NOT NULL,
   `ende_datum` datetime DEFAULT NULL,
-  `ganztaegig` tinyint(1) DEFAULT 0,
-  `ort` varchar(200) DEFAULT NULL,
-  `adresse` varchar(250) DEFAULT NULL,
-  `treffpunkt` varchar(200) DEFAULT NULL,
+  `ganztaegig` tinyint(1) DEFAULT '0',
+  `ort` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `adresse` varchar(250) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `treffpunkt` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `treffpunkt_zeit` time DEFAULT NULL,
-  `uniform` tinyint(1) DEFAULT 1,
-  `notizen` text DEFAULT NULL,
-  `google_calendar_id` varchar(255) DEFAULT NULL,
-  `status` enum('geplant','bestaetigt','abgesagt') DEFAULT 'geplant',
-  `erstellt_von` int(11) DEFAULT NULL,
-  `erstellt_am` datetime DEFAULT current_timestamp(),
-  `aktualisiert_am` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `uniform` tinyint(1) DEFAULT '1',
+  `notizen` text COLLATE utf8mb4_unicode_ci,
+  `google_calendar_id` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `status` enum('geplant','bestaetigt','abgesagt') COLLATE utf8mb4_unicode_ci DEFAULT 'geplant',
+  `erstellt_von` int DEFAULT NULL,
+  `erstellt_am` datetime DEFAULT CURRENT_TIMESTAMP,
+  `aktualisiert_am` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -136,10 +158,10 @@ INSERT INTO `ausrueckungen` (`id`, `titel`, `beschreibung`, `typ`, `start_datum`
 --
 
 CREATE TABLE `ausrueckung_noten` (
-  `id` int(11) NOT NULL,
-  `ausrueckung_id` int(11) NOT NULL,
-  `noten_id` int(11) NOT NULL,
-  `reihenfolge` int(11) DEFAULT 0
+  `id` int NOT NULL,
+  `ausrueckung_id` int NOT NULL,
+  `noten_id` int NOT NULL,
+  `reihenfolge` int DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -163,15 +185,15 @@ INSERT INTO `ausrueckung_noten` (`id`, `ausrueckung_id`, `noten_id`, `reihenfolg
 --
 
 CREATE TABLE `beitraege` (
-  `id` int(11) NOT NULL,
-  `mitglied_id` int(11) NOT NULL,
-  `jahr` int(11) NOT NULL,
+  `id` int NOT NULL,
+  `mitglied_id` int NOT NULL,
+  `jahr` int NOT NULL,
   `betrag` decimal(10,2) NOT NULL,
   `bezahlt_am` date DEFAULT NULL,
-  `bezahlt` tinyint(1) DEFAULT 0,
-  `zahlungsart` enum('bar','überweisung','lastschrift') DEFAULT 'überweisung',
-  `notizen` text DEFAULT NULL,
-  `erstellt_am` datetime DEFAULT current_timestamp()
+  `bezahlt` tinyint(1) DEFAULT '0',
+  `zahlungsart` enum('bar','überweisung','lastschrift') COLLATE utf8mb4_unicode_ci DEFAULT 'überweisung',
+  `notizen` text COLLATE utf8mb4_unicode_ci,
+  `erstellt_am` datetime DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -190,7 +212,18 @@ INSERT INTO `beitraege` (`id`, `mitglied_id`, `jahr`, `betrag`, `bezahlt_am`, `b
 (9, 10, 2025, 120.00, '2025-01-22', 1, 'überweisung', NULL, '2026-02-10 09:25:15'),
 (10, 11, 2025, 60.00, '2025-03-01', 1, 'überweisung', NULL, '2026-02-10 09:25:15'),
 (11, 12, 2025, 120.00, NULL, 0, 'überweisung', NULL, '2026-02-10 09:25:15'),
-(14, 11, 2026, 25.00, '2026-02-10', 1, 'überweisung', NULL, '2026-02-10 10:46:02');
+(14, 11, 2026, 25.00, '2026-02-10', 1, 'überweisung', NULL, '2026-02-10 10:46:02'),
+(15, 7, 2026, 20.00, NULL, 0, 'überweisung', NULL, '2026-02-12 09:45:23'),
+(16, 4, 2026, 20.00, NULL, 0, 'überweisung', NULL, '2026-02-12 09:45:23'),
+(17, 13, 2026, 20.00, '2026-02-12', 1, 'überweisung', NULL, '2026-02-12 09:45:23'),
+(18, 8, 2026, 20.00, '2026-02-12', 1, 'überweisung', NULL, '2026-02-12 09:45:23'),
+(19, 2, 2026, 20.00, NULL, 0, 'überweisung', NULL, '2026-02-12 09:45:23'),
+(20, 1, 2026, 20.00, NULL, 0, 'überweisung', NULL, '2026-02-12 09:45:23'),
+(21, 3, 2026, 20.00, NULL, 0, 'überweisung', NULL, '2026-02-12 09:45:23'),
+(22, 10, 2026, 20.00, NULL, 0, 'überweisung', NULL, '2026-02-12 09:45:23'),
+(23, 5, 2026, 20.00, NULL, 0, 'überweisung', NULL, '2026-02-12 09:45:23'),
+(24, 6, 2026, 20.00, NULL, 0, 'überweisung', NULL, '2026-02-12 09:45:23'),
+(25, 12, 2026, 20.00, NULL, 0, 'überweisung', NULL, '2026-02-12 09:45:23');
 
 -- --------------------------------------------------------
 
@@ -199,18 +232,18 @@ INSERT INTO `beitraege` (`id`, `mitglied_id`, `jahr`, `betrag`, `bezahlt_am`, `b
 --
 
 CREATE TABLE `benutzer` (
-  `id` int(11) NOT NULL,
-  `benutzername` varchar(50) NOT NULL,
-  `email` varchar(100) NOT NULL,
-  `passwort_hash` varchar(255) DEFAULT NULL,
-  `rolle` enum('admin','obmann','kassier','schriftfuehrer','mitglied','instrumentenwart','kapellmeister','trachtenwart','jugendbeauftragter','notenwart') DEFAULT 'mitglied',
-  `rolle_id` int(11) DEFAULT NULL,
-  `aktiv` tinyint(1) DEFAULT 1,
+  `id` int NOT NULL,
+  `benutzername` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `email` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `passwort_hash` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `rolle` enum('admin','obmann','kassier','schriftfuehrer','mitglied','instrumentenwart','kapellmeister','trachtenwart','jugendbeauftragter','notenwart','user') COLLATE utf8mb4_unicode_ci DEFAULT 'mitglied',
+  `rolle_id` int DEFAULT NULL,
+  `aktiv` tinyint(1) DEFAULT '1',
   `letzter_login` datetime DEFAULT NULL,
-  `erstellt_am` datetime DEFAULT current_timestamp(),
-  `aktualisiert_am` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `mitglied_id` int(11) DEFAULT NULL,
-  `google_id` varchar(100) DEFAULT NULL
+  `erstellt_am` datetime DEFAULT CURRENT_TIMESTAMP,
+  `aktualisiert_am` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `mitglied_id` int DEFAULT NULL,
+  `google_id` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -218,7 +251,7 @@ CREATE TABLE `benutzer` (
 --
 
 INSERT INTO `benutzer` (`id`, `benutzername`, `email`, `passwort_hash`, `rolle`, `rolle_id`, `aktiv`, `letzter_login`, `erstellt_am`, `aktualisiert_am`, `mitglied_id`, `google_id`) VALUES
-(1, 'admin', 'admin@musikverein.at', '$2a$12$V3H/Yxfr3hyjpyE299xFLuVdUofhCSep7Knduu4.AN/LzXwfyHcRm', 'admin', 1, 1, '2026-02-10 11:39:20', '2026-02-10 09:25:15', '2026-02-10 11:39:20', 13, NULL),
+(1, 'admin', 'admin@musikverein.at', '$2a$12$V3H/Yxfr3hyjpyE299xFLuVdUofhCSep7Knduu4.AN/LzXwfyHcRm', 'admin', 1, 1, '2026-02-12 13:48:00', '2026-02-10 09:25:15', '2026-02-12 13:48:00', 13, NULL),
 (2, 'obmann', 'obmann@musikverein.at', '$2a$12$V3H/Yxfr3hyjpyE299xFLuVdUofhCSep7Knduu4.AN/LzXwfyHcRm', 'obmann', 2, 1, NULL, '2026-02-10 09:25:15', '2026-02-10 09:25:15', NULL, NULL),
 (3, 'kapellmeister', 'kapellmeister@musikverein.at', '$2y$10$pkMirixnRkZkQ0ZRZW.9p.9O9Irk1uWa5BJCV.dEgQhffpdB3gwNu', 'kapellmeister', 3, 1, '2026-02-10 11:39:42', '2026-02-10 09:25:15', '2026-02-10 11:39:42', NULL, NULL),
 (4, 'kassier', 'kassier@musikverein.at', '$2y$10$Ytv3UudMWt.0FnfGHe.pJOfwtdeVS/hPrZRQVkV3vx8h1soa6jbMO', 'kassier', 4, 1, '2026-02-10 11:38:19', '2026-02-10 09:25:15', '2026-02-10 11:38:19', NULL, NULL);
@@ -230,13 +263,13 @@ INSERT INTO `benutzer` (`id`, `benutzername`, `email`, `passwort_hash`, `rolle`,
 --
 
 CREATE TABLE `berechtigungen` (
-  `id` int(11) NOT NULL,
-  `rolle_id` int(11) DEFAULT NULL,
-  `rolle` varchar(50) NOT NULL,
-  `modul` varchar(50) NOT NULL,
-  `lesen` tinyint(1) DEFAULT 0,
-  `schreiben` tinyint(1) DEFAULT 0,
-  `loeschen` tinyint(1) DEFAULT 0
+  `id` int NOT NULL,
+  `rolle_id` int DEFAULT NULL,
+  `rolle` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `modul` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `lesen` tinyint(1) DEFAULT '0',
+  `schreiben` tinyint(1) DEFAULT '0',
+  `loeschen` tinyint(1) DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -328,16 +361,16 @@ INSERT INTO `berechtigungen` (`id`, `rolle_id`, `rolle`, `modul`, `lesen`, `schr
 --
 
 CREATE TABLE `dokumente` (
-  `id` int(11) NOT NULL,
-  `titel` varchar(200) NOT NULL,
-  `beschreibung` text DEFAULT NULL,
-  `dateiname` varchar(255) NOT NULL,
-  `dateipfad` varchar(500) NOT NULL,
-  `dateityp` varchar(50) DEFAULT NULL,
-  `dateigroesse` int(11) DEFAULT NULL,
-  `kategorie` varchar(100) DEFAULT NULL,
-  `hochgeladen_von` int(11) DEFAULT NULL,
-  `erstellt_am` datetime DEFAULT current_timestamp()
+  `id` int NOT NULL,
+  `titel` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `beschreibung` text COLLATE utf8mb4_unicode_ci,
+  `dateiname` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `dateipfad` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `dateityp` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `dateigroesse` int DEFAULT NULL,
+  `kategorie` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `hochgeladen_von` int DEFAULT NULL,
+  `erstellt_am` datetime DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -347,11 +380,11 @@ CREATE TABLE `dokumente` (
 --
 
 CREATE TABLE `einstellungen` (
-  `id` int(11) NOT NULL,
-  `schluessel` varchar(100) NOT NULL,
-  `wert` text DEFAULT NULL,
-  `beschreibung` text DEFAULT NULL,
-  `aktualisiert_am` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `id` int NOT NULL,
+  `schluessel` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `wert` text COLLATE utf8mb4_unicode_ci,
+  `beschreibung` text COLLATE utf8mb4_unicode_ci,
+  `aktualisiert_am` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -368,9 +401,9 @@ INSERT INTO `einstellungen` (`id`, `schluessel`, `wert`, `beschreibung`, `aktual
 (7, 'verein_website', 'www.mv-musterstadt.at', 'Website', '2026-02-10 09:25:16'),
 (8, 'google_calendar_api_key', '', 'Google Calendar API Schlüssel', '2026-02-10 09:25:16'),
 (9, 'google_calendar_id', '', 'Google Calendar ID', '2026-02-10 09:25:16'),
-(10, 'mitgliedsbeitrag_jahr', '0', 'Jährlicher Mitgliedsbeitrag in Euro', '2026-02-10 10:45:19'),
-(11, 'beitrag_aktiv', '0', 'Beitrag für aktive Mitglieder', '2026-02-10 10:45:19'),
-(12, 'beitrag_passiv', '1', 'Beitrag für passive Mitglieder', '2026-02-10 10:45:19'),
+(10, 'mitgliedsbeitrag_jahr', '20', 'Jährlicher Mitgliedsbeitrag in Euro', '2026-02-12 09:45:12'),
+(11, 'beitrag_aktiv', '1', 'Beitrag für aktive Mitglieder', '2026-02-12 09:45:12'),
+(12, 'beitrag_passiv', '1', 'Beitrag für passive Mitglieder', '2026-02-12 09:45:12'),
 (13, 'beitrag_ehrenmitglied', '0', 'Beitrag für Ehrenmitglieder (0 = frei)', '2026-02-10 09:25:16'),
 (14, 'beitrag_faelligkeit_monat', '1', 'Monat der Beitragsfälligkeit (1-12)', '2026-02-10 09:25:16'),
 (15, 'email_smtp_host', '', 'SMTP Server für E-Mail Versand', '2026-02-10 09:25:16'),
@@ -383,7 +416,7 @@ INSERT INTO `einstellungen` (`id`, `schluessel`, `wert`, `beschreibung`, `aktual
 (22, 'probenzeit_beginn', '19:30', 'Beginn der Probe', '2026-02-10 09:25:16'),
 (23, 'probenzeit_ende', '22:00', 'Ende der Probe', '2026-02-10 09:25:16'),
 (24, 'probelokal_adresse', 'Musikerstraße 1, 8010 Graz', 'Adresse des Probelokals', '2026-02-10 09:25:16'),
-(29, 'beitrag_passiv_betrag', '25', NULL, '2026-02-10 10:45:19'),
+(29, 'beitrag_passiv_betrag', '60', NULL, '2026-02-12 09:45:12'),
 (39, 'beitrag_ausgetreten', '0', NULL, '2026-02-10 10:45:19');
 
 -- --------------------------------------------------------
@@ -393,16 +426,16 @@ INSERT INTO `einstellungen` (`id`, `schluessel`, `wert`, `beschreibung`, `aktual
 --
 
 CREATE TABLE `finanzen` (
-  `id` int(11) NOT NULL,
-  `typ` enum('einnahme','ausgabe') NOT NULL,
+  `id` int NOT NULL,
+  `typ` enum('einnahme','ausgabe') COLLATE utf8mb4_unicode_ci NOT NULL,
   `datum` date NOT NULL,
   `betrag` decimal(10,2) NOT NULL,
-  `kategorie` varchar(100) DEFAULT NULL,
-  `beschreibung` text DEFAULT NULL,
-  `beleg_nummer` varchar(50) DEFAULT NULL,
-  `zahlungsart` varchar(50) DEFAULT NULL,
-  `erstellt_von` int(11) DEFAULT NULL,
-  `erstellt_am` datetime DEFAULT current_timestamp()
+  `kategorie` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `beschreibung` text COLLATE utf8mb4_unicode_ci,
+  `beleg_nummer` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `zahlungsart` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `erstellt_von` int DEFAULT NULL,
+  `erstellt_am` datetime DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -430,24 +463,24 @@ INSERT INTO `finanzen` (`id`, `typ`, `datum`, `betrag`, `kategorie`, `beschreibu
 --
 
 CREATE TABLE `instrumente` (
-  `id` int(11) NOT NULL,
-  `inventar_nummer` varchar(50) NOT NULL,
-  `instrument_typ_id` int(11) NOT NULL,
-  `hersteller` varchar(100) DEFAULT NULL,
-  `modell` varchar(100) DEFAULT NULL,
-  `seriennummer` varchar(100) DEFAULT NULL,
-  `baujahr` int(11) DEFAULT NULL,
+  `id` int NOT NULL,
+  `inventar_nummer` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `instrument_typ_id` int NOT NULL,
+  `hersteller` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `modell` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `seriennummer` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `baujahr` int DEFAULT NULL,
   `anschaffungsdatum` date DEFAULT NULL,
   `anschaffungspreis` decimal(10,2) DEFAULT NULL,
-  `zustand` enum('sehr gut','gut','befriedigend','schlecht','defekt') DEFAULT 'gut',
-  `standort` varchar(100) DEFAULT NULL,
+  `zustand` enum('sehr gut','gut','befriedigend','schlecht','defekt') COLLATE utf8mb4_unicode_ci DEFAULT 'gut',
+  `standort` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `versicherungswert` decimal(10,2) DEFAULT NULL,
-  `mitglied_id` int(11) DEFAULT NULL,
+  `mitglied_id` int DEFAULT NULL,
   `ausgeliehen_seit` date DEFAULT NULL,
-  `notizen` text DEFAULT NULL,
-  `foto` varchar(255) DEFAULT NULL,
-  `erstellt_am` datetime DEFAULT current_timestamp(),
-  `aktualisiert_am` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `notizen` text COLLATE utf8mb4_unicode_ci,
+  `foto` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `erstellt_am` datetime DEFAULT CURRENT_TIMESTAMP,
+  `aktualisiert_am` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -473,10 +506,10 @@ INSERT INTO `instrumente` (`id`, `inventar_nummer`, `instrument_typ_id`, `herste
 --
 
 CREATE TABLE `instrument_typen` (
-  `id` int(11) NOT NULL,
-  `name` varchar(100) NOT NULL,
-  `register_id` int(11) DEFAULT NULL,
-  `beschreibung` text DEFAULT NULL
+  `id` int NOT NULL,
+  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `register_id` int DEFAULT NULL,
+  `beschreibung` text COLLATE utf8mb4_unicode_ci
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -511,15 +544,15 @@ INSERT INTO `instrument_typen` (`id`, `name`, `register_id`, `beschreibung`) VAL
 --
 
 CREATE TABLE `instrument_wartungen` (
-  `id` int(11) NOT NULL,
-  `instrument_id` int(11) NOT NULL,
+  `id` int NOT NULL,
+  `instrument_id` int NOT NULL,
   `datum` date NOT NULL,
-  `art` enum('Wartung','Reparatur','Überholung','Reinigung') NOT NULL,
-  `beschreibung` text DEFAULT NULL,
+  `art` enum('Wartung','Reparatur','Überholung','Reinigung') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `beschreibung` text COLLATE utf8mb4_unicode_ci,
   `kosten` decimal(10,2) DEFAULT NULL,
-  `durchgefuehrt_von` varchar(100) DEFAULT NULL,
+  `durchgefuehrt_von` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `naechste_wartung` date DEFAULT NULL,
-  `erstellt_am` datetime DEFAULT current_timestamp()
+  `erstellt_am` datetime DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -540,18 +573,18 @@ INSERT INTO `instrument_wartungen` (`id`, `instrument_id`, `datum`, `art`, `besc
 --
 
 CREATE TABLE `kalender_termine` (
-  `id` int(11) NOT NULL,
-  `titel` varchar(200) NOT NULL,
-  `beschreibung` text DEFAULT NULL,
-  `typ` enum('Termin','Besprechung','Geburtstag','Feiertag','Reminder','Sonstiges') DEFAULT 'Termin',
+  `id` int NOT NULL,
+  `titel` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `beschreibung` text COLLATE utf8mb4_unicode_ci,
+  `typ` enum('Termin','Besprechung','Geburtstag','Feiertag','Reminder','Sonstiges') COLLATE utf8mb4_unicode_ci DEFAULT 'Termin',
   `start_datum` datetime NOT NULL,
   `ende_datum` datetime DEFAULT NULL,
-  `ganztaegig` tinyint(1) DEFAULT 0,
-  `ort` varchar(200) DEFAULT NULL,
-  `farbe` varchar(7) DEFAULT '#6c757d',
-  `erstellt_von` int(11) DEFAULT NULL,
-  `erstellt_am` datetime DEFAULT current_timestamp(),
-  `aktualisiert_am` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `ganztaegig` tinyint(1) DEFAULT '0',
+  `ort` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `farbe` varchar(7) COLLATE utf8mb4_unicode_ci DEFAULT '#6c757d',
+  `erstellt_von` int DEFAULT NULL,
+  `erstellt_am` datetime DEFAULT CURRENT_TIMESTAMP,
+  `aktualisiert_am` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -574,28 +607,28 @@ INSERT INTO `kalender_termine` (`id`, `titel`, `beschreibung`, `typ`, `start_dat
 --
 
 CREATE TABLE `mitglieder` (
-  `id` int(11) NOT NULL,
-  `mitgliedsnummer` varchar(20) DEFAULT NULL,
-  `vorname` varchar(100) NOT NULL,
-  `nachname` varchar(100) NOT NULL,
+  `id` int NOT NULL,
+  `mitgliedsnummer` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `vorname` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `nachname` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `geburtsdatum` date DEFAULT NULL,
-  `geschlecht` enum('m','w','d') DEFAULT 'd',
-  `strasse` varchar(150) DEFAULT NULL,
-  `plz` varchar(10) DEFAULT NULL,
-  `ort` varchar(100) DEFAULT NULL,
-  `land` varchar(50) DEFAULT 'Österreich',
-  `telefon` varchar(30) DEFAULT NULL,
-  `mobil` varchar(30) DEFAULT NULL,
-  `email` varchar(100) DEFAULT NULL,
-  `benutzer_id` int(11) DEFAULT NULL,
-  `register_id` int(11) DEFAULT NULL,
+  `geschlecht` enum('m','w','d') COLLATE utf8mb4_unicode_ci DEFAULT 'd',
+  `strasse` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `plz` varchar(10) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `ort` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `land` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT 'Österreich',
+  `telefon` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `mobil` varchar(30) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `email` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `benutzer_id` int DEFAULT NULL,
+  `register_id` int DEFAULT NULL,
   `eintritt_datum` date DEFAULT NULL,
   `austritt_datum` date DEFAULT NULL,
-  `status` enum('aktiv','passiv','ausgetreten','ehrenmitglied') DEFAULT 'aktiv',
-  `notizen` text DEFAULT NULL,
-  `foto` varchar(255) DEFAULT NULL,
-  `erstellt_am` datetime DEFAULT current_timestamp(),
-  `aktualisiert_am` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `status` enum('aktiv','passiv','ausgetreten','ehrenmitglied') COLLATE utf8mb4_unicode_ci DEFAULT 'aktiv',
+  `notizen` text COLLATE utf8mb4_unicode_ci,
+  `foto` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `erstellt_am` datetime DEFAULT CURRENT_TIMESTAMP,
+  `aktualisiert_am` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -624,10 +657,10 @@ INSERT INTO `mitglieder` (`id`, `mitgliedsnummer`, `vorname`, `nachname`, `gebur
 --
 
 CREATE TABLE `mitglied_instrumente` (
-  `id` int(11) NOT NULL,
-  `mitglied_id` int(11) NOT NULL,
-  `instrument_typ_id` int(11) NOT NULL,
-  `hauptinstrument` tinyint(1) DEFAULT 0,
+  `id` int NOT NULL,
+  `mitglied_id` int NOT NULL,
+  `instrument_typ_id` int NOT NULL,
+  `hauptinstrument` tinyint(1) DEFAULT '0',
   `seit_datum` date DEFAULT NULL,
   `bis_datum` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -661,25 +694,25 @@ INSERT INTO `mitglied_instrumente` (`id`, `mitglied_id`, `instrument_typ_id`, `h
 --
 
 CREATE TABLE `noten` (
-  `id` int(11) NOT NULL,
-  `titel` varchar(200) NOT NULL,
-  `untertitel` varchar(200) DEFAULT NULL,
-  `komponist` varchar(150) DEFAULT NULL,
-  `arrangeur` varchar(150) DEFAULT NULL,
-  `verlag` varchar(100) DEFAULT NULL,
-  `besetzung` varchar(100) DEFAULT NULL,
-  `schwierigkeitsgrad` enum('1','2','3','4','5','6') DEFAULT '3',
-  `dauer_minuten` int(11) DEFAULT NULL,
-  `genre` varchar(50) DEFAULT NULL,
-  `archiv_nummer` varchar(50) DEFAULT NULL,
-  `anzahl_stimmen` int(11) DEFAULT NULL,
-  `zustand` enum('sehr gut','gut','befriedigend','schlecht') DEFAULT 'gut',
-  `bemerkungen` text DEFAULT NULL,
-  `standort` varchar(100) DEFAULT NULL,
-  `pdf_datei` varchar(255) DEFAULT NULL,
-  `audio_datei` varchar(255) DEFAULT NULL,
-  `erstellt_am` datetime DEFAULT current_timestamp(),
-  `aktualisiert_am` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `id` int NOT NULL,
+  `titel` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `untertitel` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `komponist` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `arrangeur` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `verlag` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `besetzung` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `schwierigkeitsgrad` enum('1','2','3','4','5','6') COLLATE utf8mb4_unicode_ci DEFAULT '3',
+  `dauer_minuten` int DEFAULT NULL,
+  `genre` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `archiv_nummer` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `anzahl_stimmen` int DEFAULT NULL,
+  `zustand` enum('sehr gut','gut','befriedigend','schlecht') COLLATE utf8mb4_unicode_ci DEFAULT 'gut',
+  `bemerkungen` text COLLATE utf8mb4_unicode_ci,
+  `standort` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `pdf_datei` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `audio_datei` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `erstellt_am` datetime DEFAULT CURRENT_TIMESTAMP,
+  `aktualisiert_am` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -698,10 +731,7 @@ INSERT INTO `noten` (`id`, `titel`, `untertitel`, `komponist`, `arrangeur`, `ver
 (9, 'Böhmischer Traum', 'Polka', 'Norbert Gälle', NULL, 'Musikverlag Geiger', 'Blasorchester', '4', 4, 'Polka', 'C-001', 28, 'sehr gut', NULL, 'Schrank C', NULL, NULL, '2026-02-10 09:25:15', '2026-02-10 09:25:15'),
 (10, 'Gabriel\'s Oboe', 'aus \"The Mission\"', 'Ennio Morricone', 'Johan de Meij', 'Amstel Music', 'Blasorchester', '4', 5, 'Filmmusik', 'C-002', 30, 'gut', NULL, 'Schrank C', NULL, NULL, '2026-02-10 09:25:15', '2026-02-10 09:25:15'),
 (11, 'Music', NULL, 'John Miles', 'Thijs Oud', 'De Haske', 'Blasorchester', '5', 7, 'Pop', 'C-003', 32, 'gut', NULL, 'Schrank C', NULL, NULL, '2026-02-10 09:25:15', '2026-02-10 09:25:15'),
-(12, 'Florentiner Marsch', NULL, 'Julius Fučík', 'Fritz Neuböck', 'Rundel', 'Blasorchester', '4', 5, 'Marsch', 'C-004', 28, 'sehr gut', NULL, 'Schrank C', NULL, NULL, '2026-02-10 09:25:15', '2026-02-10 09:25:15'),
-(13, 'gfdsgfdsg', 'fdgfdsdf', NULL, NULL, NULL, NULL, '3', NULL, NULL, 'N00001', NULL, 'gut', NULL, NULL, NULL, NULL, '2026-02-10 11:26:22', '2026-02-10 11:26:22'),
-(14, 'gaaaaaaaaaa', 'fdsfdsf', NULL, NULL, NULL, NULL, '3', NULL, NULL, 'N00002', NULL, 'gut', NULL, 'FA', NULL, NULL, '2026-02-10 11:26:53', '2026-02-10 11:27:34'),
-(15, 'aaaaaaaaa', 'dgfdgf', NULL, NULL, NULL, NULL, '3', NULL, NULL, 'N00003', NULL, 'gut', NULL, 'X', NULL, NULL, '2026-02-10 11:27:53', '2026-02-10 11:27:53');
+(12, 'Florentiner Marsch', NULL, 'Julius Fučík', 'Fritz Neuböck', 'Rundel', 'Blasorchester', '4', 5, 'Marsch', 'C-004', 28, 'sehr gut', NULL, 'Schrank C', NULL, NULL, '2026-02-10 09:25:15', '2026-02-10 09:25:15');
 
 -- --------------------------------------------------------
 
@@ -710,16 +740,16 @@ INSERT INTO `noten` (`id`, `titel`, `untertitel`, `komponist`, `arrangeur`, `ver
 --
 
 CREATE TABLE `noten_dateien` (
-  `id` int(11) NOT NULL,
-  `noten_id` int(11) NOT NULL,
-  `dateiname` varchar(255) NOT NULL,
-  `original_name` varchar(255) NOT NULL,
-  `dateityp` varchar(50) DEFAULT 'application/pdf',
-  `dateigroesse` int(11) DEFAULT NULL,
-  `beschreibung` varchar(255) DEFAULT NULL,
-  `sortierung` int(11) DEFAULT 0,
-  `hochgeladen_von` int(11) DEFAULT NULL,
-  `erstellt_am` datetime DEFAULT current_timestamp()
+  `id` int NOT NULL,
+  `noten_id` int NOT NULL,
+  `dateiname` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `original_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `dateityp` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT 'application/pdf',
+  `dateigroesse` int DEFAULT NULL,
+  `beschreibung` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `sortierung` int DEFAULT '0',
+  `hochgeladen_von` int DEFAULT NULL,
+  `erstellt_am` datetime DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -727,8 +757,7 @@ CREATE TABLE `noten_dateien` (
 --
 
 INSERT INTO `noten_dateien` (`id`, `noten_id`, `dateiname`, `original_name`, `dateityp`, `dateigroesse`, `beschreibung`, `sortierung`, `hochgeladen_von`, `erstellt_am`) VALUES
-(1, 14, '14_698b07f6c2b28_1770719222.pdf', 'close.pdf', 'application/pdf', 33622, NULL, 1, 1, '2026-02-10 11:27:02'),
-(2, 15, '15_698b084c5c814_1770719308.pdf', 'Architektenmappe_neu.pdf', 'application/pdf', 232451, NULL, 1, 1, '2026-02-10 11:28:28');
+(4, 7, '7_698d92c7d6f30_1770885831.pdf', 'Sued Polka.pdf', 'application/pdf', 1430803, NULL, 1, 1, '2026-02-12 09:43:51');
 
 -- --------------------------------------------------------
 
@@ -737,10 +766,10 @@ INSERT INTO `noten_dateien` (`id`, `noten_id`, `dateiname`, `original_name`, `da
 --
 
 CREATE TABLE `register` (
-  `id` int(11) NOT NULL,
-  `name` varchar(50) NOT NULL,
-  `beschreibung` text DEFAULT NULL,
-  `sortierung` int(11) DEFAULT 0
+  `id` int NOT NULL,
+  `name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `beschreibung` text COLLATE utf8mb4_unicode_ci,
+  `sortierung` int DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -764,14 +793,14 @@ INSERT INTO `register` (`id`, `name`, `beschreibung`, `sortierung`) VALUES
 --
 
 CREATE TABLE `rollen` (
-  `id` int(11) NOT NULL,
-  `name` varchar(100) NOT NULL,
-  `beschreibung` text DEFAULT NULL,
-  `ist_admin` tinyint(1) DEFAULT 0,
-  `farbe` varchar(20) DEFAULT 'secondary',
-  `sortierung` int(11) DEFAULT 100,
-  `aktiv` tinyint(1) DEFAULT 1,
-  `erstellt_am` timestamp NULL DEFAULT current_timestamp()
+  `id` int NOT NULL,
+  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `beschreibung` text COLLATE utf8mb4_unicode_ci,
+  `ist_admin` tinyint(1) DEFAULT '0',
+  `farbe` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT 'secondary',
+  `sortierung` int DEFAULT '100',
+  `aktiv` tinyint(1) DEFAULT '1',
+  `erstellt_am` timestamp NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -788,7 +817,8 @@ INSERT INTO `rollen` (`id`, `name`, `beschreibung`, `ist_admin`, `farbe`, `sorti
 (7, 'instrumentenwart', 'Instrumentenwart', 0, 'dark', 7, 1, '2026-02-10 09:25:15'),
 (8, 'jugendbeauftragter', 'Jugendbeauftragter', 0, 'info', 8, 1, '2026-02-10 09:25:15'),
 (9, 'mitglied', 'Normales Mitglied', 0, 'secondary', 999, 1, '2026-02-10 09:25:15'),
-(10, 'notenwart', 'Notenwart - Verwaltung des Notenarchivs', 0, 'danger', 9, 1, '2026-02-10 10:30:25');
+(10, 'notenwart', 'Notenwart - Verwaltung des Notenarchivs', 0, 'danger', 9, 1, '2026-02-10 10:30:25'),
+(11, 'user', 'Neuer Benutzer (noch nicht freigeschaltet)', 0, 'secondary', 1000, 1, '2026-02-12 08:35:00');
 
 -- --------------------------------------------------------
 
@@ -797,12 +827,12 @@ INSERT INTO `rollen` (`id`, `name`, `beschreibung`, `ist_admin`, `farbe`, `sorti
 --
 
 CREATE TABLE `uniform_kategorien` (
-  `id` int(11) NOT NULL,
-  `name` varchar(100) NOT NULL,
-  `beschreibung` text DEFAULT NULL,
-  `sortierung` int(11) DEFAULT 100,
-  `aktiv` tinyint(1) DEFAULT 1,
-  `erstellt_am` timestamp NULL DEFAULT current_timestamp()
+  `id` int NOT NULL,
+  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `beschreibung` text COLLATE utf8mb4_unicode_ci,
+  `sortierung` int DEFAULT '100',
+  `aktiv` tinyint(1) DEFAULT '1',
+  `erstellt_am` timestamp NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -823,14 +853,14 @@ INSERT INTO `uniform_kategorien` (`id`, `name`, `beschreibung`, `sortierung`, `a
 --
 
 CREATE TABLE `uniform_kleidungsstuecke` (
-  `id` int(11) NOT NULL,
-  `kategorie_id` int(11) DEFAULT NULL,
-  `name` varchar(100) NOT NULL,
-  `beschreibung` text DEFAULT NULL,
-  `groessen_verfuegbar` varchar(255) DEFAULT NULL,
-  `sortierung` int(11) DEFAULT 100,
-  `aktiv` tinyint(1) DEFAULT 1,
-  `erstellt_am` timestamp NULL DEFAULT current_timestamp()
+  `id` int NOT NULL,
+  `kategorie_id` int DEFAULT NULL,
+  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `beschreibung` text COLLATE utf8mb4_unicode_ci,
+  `groessen_verfuegbar` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `sortierung` int DEFAULT '100',
+  `aktiv` tinyint(1) DEFAULT '1',
+  `erstellt_am` timestamp NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -860,15 +890,15 @@ INSERT INTO `uniform_kleidungsstuecke` (`id`, `kategorie_id`, `name`, `beschreib
 --
 
 CREATE TABLE `uniform_zuweisungen` (
-  `id` int(11) NOT NULL,
-  `mitglied_id` int(11) NOT NULL,
-  `kleidungsstueck_id` int(11) NOT NULL,
-  `groesse` varchar(20) DEFAULT NULL,
-  `zustand` enum('sehr gut','gut','befriedigend','schlecht') DEFAULT 'gut',
+  `id` int NOT NULL,
+  `mitglied_id` int NOT NULL,
+  `kleidungsstueck_id` int NOT NULL,
+  `groesse` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `zustand` enum('sehr gut','gut','befriedigend','schlecht') COLLATE utf8mb4_unicode_ci DEFAULT 'gut',
   `ausgabe_datum` date DEFAULT NULL,
-  `bemerkungen` text DEFAULT NULL,
-  `erstellt_am` timestamp NULL DEFAULT current_timestamp(),
-  `aktualisiert_am` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `bemerkungen` text COLLATE utf8mb4_unicode_ci,
+  `erstellt_am` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `aktualisiert_am` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -1066,139 +1096,139 @@ ALTER TABLE `uniform_zuweisungen`
 -- AUTO_INCREMENT für Tabelle `aktivitaetslog`
 --
 ALTER TABLE `aktivitaetslog`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT für Tabelle `anwesenheit`
 --
 ALTER TABLE `anwesenheit`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT für Tabelle `ausrueckungen`
 --
 ALTER TABLE `ausrueckungen`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT für Tabelle `ausrueckung_noten`
 --
 ALTER TABLE `ausrueckung_noten`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT für Tabelle `beitraege`
 --
 ALTER TABLE `beitraege`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
 -- AUTO_INCREMENT für Tabelle `benutzer`
 --
 ALTER TABLE `benutzer`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT für Tabelle `berechtigungen`
 --
 ALTER TABLE `berechtigungen`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=84;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=84;
 
 --
 -- AUTO_INCREMENT für Tabelle `dokumente`
 --
 ALTER TABLE `dokumente`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT für Tabelle `einstellungen`
 --
 ALTER TABLE `einstellungen`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=56;
 
 --
 -- AUTO_INCREMENT für Tabelle `finanzen`
 --
 ALTER TABLE `finanzen`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT für Tabelle `instrumente`
 --
 ALTER TABLE `instrumente`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT für Tabelle `instrument_typen`
 --
 ALTER TABLE `instrument_typen`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT für Tabelle `instrument_wartungen`
 --
 ALTER TABLE `instrument_wartungen`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT für Tabelle `kalender_termine`
 --
 ALTER TABLE `kalender_termine`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT für Tabelle `mitglieder`
 --
 ALTER TABLE `mitglieder`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT für Tabelle `mitglied_instrumente`
 --
 ALTER TABLE `mitglied_instrumente`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT für Tabelle `noten`
 --
 ALTER TABLE `noten`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT für Tabelle `noten_dateien`
 --
 ALTER TABLE `noten_dateien`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT für Tabelle `register`
 --
 ALTER TABLE `register`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT für Tabelle `rollen`
 --
 ALTER TABLE `rollen`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT für Tabelle `uniform_kategorien`
 --
 ALTER TABLE `uniform_kategorien`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT für Tabelle `uniform_kleidungsstuecke`
 --
 ALTER TABLE `uniform_kleidungsstuecke`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT für Tabelle `uniform_zuweisungen`
 --
 ALTER TABLE `uniform_zuweisungen`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- Constraints der exportierten Tabellen
