@@ -1,223 +1,102 @@
 # 🚀 SYNCOPA - Installationsanleitung
 
-Diese Anleitung führt dich Schritt für Schritt durch die Installation von SYNCOPA.
+Diese Anleitung führt Sie Schritt für Schritt durch die Installation von Syncopa auf verschiedenen Systemen.
 
 ---
 
 ## 📋 Inhaltsverzeichnis
 
-1. [Voraussetzungen](#1-voraussetzungen)
-2. [Download](#2-download)
-3. [Datenbank einrichten](#3-datenbank-einrichten)
-4. [Dateien konfigurieren](#4-dateien-konfigurieren)
-5. [Webserver konfigurieren](#5-webserver-konfigurieren)
-6. [Erster Login](#6-erster-login)
-7. [Nach der Installation](#7-nach-der-installation)
-8. [Optionale Konfiguration](#8-optionale-konfiguration)
-9. [Updates installieren](#9-updates-installieren)
-10. [Deinstallation](#10-deinstallation)
+1. [Voraussetzungen prüfen](#1-voraussetzungen-prüfen)
+2. [Installation unter Linux (Ubuntu/Debian)](#2-installation-unter-linux)
+3. [Installation unter Windows (XAMPP)](#3-installation-unter-windows-xampp)
+4. [Datenbank einrichten](#4-datenbank-einrichten)
+5. [Anwendung konfigurieren](#5-anwendung-konfigurieren)
+6. [Erster Start](#6-erster-start)
+7. [Produktionsumgebung](#7-produktionsumgebung)
 
 ---
 
-## 1. Voraussetzungen
+## 1. Voraussetzungen prüfen
 
-### Server-Anforderungen
+### Systemanforderungen
 
 | Komponente | Minimum | Empfohlen |
 |------------|---------|-----------|
 | PHP | 8.0 | 8.2+ |
 | MySQL | 8.0 | 8.0+ |
-| MariaDB | 10.4 | 10.6+ |
-| Apache | 2.4 | 2.4+ |
-| Nginx | 1.18 | 1.24+ |
+| RAM | 512 MB | 1 GB+ |
+| Speicher | 100 MB | 500 MB+ |
 
-### PHP-Erweiterungen
+### PHP-Erweiterungen prüfen
 
 ```bash
-# Prüfen welche Extensions installiert sind:
-php -m
+# Linux
+php -m | grep -E "pdo_mysql|mbstring|intl|json|fileinfo"
 
-# Benötigte Extensions:
-- pdo_mysql    # Datenbankzugriff
-- mbstring     # Zeichenkodierung
-- json         # JSON-Verarbeitung
-- fileinfo     # Dateiuploads
-- intl         # Datumsformatierung (optional)
-- gd           # Bildverarbeitung (optional)
+# Alle müssen angezeigt werden:
+# fileinfo
+# intl
+# json
+# mbstring
+# pdo_mysql
 ```
 
-#### Installation der Extensions (Ubuntu/Debian)
+Falls Erweiterungen fehlen:
 
 ```bash
-sudo apt update
-sudo apt install php8.2-mysql php8.2-mbstring php8.2-intl php8.2-gd
+# Ubuntu/Debian
+sudo apt install php-mysql php-mbstring php-intl php-json php-gd
+
+# Nach Installation Apache neu starten
 sudo systemctl restart apache2
 ```
 
-#### Installation der Extensions (CentOS/RHEL)
-
-```bash
-sudo dnf install php-mysqlnd php-mbstring php-intl php-gd
-sudo systemctl restart httpd
-```
-
 ---
 
-## 2. Download
+## 2. Installation unter Linux
 
-### Option A: Git Clone (empfohlen)
+### 2.1 LAMP-Stack installieren (falls nicht vorhanden)
 
 ```bash
+# Apache, MySQL, PHP installieren
+sudo apt update
+sudo apt install apache2 mysql-server php php-mysql php-mbstring php-intl php-gd php-curl
+
+# Services starten
+sudo systemctl start apache2
+sudo systemctl start mysql
+sudo systemctl enable apache2
+sudo systemctl enable mysql
+```
+
+### 2.2 Syncopa-Dateien installieren
+
+```bash
+# In das Webverzeichnis wechseln
 cd /var/www/html
-git clone https://github.com/yourname/syncopa.git
-cd syncopa
+
+# Syncopa-Ordner erstellen und entpacken
+sudo mkdir syncopa
+sudo unzip /pfad/zu/syncopa.zip -d syncopa/
+# oder
+sudo cp -r /pfad/zu/syncopa/* syncopa/
+
+# Berechtigungen setzen
+sudo chown -R www-data:www-data syncopa/
+sudo chmod -R 755 syncopa/
+sudo chmod -R 775 syncopa/uploads/
 ```
 
-### Option B: ZIP-Download
-
-1. ZIP-Datei von GitHub herunterladen
-2. Entpacken in das Webverzeichnis:
-
-```bash
-unzip syncopa.zip -d /var/www/html/
-cd /var/www/html/syncopa
-```
-
-### Option C: FTP-Upload
-
-1. Alle Dateien per FTP hochladen
-2. Zielverzeichnis: `/public_html/syncopa/` oder `/htdocs/syncopa/`
-
----
-
-## 3. Datenbank einrichten
-
-### 3.1 Datenbank erstellen
-
-#### Via MySQL-Konsole
-
-```bash
-mysql -u root -p
-```
-
-```sql
--- Datenbank erstellen
-CREATE DATABASE syncopa CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- Benutzer erstellen (Passwort anpassen!)
-CREATE USER 'syncopa_user'@'localhost' IDENTIFIED BY 'SICHERES_PASSWORT_HIER';
-
--- Berechtigungen vergeben
-GRANT ALL PRIVILEGES ON syncopa.* TO 'syncopa_user'@'localhost';
-FLUSH PRIVILEGES;
-
--- Prüfen
-SHOW DATABASES;
-EXIT;
-```
-
-#### Via phpMyAdmin
-
-1. phpMyAdmin öffnen
-2. Tab "Datenbanken"
-3. Name: `syncopa`, Kollation: `utf8mb4_unicode_ci`
-4. "Anlegen" klicken
-5. Tab "Benutzerkonten" → "Benutzerkonto hinzufügen"
-6. Benutzer und Passwort vergeben
-7. "Erstelle Datenbank mit gleichem Namen und gewähre alle Rechte"
-
-### 3.2 Schema importieren
-
-#### Via Konsole
-
-```bash
-cd /var/www/html/syncopa
-mysql -u syncopa_user -p syncopa < database.sql
-```
-
-#### Via phpMyAdmin
-
-1. Datenbank `syncopa` auswählen
-2. Tab "Importieren"
-3. Datei `database.sql` auswählen
-4. "Importieren" klicken
-
-### 3.3 Import überprüfen
-
-```sql
-USE syncopa;
-SHOW TABLES;
--- Sollte ca. 20 Tabellen anzeigen
-```
-
----
-
-## 4. Dateien konfigurieren
-
-### 4.1 Konfigurationsdatei erstellen
-
-```bash
-cp config.example.php config.php
-nano config.php
-```
-
-Falls `config.example.php` nicht existiert, `config.php` direkt bearbeiten.
-
-### 4.2 Datenbank-Einstellungen
-
-```php
-<?php
-// config.php
-
-// ===== DATENBANK =====
-define('DB_HOST', 'localhost');           // Datenbankserver
-define('DB_NAME', 'syncopa');             // Datenbankname
-define('DB_USER', 'syncopa_user');        // Datenbankbenutzer
-define('DB_PASS', 'DEIN_PASSWORT');       // Datenbankpasswort
-define('DB_CHARSET', 'utf8mb4');
-
-// ===== ANWENDUNG =====
-define('APP_NAME', 'Syncopa');            // Name deines Vereins
-define('APP_VERSION', '2.1.0');
-define('BASE_URL', 'https://example.com/syncopa');  // ANPASSEN!
-
-// ===== SICHERHEIT =====
-define('SESSION_LIFETIME', 3600);         // Session-Dauer: 1 Stunde
-define('SESSION_NAME', 'syncopa_session');
-
-// ===== UPLOADS =====
-define('UPLOAD_DIR', __DIR__ . '/uploads/');
-define('MAX_UPLOAD_SIZE', 10 * 1024 * 1024);  // 10 MB
-```
-
-### 4.3 Verzeichnisrechte setzen
-
-```bash
-# Upload-Verzeichnisse
-chmod -R 755 uploads/
-chmod -R 755 uploads/noten/
-chmod -R 755 uploads/fotos/
-chmod -R 755 uploads/dokumente/
-
-# Konfigurationsdatei schützen
-chmod 640 config.php
-```
-
----
-
-## 5. Webserver konfigurieren
-
-### Apache
-
-#### Virtual Host erstellen
+### 2.3 Apache Virtual Host (optional)
 
 ```bash
 sudo nano /etc/apache2/sites-available/syncopa.conf
 ```
 
+Inhalt:
 ```apache
 <VirtualHost *:80>
-    ServerName syncopa.example.com
+    ServerName syncopa.local
     DocumentRoot /var/www/html/syncopa
     
     <Directory /var/www/html/syncopa>
@@ -230,255 +109,322 @@ sudo nano /etc/apache2/sites-available/syncopa.conf
 </VirtualHost>
 ```
 
+Aktivieren:
 ```bash
 sudo a2ensite syncopa.conf
 sudo a2enmod rewrite
 sudo systemctl reload apache2
 ```
 
-#### .htaccess (falls im Unterverzeichnis)
+---
 
-```apache
-# Bereits in uploads/.htaccess vorhanden
-Options -Indexes
-<FilesMatch "\.php$">
-    Deny from all
-</FilesMatch>
+## 3. Installation unter Windows (XAMPP)
+
+### 3.1 XAMPP installieren
+
+1. Download von: https://www.apachefriends.org/
+2. Installation mit PHP 8.0+ wählen
+3. Apache und MySQL im XAMPP Control Panel starten
+
+### 3.2 Syncopa-Dateien kopieren
+
+1. Entpacken Sie `syncopa.zip`
+2. Kopieren Sie den Ordner nach `C:\xampp\htdocs\syncopa`
+3. Stellen Sie sicher, dass die Struktur so aussieht:
+   ```
+   C:\xampp\htdocs\syncopa\
+   ├── api\
+   ├── classes\
+   ├── includes\
+   ├── uploads\
+   ├── config.php
+   ├── database.sql
+   ├── index.php
+   └── ...
+   ```
+
+### 3.3 PHP-Konfiguration anpassen
+
+1. Öffnen Sie `C:\xampp\php\php.ini`
+2. Aktivieren Sie (Semikolon entfernen):
+   ```ini
+   extension=intl
+   extension=gd
+   extension=mbstring
+   extension=pdo_mysql
+   ```
+3. Apache neu starten
+
+---
+
+## 4. Datenbank einrichten
+
+### 4.1 MySQL-Zugang (phpMyAdmin)
+
+**Linux**: http://localhost/phpmyadmin  
+**Windows/XAMPP**: http://localhost/phpmyadmin
+
+### 4.2 Datenbank und Benutzer erstellen
+
+**Option A: Via phpMyAdmin**
+
+1. Tab "SQL" öffnen
+2. Folgenden Code ausführen:
+
+```sql
+-- Datenbank erstellen
+CREATE DATABASE IF NOT EXISTS syncopa_db 
+CHARACTER SET utf8mb4 
+COLLATE utf8mb4_unicode_ci;
+
+-- Benutzer erstellen (Passwort anpassen!)
+CREATE USER IF NOT EXISTS 'syncopa_user'@'localhost' 
+IDENTIFIED BY 'IhrSicheresPasswort123!';
+
+-- Rechte vergeben
+GRANT ALL PRIVILEGES ON syncopa_db.* TO 'syncopa_user'@'localhost';
+FLUSH PRIVILEGES;
 ```
 
-### Nginx
+**Option B: Via Kommandozeile**
 
-```nginx
-server {
-    listen 80;
-    server_name syncopa.example.com;
-    root /var/www/html/syncopa;
-    index index.php;
-    
-    location / {
-        try_files $uri $uri/ /index.php?$query_string;
-    }
-    
-    location ~ \.php$ {
-        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
-        fastcgi_index index.php;
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        include fastcgi_params;
-    }
-    
-    location /uploads {
-        location ~ \.php$ { deny all; }
-    }
-}
+```bash
+# Als root einloggen
+sudo mysql -u root -p
+
+# Befehle ausführen (siehe oben)
+```
+
+### 4.3 Datenbankschema importieren
+
+**Via phpMyAdmin:**
+1. Datenbank `syncopa_db` auswählen
+2. Tab "Importieren" klicken
+3. Datei `database.sql` hochladen
+4. "OK" klicken
+
+**Via Kommandozeile:**
+```bash
+mysql -u syncopa_user -p syncopa_db < /pfad/zu/database.sql
+```
+
+### 4.4 Import überprüfen
+
+```sql
+-- In phpMyAdmin oder MySQL:
+USE syncopa_db;
+SHOW TABLES;
+
+-- Sollte ca. 20 Tabellen anzeigen
 ```
 
 ---
 
-## 6. Erster Login
+## 5. Anwendung konfigurieren
 
-### 6.1 Browser öffnen
+### 5.1 config.php anpassen
 
-Navigiere zu deiner Installation:
-- `http://localhost/syncopa/`
-- `https://syncopa.example.com/`
+Öffnen Sie `config.php` und passen Sie folgende Werte an:
 
-### 6.2 Anmelden
+```php
+// ============================================================================
+// DATENBANK-KONFIGURATION
+// ============================================================================
+define('DB_HOST', 'localhost');
+define('DB_NAME', 'syncopa_db');
+define('DB_USER', 'syncopa_user');
+define('DB_PASS', 'IhrSicheresPasswort123!');  // ← Ihr Passwort!
+
+// ============================================================================
+// ANWENDUNGS-KONFIGURATION
+// ============================================================================
+define('BASE_URL', 'http://localhost/syncopa');  // ← Ihre URL!
+```
+
+### 5.2 Produktion: Fehler deaktivieren
+
+```php
+// Für Produktion ändern:
+error_reporting(0);
+ini_set('display_errors', 0);
+```
+
+### 5.3 Upload-Verzeichnisse prüfen
+
+Die Ordner sollten bereits existieren, aber prüfen Sie:
+
+```bash
+ls -la uploads/
+# Sollte zeigen: dokumente/ fotos/ noten/
+```
+
+Falls nicht:
+```bash
+mkdir -p uploads/{dokumente,fotos,noten}
+chmod 775 uploads/*
+```
+
+---
+
+## 6. Erster Start
+
+### 6.1 Anwendung aufrufen
+
+Öffnen Sie im Browser:
+- **Linux**: http://localhost/syncopa/
+- **Windows**: http://localhost/syncopa/
+- **Mit Virtual Host**: http://syncopa.local/
+
+### 6.2 Login
 
 | Feld | Wert |
 |------|------|
-| **Benutzername** | `admin` |
-| **Passwort** | `admin123` |
+| Benutzername | `admin` |
+| Passwort | `admin123` |
 
-### 6.3 Passwort sofort ändern!
+### 6.3 Nach dem ersten Login
 
-1. Nach Login: Oben rechts auf Benutzername klicken
-2. "Profil" oder "Einstellungen"
-3. Neues sicheres Passwort setzen
+1. **Passwort ändern!**
+   - Benutzer → admin → Bearbeiten → Neues Passwort
 
----
+2. **Vereinsdaten eintragen**
+   - Einstellungen → Vereinsname, Adresse, etc.
 
-## 7. Nach der Installation
+3. **Weitere Benutzer anlegen**
+   - Benutzer → Neuer Benutzer
 
-### 7.1 Grundeinstellungen
+### 6.4 Beispieldaten prüfen
 
-1. **System → Einstellungen**
-   - Vereinsname eintragen
-   - E-Mail-Einstellungen (optional)
-   - Mitgliedsbeiträge konfigurieren
+Die Datenbank enthält bereits:
+- 12 Beispiel-Mitglieder
+- 10 Instrumente
+- 12 Notentitel
+- 11 Ausrückungen für 2026
+- Finanztransaktionen
+- Mitgliedsbeiträge
 
-2. **System → Stammdaten**
-   - Register anlegen (Holz, Blech, Schlagwerk, etc.)
-   - Instrumententypen anlegen
-
-3. **System → Benutzer**
-   - Weitere Benutzer anlegen
-   - Rollen zuweisen
-
-### 7.2 Erste Daten erfassen
-
-1. **Mitglieder** anlegen
-2. **Instrumente** im Inventar erfassen
-3. **Noten** katalogisieren
-4. **Ausrückungen** planen
+Diese können Sie bearbeiten oder löschen und durch echte Daten ersetzen.
 
 ---
 
-## 8. Optionale Konfiguration
+## 7. Produktionsumgebung
 
-### 8.1 Google OAuth aktivieren
+### 7.1 Sicherheits-Checkliste
 
-1. Google Cloud Console öffnen: https://console.cloud.google.com
-2. Neues Projekt erstellen
-3. APIs & Dienste → Anmeldedaten
-4. OAuth 2.0-Client-ID erstellen
-5. Autorisierte Redirect-URI hinzufügen:
-   ```
-   https://example.com/syncopa/login_google_callback.php
-   ```
-6. In `config.php` eintragen:
+- [ ] Admin-Passwort geändert
+- [ ] HTTPS aktiviert
+- [ ] PHP-Fehleranzeige deaktiviert
+- [ ] Backup-Strategie eingerichtet
+- [ ] Upload-Verzeichnis geschützt
 
-```php
-define('GOOGLE_OAUTH_ENABLED', true);
-define('GOOGLE_CLIENT_ID', 'xxx.apps.googleusercontent.com');
-define('GOOGLE_CLIENT_SECRET', 'GOCSPX-xxx');
-define('GOOGLE_REDIRECT_URI', BASE_URL . '/login_google_callback.php');
-```
-
-### 8.2 SSL/HTTPS einrichten
-
-#### Let's Encrypt (empfohlen)
+### 7.2 HTTPS aktivieren (Let's Encrypt)
 
 ```bash
+# Certbot installieren
 sudo apt install certbot python3-certbot-apache
-sudo certbot --apache -d syncopa.example.com
+
+# Zertifikat erstellen
+sudo certbot --apache -d ihre-domain.at
+
+# Auto-Renewal testen
+sudo certbot renew --dry-run
 ```
 
-#### In config.php erzwingen
+### 7.3 .htaccess für Produktion
 
-```php
-define('FORCE_HTTPS', true);
+Erstellen Sie `/.htaccess`:
+
+```apache
+# HTTPS erzwingen
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Verzeichnisauflistung deaktivieren
+Options -Indexes
+
+# PHP-Dateien in uploads blockieren
+<Directory "uploads">
+    <FilesMatch "\.php$">
+        Deny from all
+    </FilesMatch>
+</Directory>
 ```
 
-### 8.3 Backup einrichten
+### 7.4 Automatisches Backup einrichten
 
 ```bash
-# Backup-Script erstellen
-nano /home/user/backup_syncopa.sh
+# Backup-Skript erstellen
+sudo nano /usr/local/bin/syncopa-backup.sh
 ```
 
+Inhalt:
 ```bash
 #!/bin/bash
-DATE=$(date +%Y%m%d)
-BACKUP_DIR="/home/user/backups"
+BACKUP_DIR="/var/backups/syncopa"
+DATE=$(date +%Y%m%d_%H%M%S)
 
-# Datenbank sichern
-mysqldump -u syncopa_user -pPASSWORT syncopa > $BACKUP_DIR/syncopa_$DATE.sql
+mkdir -p $BACKUP_DIR
 
-# Dateien sichern
-tar -czf $BACKUP_DIR/syncopa_files_$DATE.tar.gz /var/www/html/syncopa/uploads/
+# Datenbank
+mysqldump -u syncopa_user -p'IhrPasswort' syncopa_db > $BACKUP_DIR/db_$DATE.sql
+
+# Dateien
+tar -czf $BACKUP_DIR/files_$DATE.tar.gz /var/www/html/syncopa/uploads/
 
 # Alte Backups löschen (älter als 30 Tage)
-find $BACKUP_DIR -name "syncopa_*" -mtime +30 -delete
+find $BACKUP_DIR -mtime +30 -delete
 ```
 
 ```bash
-chmod +x /home/user/backup_syncopa.sh
-
-# Cronjob einrichten (täglich um 3 Uhr)
-crontab -e
-0 3 * * * /home/user/backup_syncopa.sh
+# Ausführbar machen und Cronjob einrichten
+sudo chmod +x /usr/local/bin/syncopa-backup.sh
+sudo crontab -e
+# Hinzufügen: 0 2 * * * /usr/local/bin/syncopa-backup.sh
 ```
 
 ---
 
-## 9. Updates installieren
-
-### 9.1 Backup erstellen
-
-```bash
-mysqldump -u syncopa_user -p syncopa > backup_vor_update.sql
-cp -r /var/www/html/syncopa /var/www/html/syncopa_backup
-```
-
-### 9.2 Update herunterladen
-
-```bash
-cd /var/www/html/syncopa
-git pull origin main
-```
-
-Oder: Neue Dateien per FTP überschreiben.
-
-### 9.3 Datenbank-Migration (falls nötig)
-
-Prüfe die Release Notes auf SQL-Änderungen:
-
-```bash
-mysql -u syncopa_user -p syncopa < migrations/v2.1.0.sql
-```
-
-### 9.4 Cache leeren
-
-```bash
-# Browser-Cache leeren (Strg+Shift+R)
-# PHP OPcache leeren (falls aktiviert)
-sudo systemctl reload apache2
-```
-
----
-
-## 10. Deinstallation
-
-### Vollständige Entfernung
-
-```bash
-# 1. Datenbank löschen
-mysql -u root -p -e "DROP DATABASE syncopa;"
-mysql -u root -p -e "DROP USER 'syncopa_user'@'localhost';"
-
-# 2. Dateien löschen
-rm -rf /var/www/html/syncopa
-
-# 3. Apache-Konfiguration entfernen
-sudo a2dissite syncopa.conf
-sudo rm /etc/apache2/sites-available/syncopa.conf
-sudo systemctl reload apache2
-```
-
----
-
-## ❓ Hilfe & Support
+## ❓ Hilfe bei Problemen
 
 ### Häufige Fehler
 
-| Fehler | Lösung |
-|--------|--------|
-| `Connection refused` | MySQL-Dienst starten: `sudo systemctl start mysql` |
-| `Access denied` | Datenbankpasswort in config.php prüfen |
-| `404 Not Found` | Apache mod_rewrite aktivieren |
-| `500 Internal Server Error` | PHP-Fehlerlog prüfen: `/var/log/apache2/error.log` |
-| `Permission denied` | Verzeichnisrechte: `chmod -R 755 uploads/` |
-
-### Logs prüfen
-
+**"Connection refused" bei Datenbankverbindung**
 ```bash
-# Apache
-tail -f /var/log/apache2/error.log
-
-# PHP
-tail -f /var/log/php8.2-fpm.log
-
-# MySQL
-tail -f /var/log/mysql/error.log
+# MySQL läuft?
+sudo systemctl status mysql
+# Neu starten
+sudo systemctl restart mysql
 ```
 
-### Community
+**"intl extension not found"**
+```bash
+sudo apt install php-intl
+sudo systemctl restart apache2
+```
 
-- GitHub Issues: [github.com/yourname/syncopa/issues](https://github.com/yourname/syncopa/issues)
-- Diskussionen: [github.com/yourname/syncopa/discussions](https://github.com/yourname/syncopa/discussions)
+**Seite lädt nicht (500 Error)**
+```bash
+# Apache Error Log prüfen
+sudo tail -50 /var/log/apache2/error.log
+```
+
+**Hochladen von Dateien fehlgeschlagen**
+```bash
+# Rechte prüfen
+ls -la uploads/
+# Falls nötig:
+sudo chown -R www-data:www-data uploads/
+sudo chmod -R 775 uploads/
+```
 
 ---
 
-<p align="center">
-  <strong>Viel Erfolg mit SYNCOPA!</strong> 🎵
-</p>
+## 📞 Support
+
+Bei weiteren Fragen steht die Dokumentation in `README.md` zur Verfügung.
+
+---
+
+**Version**: 2.0.0  
+**Stand**: Dezember 2025
