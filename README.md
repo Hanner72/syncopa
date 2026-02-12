@@ -6,6 +6,14 @@ Eine umfassende Webapplikation zur Verwaltung von Musikvereinen, entwickelt mit 
 
 ---
 
+## DEMO
+
+https://syncopa.dannerbam.eu/
+
+Admin Login
+Benutzer: admin
+Passwort: admin123
+
 ## 📋 Inhaltsverzeichnis
 
 1. [Funktionsübersicht](#funktionsübersicht)
