@@ -26,6 +26,13 @@ $mitglieder = $mitglied->getAll($filter);
 // Register für Filter laden
 $register = $db->fetchAll("SELECT * FROM register ORDER BY sortierung");
 
+// Statistiken für Charts
+$stats = $mitglied->getStatistik();
+$statusLabels = array_column($stats['status'] ?? [], 'status');
+$statusData = array_column($stats['status'] ?? [], 'anzahl');
+$registerLabels = array_column($stats['register'] ?? [], 'name');
+$registerData = array_column($stats['register'] ?? [], 'anzahl');
+
 include 'includes/header.php';
 ?>
 
@@ -110,7 +117,7 @@ include 'includes/header.php';
                         </td>
                         <td>
                             <?php 
-                            echo htmlspecialchars($m['vorname'] . ' ' . $m['nachname']); 
+                            echo htmlspecialchars($m['nachname'] . ' ' . $m['vorname']); 
                             if ($m['geburtsdatum']) {
                                 $alter = date_diff(date_create($m['geburtsdatum']), date_create('today'))->y;
                                 echo "<br><small class='text-muted'>{$alter} Jahre</small>";
@@ -121,29 +128,30 @@ include 'includes/header.php';
                             <?php if ($m['register_name']): ?>
                                 <span class="badge bg-info"><?php echo htmlspecialchars($m['register_name']); ?></span>
                             <?php else: ?>
-                                <span class="text-muted">-</span>
+                                <span class="text-muted">–</span>
                             <?php endif; ?>
                         </td>
                         <td>
-                            <?php if (!empty($m['instrumente'])): ?>
-                                <small><?php echo htmlspecialchars($m['instrumente']); ?></small>
-                            <?php else: ?>
-                                <small class="text-muted">-</small>
-                            <?php endif; ?>
-                            <?php if (isset($m['ausgeliehene_instrumente']) && $m['ausgeliehene_instrumente'] > 0): ?>
-                                <br><span class="badge bg-warning text-dark">
-                                    <i class="bi bi-box"></i> <?php echo $m['ausgeliehene_instrumente']; ?> ausgeliehen
+                            <?php if (!empty($m['instrumente_anzahl']) && $m['instrumente_anzahl'] > 0): ?>
+                                <span class="badge bg-secondary" 
+                                      data-bs-toggle="tooltip" 
+                                      data-bs-placement="top" 
+                                      data-bs-html="true"
+                                      title="<?php echo htmlspecialchars($m['instrumente_liste']); ?>">
+                                    <i class="bi bi-music-note"></i> <?php echo $m['instrumente_anzahl']; ?>
                                 </span>
+                            <?php else: ?>
+                                <span class="text-muted">–</span>
                             <?php endif; ?>
                         </td>
                         <td>
                             <?php if ($m['email']): ?>
-                                <a href="mailto:<?php echo htmlspecialchars($m['email']); ?>">
+                                <a href="mailto:<?php echo htmlspecialchars($m['email']); ?>" class="text-muted">
                                     <i class="bi bi-envelope"></i>
                                 </a>
                             <?php endif; ?>
                             <?php if ($m['mobil']): ?>
-                                <a href="tel:<?php echo htmlspecialchars($m['mobil']); ?>">
+                                <a href="tel:<?php echo htmlspecialchars($m['mobil']); ?>" class="text-muted ms-1">
                                     <i class="bi bi-phone"></i>
                                 </a>
                             <?php endif; ?>
@@ -158,30 +166,28 @@ include 'includes/header.php';
                             ];
                             $color = $statusColors[$m['status']] ?? 'secondary';
                             ?>
-                            <span class="badge bg-<?php echo $color; ?> badge-status">
+                            <span class="badge bg-<?php echo $color; ?>">
                                 <?php echo ucfirst($m['status']); ?>
                             </span>
                         </td>
                         <td class="text-end no-print">
-                            <div class="table-actions">
-                                <a href="mitglied_detail.php?id=<?php echo $m['id']; ?>" 
-                                   class="btn btn-sm btn-info" title="Details anzeigen">
-                                    <i class="bi bi-eye"></i>
-                                </a>
-                                <?php if (Session::checkPermission('mitglieder', 'schreiben')): ?>
-                                <a href="mitglied_bearbeiten.php?id=<?php echo $m['id']; ?>" 
-                                   class="btn btn-sm btn-primary" title="Bearbeiten">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                                <?php endif; ?>
-                                <?php if (Session::checkPermission('mitglieder', 'loeschen')): ?>
-                                <a href="mitglied_loeschen.php?id=<?php echo $m['id']; ?>" 
-                                   class="btn btn-sm btn-danger" title="Löschen"
-                                   onclick="return confirmDelete('Mitglied wirklich löschen?')">
-                                    <i class="bi bi-trash"></i>
-                                </a>
-                                <?php endif; ?>
-                            </div>
+                            <a href="mitglied_detail.php?id=<?php echo $m['id']; ?>" 
+                               class="btn btn-sm btn-info" title="Details">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <?php if (Session::checkPermission('mitglieder', 'schreiben')): ?>
+                            <a href="mitglied_bearbeiten.php?id=<?php echo $m['id']; ?>" 
+                               class="btn btn-sm btn-primary" title="Bearbeiten">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <?php endif; ?>
+                            <?php if (Session::checkPermission('mitglieder', 'loeschen')): ?>
+                            <a href="mitglied_loeschen.php?id=<?php echo $m['id']; ?>" 
+                               class="btn btn-sm btn-danger" title="Löschen"
+                               onclick="return confirmDelete('Mitglied wirklich löschen?')">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                            <?php endif; ?>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -193,80 +199,113 @@ include 'includes/header.php';
 
 <!-- Statistik -->
 <div class="row mt-4">
-    <div class="col-md-12">
+    <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Statistik</h5>
+                <i class="bi bi-bar-chart me-2"></i>Nach Status
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>Mitglieder nach Status</h6>
-                        <canvas id="statusChart" height="150"></canvas>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>Mitglieder nach Register</h6>
-                        <canvas id="registerChart" height="150"></canvas>
-                    </div>
+                <div class="chart-container">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-pie-chart me-2"></i>Nach Register
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="registerChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<?php include 'includes/footer.php'; ?>
+
 <script>
 $(document).ready(function() {
     $('#mitgliederTable').DataTable({
-        order: [[1, 'asc']], // Nach Name sortieren
+        order: [[1, 'asc']],
         columnDefs: [
-            { targets: -1, orderable: false } // Aktionen-Spalte nicht sortierbar
+            { targets: -1, orderable: false }
         ]
+    });
+    
+    // Bootstrap Tooltips initialisieren
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 });
 
-// Statistik-Charts
-<?php
-$stats = $mitglied->getStatistik();
-?>
-
-// Status Chart
-new Chart(document.getElementById('statusChart'), {
-    type: 'bar',
-    data: {
-        labels: <?php echo json_encode(array_column($stats['status'], 'status')); ?>,
-        datasets: [{
-            label: 'Anzahl Mitglieder',
-            data: <?php echo json_encode(array_column($stats['status'], 'anzahl')); ?>,
-            backgroundColor: ['#198754', '#ffc107', '#6c757d', '#0d6efd']
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: { display: false }
-        }
+// Charts initialisieren
+document.addEventListener('DOMContentLoaded', function() {
+    const statusLabels = <?php echo json_encode($statusLabels); ?>;
+    const statusData = <?php echo json_encode($statusData); ?>;
+    const registerLabels = <?php echo json_encode($registerLabels); ?>;
+    const registerData = <?php echo json_encode($registerData); ?>;
+    
+    // Status Chart
+    const statusCtx = document.getElementById('statusChart');
+    if (statusCtx && statusLabels.length > 0) {
+        new Chart(statusCtx, {
+            type: 'bar',
+            data: {
+                labels: statusLabels.map(s => s.charAt(0).toUpperCase() + s.slice(1)),
+                datasets: [{
+                    label: 'Mitglieder',
+                    data: statusData,
+                    backgroundColor: ['#5b8a72', '#c9a227', '#8fa1b3', '#4f6d7a'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                }
+            }
+        });
+    } else if (statusCtx) {
+        statusCtx.parentElement.innerHTML = '<p class="text-muted text-center mb-0" style="padding: 40px 0;">Keine Daten</p>';
     }
-});
-
-// Register Chart
-new Chart(document.getElementById('registerChart'), {
-    type: 'pie',
-    data: {
-        labels: <?php echo json_encode(array_column($stats['register'], 'name')); ?>,
-        datasets: [{
-            data: <?php echo json_encode(array_column($stats['register'], 'anzahl')); ?>,
-            backgroundColor: [
-                '#0d6efd', '#6c757d', '#198754', '#ffc107',
-                '#dc3545', '#0dcaf0', '#6f42c1', '#fd7e14'
-            ]
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false
+    
+    // Register Chart
+    const registerCtx = document.getElementById('registerChart');
+    if (registerCtx && registerLabels.length > 0 && registerData.some(v => v > 0)) {
+        new Chart(registerCtx, {
+            type: 'pie',
+            data: {
+                labels: registerLabels,
+                datasets: [{
+                    data: registerData,
+                    backgroundColor: [
+                        '#4f6d7a', '#5b8a72', '#c9a227', '#6b8cae',
+                        '#b54a4a', '#7a8f6d', '#8a6d5b', '#5a7a8f'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { boxWidth: 12, padding: 8, font: { size: 11 } }
+                    }
+                }
+            }
+        });
+    } else if (registerCtx) {
+        registerCtx.parentElement.innerHTML = '<p class="text-muted text-center mb-0" style="padding: 40px 0;">Keine Daten</p>';
     }
 });
 </script>
-
-<?php include 'includes/footer.php'; ?>

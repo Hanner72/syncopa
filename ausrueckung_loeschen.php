@@ -3,7 +3,13 @@ require_once 'config.php';
 require_once 'includes.php';
 
 Session::requireLogin();
-Session::requirePermission('ausrueckungen', 'loeschen');
+
+// Admin oder Lösch-Berechtigung erforderlich
+if (Session::getRole() !== 'admin' && !Session::checkPermission('ausrueckungen', 'loeschen')) {
+    Session::setFlashMessage('danger', 'Keine Berechtigung zum Löschen');
+    header('Location: ausrueckungen.php');
+    exit;
+}
 
 $id = $_GET['id'] ?? null;
 if (!$id) {
@@ -20,5 +26,6 @@ try {
     Session::setFlashMessage('danger', 'Fehler beim Löschen: ' . $e->getMessage());
 }
 
-header('Location: ausrueckungen.php');
+$redirect = $_GET['redirect'] ?? 'ausrueckungen.php';
+header('Location: ' . $redirect);
 exit;

@@ -10,3 +10,4 @@ require_once __DIR__ . '/classes/Mitglied.php';
 require_once __DIR__ . '/classes/Ausrueckung.php';
 require_once __DIR__ . '/classes/Noten.php';
 require_once __DIR__ . '/classes/Instrument.php';
+require_once __DIR__ . '/classes/Uniform.php';

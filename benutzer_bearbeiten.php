@@ -44,13 +44,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $neues_passwort = $_POST['passwort'] ?? '';
     
     try {
+        // Rollenname für das ENUM-Feld holen
+        $rolleData = $db->fetchOne("SELECT name FROM rollen WHERE id = ?", [$rolle_id]);
+        $rolleName = $rolleData['name'] ?? 'mitglied';
+        
         if ($isEdit) {
-            $sql = "UPDATE benutzer SET benutzername = ?, email = ?, rolle_id = ?, mitglied_id = ?, aktiv = ? WHERE id = ?";
-            $params = [$benutzername, $email, $rolle_id, $mitglied_id, $aktiv, $id];
+            $sql = "UPDATE benutzer SET benutzername = ?, email = ?, rolle = ?, rolle_id = ?, mitglied_id = ?, aktiv = ? WHERE id = ?";
+            $params = [$benutzername, $email, $rolleName, $rolle_id, $mitglied_id, $aktiv, $id];
             
             if (!empty($neues_passwort)) {
-                $sql = "UPDATE benutzer SET benutzername = ?, email = ?, rolle_id = ?, mitglied_id = ?, aktiv = ?, passwort_hash = ? WHERE id = ?";
-                $params = [$benutzername, $email, $rolle_id, $mitglied_id, $aktiv, password_hash($neues_passwort, PASSWORD_DEFAULT), $id];
+                $sql = "UPDATE benutzer SET benutzername = ?, email = ?, rolle = ?, rolle_id = ?, mitglied_id = ?, aktiv = ?, passwort_hash = ? WHERE id = ?";
+                $params = [$benutzername, $email, $rolleName, $rolle_id, $mitglied_id, $aktiv, password_hash($neues_passwort, PASSWORD_DEFAULT), $id];
             }
             
             $db->execute($sql, $params);
@@ -60,8 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('Passwort ist erforderlich');
             }
             
-            $sql = "INSERT INTO benutzer (benutzername, email, passwort_hash, rolle_id, mitglied_id, aktiv) VALUES (?, ?, ?, ?, ?, ?)";
-            $db->execute($sql, [$benutzername, $email, password_hash($neues_passwort, PASSWORD_DEFAULT), $rolle_id, $mitglied_id, $aktiv]);
+            $sql = "INSERT INTO benutzer (benutzername, email, passwort_hash, rolle, rolle_id, mitglied_id, aktiv) VALUES (?, ?, ?, ?, ?, ?, ?)";
+            $db->execute($sql, [$benutzername, $email, password_hash($neues_passwort, PASSWORD_DEFAULT), $rolleName, $rolle_id, $mitglied_id, $aktiv]);
             Session::setFlashMessage('success', 'Benutzer erstellt');
         }
         header('Location: benutzer.php');

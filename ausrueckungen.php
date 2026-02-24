@@ -98,7 +98,7 @@ include 'includes/header.php';
 <!-- Liste -->
 <div class="card">
     <div class="card-body">
-        <div class="table-responsive">
+        <div class="table-responsive p-2">
             <table class="table table-hover" id="ausrueckungenTable">
                 <thead>
                     <tr>
@@ -202,6 +202,8 @@ include 'includes/header.php';
     </div>
 </div>
 
+<?php include 'includes/footer.php'; ?>
+
 <script>
 $(document).ready(function() {
     $('#ausrueckungenTable').DataTable({
@@ -209,5 +211,3 @@ $(document).ready(function() {
     });
 });
 </script>
-
-<?php include 'includes/footer.php'; ?>

@@ -43,7 +43,8 @@ $instrumente = $mitgliedObj->getInstrumente($id);
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_instrument'])) {
     if (Session::checkPermission('mitglieder', 'schreiben')) {
         try {
-            $mitgliedObj->addInstrument($id, $_POST['instrument_typ_id'], isset($_POST['hauptinstrument']) ? 1 : 0);
+            $seitDatum = !empty($_POST['seit_datum']) ? $_POST['seit_datum'] : null;
+            $mitgliedObj->addInstrument($id, $_POST['instrument_typ_id'], isset($_POST['hauptinstrument']) ? 1 : 0, $seitDatum);
             Session::setFlashMessage('success', 'Instrument hinzugefügt');
             header('Location: mitglied_detail.php?id=' . $id);
             exit;
@@ -351,6 +352,13 @@ include 'includes/header.php';
                             <?php endforeach; ?>
                             <?php if ($currentRegister !== null) echo '</optgroup>'; ?>
                         </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="seit_datum" class="form-label">Spielt seit</label>
+                        <input type="date" class="form-control" id="seit_datum" name="seit_datum" 
+                               value="<?php echo date('Y-m-d'); ?>">
+                        <small class="text-muted">Wird auf heute gesetzt, falls leer</small>
                     </div>
                     
                     <div class="form-check">

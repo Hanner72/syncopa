@@ -3,7 +3,7 @@
  * SYNCOPA - Musikvereinsverwaltung
  * Konfigurationsdatei
  * 
- * @version 2.0.5
+ * @version 2.2.1
  */
 
 // ============================================================================
@@ -17,17 +17,17 @@ ini_set('display_errors', 1);
 // DATENBANK-KONFIGURATION
 // ============================================================================
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'syncopa_db');
-define('DB_USER', 'syncopa_user');
-define('DB_PASS', 'HIER_PASSWORT_EINTRAGEN');
+define('DB_NAME', 'XXX');
+define('DB_USER', 'XXX');
+define('DB_PASS', 'XXX');
 define('DB_CHARSET', 'utf8mb4');
 
 // ============================================================================
 // ANWENDUNGS-KONFIGURATION
 // ============================================================================
 define('APP_NAME', 'Syncopa');
-define('APP_VERSION', '2.0.0');
-define('BASE_URL', 'http://localhost/syncopa'); // Anpassen an Ihr Setup
+define('APP_VERSION', '2.1.0');
+define('BASE_URL', 'https://MEINE-DOMAIN'); // Anpassen an Ihr Setup
 define('BASE_PATH', __DIR__);
 
 // ============================================================================
@@ -64,16 +64,14 @@ define('GOOGLE_CALENDAR_ID', '');
 // Erstelle Client-ID unter: https://console.cloud.google.com/apis/credentials
 // Redirect URI: https://deine-domain.at/syncopa/login_google_callback.php
 define('GOOGLE_OAUTH_ENABLED', true);
-define('GOOGLE_CLIENT_ID', 'XXXXXXXXXXXXXXXXXXX');
-define('GOOGLE_CLIENT_SECRET', 'XXXXXXXXXXXXXXXXX');
+define('GOOGLE_CLIENT_ID', 'XXX');
+define('GOOGLE_CLIENT_SECRET', 'XXX');
 define('GOOGLE_REDIRECT_URI', BASE_URL . '/login_google_callback.php');
 
 // ============================================================================
-// GOOGLE CALENDAR API (optional)
+// https://ocr.space/ocrapi → „Get API Key FREE" 
 // ============================================================================
-define('GOOGLE_CALENDAR_ENABLED', false);
-define('GOOGLE_CALENDAR_API_KEY', '');
-define('GOOGLE_CALENDAR_ID', '');
+define('OCR_SPACE_API_KEY', 'K88394394XXX....');
 
 // ============================================================================
 // E-MAIL-KONFIGURATION (optional)

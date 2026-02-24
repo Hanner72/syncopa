@@ -178,8 +178,14 @@ include 'includes/header.php';
                             </td>
                             <td class="text-end">
                                 <?php if (Session::checkPermission('finanzen', 'schreiben')): ?>
-                                <a href="transaktion_bearbeiten.php?id=<?php echo $t['id']; ?>" class="btn btn-sm btn-primary">
+                                <a href="transaktion_bearbeiten.php?id=<?php echo $t['id']; ?>" class="btn btn-sm btn-primary" title="Bearbeiten">
                                     <i class="bi bi-pencil"></i>
+                                </a>
+                                <?php endif; ?>
+                                <?php if (Session::checkPermission('finanzen', 'loeschen')): ?>
+                                <a href="transaktion_loeschen.php?id=<?php echo $t['id']; ?>" class="btn btn-sm btn-danger" title="Löschen"
+                                   onclick="return confirm('Transaktion wirklich löschen?')">
+                                    <i class="bi bi-trash"></i>
                                 </a>
                                 <?php endif; ?>
                             </td>
@@ -245,11 +251,11 @@ include 'includes/header.php';
     </div>
 </div>
 
+<?php include 'includes/footer.php'; ?>
+
 <script>
 $(document).ready(function() {
     $('#transaktionenTable').DataTable({order: [[0, 'desc']]});
     $('#beitraegeTable').DataTable({order: [[3, 'asc'], [0, 'asc']]});
 });
 </script>
-
-<?php include 'includes/footer.php'; ?>

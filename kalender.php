@@ -9,6 +9,13 @@ Session::requirePermission('ausrueckungen', 'lesen');
 include 'includes/header.php';
 ?>
 
+<style>
+    a.fc-event, a.fc-event:hover {
+        text-decoration: none;
+        cursor: pointer !important;
+    }
+</style>
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h2">
         <i class="bi bi-calendar-event"></i> Kalender
@@ -39,7 +46,19 @@ include 'includes/header.php';
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Schließen</button>
-                <a href="#" id="eventDetailsLink" class="btn btn-primary">Details anzeigen</a>
+                <?php if (Session::checkPermission('ausrueckungen', 'schreiben') || Session::getRole() === 'admin'): ?>
+                <a href="#" id="eventEditLink" class="btn btn-primary" style="display:none;">
+                    <i class="bi bi-pencil"></i> Bearbeiten
+                </a>
+                <?php endif; ?>
+                <?php if (Session::checkPermission('ausrueckungen', 'loeschen') || Session::getRole() === 'admin'): ?>
+                <a href="#" id="eventDeleteLink" class="btn btn-danger" style="display:none;" onclick="return confirm('Termin wirklich löschen?')">
+                    <i class="bi bi-trash"></i> Löschen
+                </a>
+                <?php endif; ?>
+                <a href="#" id="eventDetailsLink" class="btn btn-info">
+                    <i class="bi bi-info-circle"></i> Details
+                </a>
             </div>
         </div>
     </div>
@@ -257,17 +276,42 @@ document.addEventListener('DOMContentLoaded', function() {
             
             document.getElementById('eventModalBody').innerHTML = body;
             
-            // Details-Link
+            // Details-Link, Edit-Link und Delete-Link setzen
             const detailsLink = document.getElementById('eventDetailsLink');
+            const editLink = document.getElementById('eventEditLink');
+            const deleteLink = document.getElementById('eventDeleteLink');
+            
             if (isAusrueckung) {
                 // ID ohne Prefix
                 const realId = event.id.replace('ausrueckung_', '');
                 detailsLink.href = 'ausrueckung_detail.php?id=' + realId;
                 detailsLink.style.display = '';
-                detailsLink.innerHTML = '<i class="bi bi-info-circle"></i> Zu Ausrückung';
+                detailsLink.innerHTML = '<i class="bi bi-info-circle"></i> Details';
+                
+                if (editLink) {
+                    editLink.href = 'ausrueckung_bearbeiten.php?id=' + realId;
+                    editLink.style.display = '';
+                }
+                if (deleteLink) {
+                    deleteLink.href = 'ausrueckung_loeschen.php?id=' + realId + '&redirect=kalender.php';
+                    deleteLink.style.display = '';
+                }
             } else if (isTermin) {
-                // Kein Details-Link für Termine
+                const realId = event.id.replace('termin_', '');
                 detailsLink.style.display = 'none';
+                
+                if (editLink) {
+                    editLink.href = 'kalender_termin_bearbeiten.php?id=' + realId;
+                    editLink.style.display = '';
+                }
+                if (deleteLink) {
+                    deleteLink.href = 'kalender_loeschen.php?id=' + realId;
+                    deleteLink.style.display = '';
+                }
+            } else {
+                detailsLink.style.display = 'none';
+                if (editLink) editLink.style.display = 'none';
+                if (deleteLink) deleteLink.style.display = 'none';
             }
             
             const modal = new bootstrap.Modal(document.getElementById('eventModal'));

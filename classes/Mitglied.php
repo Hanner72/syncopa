@@ -32,7 +32,13 @@ class Mitglied {
         
         $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
         
-        $sql = "SELECT m.*, r.name as register_name 
+        // Instrumente als Subquery mitzählen und als Liste holen
+        $sql = "SELECT m.*, r.name as register_name,
+                (SELECT COUNT(*) FROM mitglied_instrumente mi WHERE mi.mitglied_id = m.id) as instrumente_anzahl,
+                (SELECT GROUP_CONCAT(it.name ORDER BY mi2.hauptinstrument DESC SEPARATOR ', ')
+                 FROM mitglied_instrumente mi2 
+                 JOIN instrument_typen it ON mi2.instrument_typ_id = it.id 
+                 WHERE mi2.mitglied_id = m.id) as instrumente_liste
                 FROM mitglieder m 
                 LEFT JOIN register r ON m.register_id = r.id 
                 {$whereClause}
@@ -128,10 +134,14 @@ class Mitglied {
         return $this->db->fetchAll($sql, [$mitgliedId]);
     }
     
-    public function addInstrument($mitgliedId, $instrumentTypId, $hauptinstrument = false) {
+    public function addInstrument($mitgliedId, $instrumentTypId, $hauptinstrument = false, $seitDatum = null) {
+        // Wenn kein Datum angegeben, heutiges Datum verwenden
+        if (empty($seitDatum)) {
+            $seitDatum = date('Y-m-d');
+        }
         $sql = "INSERT INTO mitglied_instrumente (mitglied_id, instrument_typ_id, hauptinstrument, seit_datum)
                 VALUES (?, ?, ?, ?)";
-        return $this->db->execute($sql, [$mitgliedId, $instrumentTypId, $hauptinstrument, date('Y-m-d')]);
+        return $this->db->execute($sql, [$mitgliedId, $instrumentTypId, $hauptinstrument, $seitDatum]);
     }
     
     public function removeInstrument($id) {
