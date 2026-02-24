@@ -253,16 +253,18 @@ include 'includes/header.php';
                 </div>
                 <?php else: ?>
                 <!-- Upload-Zone -->
-                <div id="dropZone" class="upload-zone mb-3">
+                <div id="dropZone" class="upload-zone mb-2">
                     <i class="bi bi-cloud-arrow-up"></i>
                     <p class="mb-1"><strong>PDF-Dateien hierher ziehen</strong></p>
-                    <p class="text-muted small mb-2">oder klicken zum Auswählen</p>
-                    <small class="text-muted d-block mt-2">
-                        Erlaubt: PDF-Dateien bis max. <?php echo MAX_UPLOAD_SIZE / 1024 / 1024; ?> MB
-                    </small>
+                    <p class="text-muted small mb-1">oder:</p>
+                    <label class="btn btn-sm btn-outline-secondary mb-0">
+                        <i class="bi bi-folder2-open"></i> Datei(en) auswählen
+                        <input type="file" id="fileInput" multiple accept=".pdf,application/pdf" style="display:none;">
+                    </label>
+                    <p class="text-muted small mt-2 mb-0">
+                        Erlaubt: PDF bis max. <?php echo MAX_UPLOAD_SIZE / 1024 / 1024; ?> MB
+                    </p>
                 </div>
-                <!-- Verstecktes File-Input -->
-                <input type="file" id="fileInput" multiple accept=".pdf,application/pdf" style="display:none !important;">
                 
                 <!-- Upload Progress -->
                 <div id="uploadProgress" class="mb-3" style="display: none;">
@@ -303,6 +305,22 @@ include 'includes/header.php';
                                        class="btn btn-outline-primary" title="Herunterladen">
                                         <i class="bi bi-download"></i>
                                     </a>
+                                    <?php 
+                                    $istEinzelstimme = (strpos($datei['beschreibung'] ?? '', '[stimme]') === 0);
+                                    $istPdf = strtolower(pathinfo($datei['original_name'], PATHINFO_EXTENSION)) === 'pdf';
+                                    if (Session::checkPermission('noten', 'schreiben') && $istPdf): ?>
+                                    <button type="button" 
+                                            class="btn btn-sm <?php echo $istEinzelstimme ? 'btn-outline-secondary disabled' : 'btn-outline-success btn-split-datei'; ?>"
+                                            <?php if (!$istEinzelstimme): ?>
+                                            data-id="<?php echo $datei['id']; ?>"
+                                            data-noten-id="<?php echo $note['id']; ?>"
+                                            data-name="<?php echo htmlspecialchars($datei['original_name']); ?>"
+                                            <?php endif; ?>
+                                            title="<?php echo $istEinzelstimme ? 'Bereits eine Einzelstimme' : 'Stimmen aufteilen'; ?>"
+                                            <?php if ($istEinzelstimme): ?>disabled aria-disabled="true"<?php endif; ?>>
+                                        <i class="bi bi-scissors"></i>
+                                    </button>
+                                    <?php endif; ?>
                                     <?php if (Session::checkPermission('noten', 'loeschen')): ?>
                                     <button type="button" class="btn btn-outline-danger btn-delete-datei" 
                                             data-id="<?php echo $datei['id']; ?>" 
@@ -322,19 +340,65 @@ include 'includes/header.php';
             </div>
         </div>
         
+        <?php if ($isEdit): ?>
+        <!-- Stimmen-Split: Gesamtnoten-PDF aufteilen -->
+        <div class="card mt-3 border-primary">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-scissors"></i> Noten automatisch aufteilen
+                </h5>
+                <span class="badge bg-white text-primary">PDF → Stimmen</span>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-3">
+                    Lade ein Gesamt-PDF hoch (alle Stimmen in einer Datei). Das System erkennt
+                    automatisch welche Seiten zu welcher Stimme gehören – anhand der Beschriftung
+                    oben links/rechts – und erzeugt für jede Stimme eine eigene Datei.<br>
+                    <strong>Ergebnis:</strong>
+                    <code><?php echo htmlspecialchars(preg_replace('/[^A-Za-z0-9]+/', '_', trim($note['titel']))); ?>_Fluegelhorn_1.pdf</code>
+                </p>
+
+                <div id="splitDropZone" class="upload-zone upload-zone-split mb-2">
+                    <i class="bi bi-file-earmark-arrow-up"></i>
+                    <p class="mb-1"><strong>Gesamt-PDF hier ablegen</strong></p>
+                    <p class="text-muted small mb-1">oder:</p>
+                    <label class="btn btn-sm btn-outline-primary mb-0">
+                        <i class="bi bi-folder2-open"></i> Datei auswählen
+                        <input type="file" id="splitFileInput" accept=".pdf,application/pdf" style="display:none;">
+                    </label>
+                    <p class="text-muted small mt-2 mb-0">Nur eine PDF-Datei</p>
+                </div>
+
+                <!-- Status während Upload/Verarbeitung -->
+                <div id="splitStatus" style="display:none;">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <div class="spinner-border spinner-border-sm text-primary" id="splitSpinner"></div>
+                        <span id="splitStatusText" class="small text-muted">Wird verarbeitet…</span>
+                    </div>
+                    <div class="progress" style="height:8px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                             id="splitProgressBar" style="width:100%;"></div>
+                    </div>
+                </div>
+
+                <div id="splitError" class="alert alert-danger mb-0 small" style="display:none;"></div>
+                <div id="splitErgebnis"></div>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <!-- Tipps -->
         <div class="card mt-3 bg-light">
             <div class="card-body">
                 <h6 class="card-title"><i class="bi bi-lightbulb text-warning"></i> Tipps</h6>
                 <ul class="small mb-0">
-                    <li>Laden Sie alle Stimmen als einzelne PDFs hoch</li>
+                    <li>Nutze <strong>Noten aufteilen</strong> für Gesamt-PDFs mit allen Stimmen</li>
+                    <li>Einzelne PDFs kannst du oben direkt hochladen</li>
                     <li>Auch die Partitur kann als PDF hinzugefügt werden</li>
-                    <li>Mehrere Dateien können gleichzeitig hochgeladen werden</li>
                 </ul>
             </div>
         </div>
-    </div>
-</div>
+
 
 <style>
 .upload-zone {
@@ -373,10 +437,32 @@ include 'includes/header.php';
 .list-group-item:hover {
     background-color: #f8f9fa;
 }
+
+.upload-zone-split {
+    border-color: #0d6efd;
+    background-color: #f0f7ff;
+    padding: 1.5rem;
+}
+
+.upload-zone-split i {
+    font-size: 2.5rem;
+    color: #0d6efd;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.upload-zone-split:hover,
+.upload-zone-split.drag-over {
+    border-color: #0a58ca;
+    background-color: #ddeeff;
+    transform: scale(1.01);
+}
+
 </style>
 
 <?php if ($isEdit): ?>
 <script>
+console.log('[Noten] Script 1 geladen');
 (function() {
     // Warten bis DOM geladen ist
     if (document.readyState === 'loading') {
@@ -395,22 +481,14 @@ include 'includes/header.php';
         var dateiAnzahl = document.getElementById('dateiAnzahl');
         var notenId = <?php echo (int)$id; ?>;
         
-        if (!dropZone || !fileInput) {
-            console.error('Upload-Elemente nicht gefunden');
+        if (!fileInput) {
+            console.error('fileInput nicht gefunden!');
             return;
         }
         
         console.log('Upload initialisiert für Noten-ID:', notenId);
         
-        // ===== KLICK AUF UPLOAD-ZONE =====
-        dropZone.onclick = function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Dropzone geklickt');
-            fileInput.click();
-        };
-        
-        // ===== DATEI AUSGEWÄHLT =====
+        // ===== DATEI AUSGEWÄHLT (via Label/Button) =====
         fileInput.onchange = function(e) {
             console.log('Dateien ausgewählt:', this.files.length);
             if (this.files && this.files.length > 0) {
@@ -547,6 +625,63 @@ include 'includes/header.php';
             uploadError.style.display = 'block';
         }
         
+        // ===== DATEI SPLIT =====
+        document.querySelectorAll('.btn-split-datei').forEach(function(btn) {
+            btn.onclick = function() {
+                var dateiId   = this.getAttribute('data-id');
+                var notenId   = this.getAttribute('data-noten-id');
+                var dateiName = this.getAttribute('data-name');
+                var selfBtn   = this;
+
+                if (!confirm('Die Datei "' + dateiName + '" in einzelne Stimmen aufteilen?\nDie Originaldatei bleibt erhalten.')) {
+                    return;
+                }
+
+                // Button deaktivieren & Spinner zeigen
+                selfBtn.disabled = true;
+                selfBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+                fetch('api/noten_split_existing.php', {
+                    method: 'POST',
+                    body: (function() {
+                        var fd = new FormData();
+                        fd.append('datei_id', dateiId);
+                        fd.append('noten_id', notenId);
+                        return fd;
+                    })()
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    selfBtn.disabled = false;
+                    selfBtn.innerHTML = '<i class="bi bi-scissors"></i>';
+
+                    if (!data.success) {
+                        alert('Fehler: ' + (data.error || 'Unbekannter Fehler'));
+                        return;
+                    }
+
+                    // Erfolgsmeldung einblenden
+                    var info = document.createElement('div');
+                    info.className = 'alert alert-success alert-dismissible small py-2 mt-2';
+                    info.innerHTML = '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>'
+                        + '<i class="bi bi-check-circle-fill me-1"></i>'
+                        + '<strong>' + data.message + '</strong>'
+                        + (data.ist_scan ? '<br><em class="text-warning">Scan-PDF – bitte Dateien umbenennen.</em>' : '');
+
+                    selfBtn.closest('li').insertAdjacentElement('afterend', info);
+
+                    // Seite nach kurzer Pause neu laden damit neue Dateien sichtbar werden
+                    setTimeout(function() { location.reload(); }, 1800);
+                })
+                .catch(function(err) {
+                    selfBtn.disabled = false;
+                    selfBtn.innerHTML = '<i class="bi bi-scissors"></i>';
+                    alert('Netzwerkfehler beim Aufteilen');
+                    console.error(err);
+                });
+            };
+        });
+
         // ===== DATEI LÖSCHEN =====
         document.querySelectorAll('.btn-delete-datei').forEach(function(btn) {
             btn.onclick = function() {
@@ -592,4 +727,225 @@ include 'includes/header.php';
 </script>
 <?php endif; ?>
 
+
+<?php if ($isEdit): ?>
+<script>
+console.log('[Noten] Script 2 geladen');
+// =====================================================================
+// NOTEN-SPLIT: Gesamt-PDF hochladen und nach Stimmen aufteilen
+// =====================================================================
+(function() {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initSplit);
+    } else {
+        initSplit();
+    }
+
+    function initSplit() {
+        var dropZone   = document.getElementById('splitDropZone');
+        var fileInput  = document.getElementById('splitFileInput');
+        var status     = document.getElementById('splitStatus');
+        var statusText = document.getElementById('splitStatusText');
+        var errorBox   = document.getElementById('splitError');
+        var ergebnis   = document.getElementById('splitErgebnis');
+        var notenId    = <?php echo (int)$id; ?>;
+
+        if (!dropZone || !fileInput) {
+            console.error('Split-Upload: Elemente nicht gefunden');
+            return;
+        }
+
+        console.log('Split-Upload initialisiert, Noten-ID:', notenId);
+
+        // ===== DATEI AUSGEWAEHLT (Input ist direkt in der Zone eingebettet) =====
+        fileInput.onchange = function(e) {
+            console.log('Split-Datei ausgewaehlt:', this.files.length);
+            if (this.files && this.files.length > 0) {
+                handleFile(this.files[0]);
+            }
+            this.value = '';
+        };
+
+        // ===== DRAG & DROP =====
+        dropZone.ondragenter = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.add('drag-over');
+        };
+
+        dropZone.ondragover = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.add('drag-over');
+        };
+
+        dropZone.ondragleave = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.remove('drag-over');
+        };
+
+        dropZone.ondrop = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.remove('drag-over');
+            console.log('Split: Datei gedroppt');
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        };
+
+        function handleFile(file) {
+            console.log('Split: handleFile', file.name, file.type, file.size);
+            var isPdf = file.type === 'application/pdf' ||
+                        file.name.toLowerCase().indexOf('.pdf') === file.name.length - 4;
+            if (!isPdf) {
+                showError('Bitte nur eine PDF-Datei hochladen.');
+                return;
+            }
+            uploadUndSplitte(file);
+        }
+
+        function uploadUndSplitte(file) {
+            var formData = new FormData();
+            formData.append('noten_id', notenId);
+            formData.append('datei', file);
+
+            console.log('Split: Starte Upload, notenId=' + notenId + ', Datei=' + file.name);
+
+            status.style.display   = 'block';
+            errorBox.style.display = 'none';
+            ergebnis.innerHTML     = '';
+            statusText.textContent = 'Wird hochgeladen...';
+
+            var xhr = new XMLHttpRequest();
+
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    var pct = Math.round(e.loaded / e.total * 100);
+                    statusText.textContent = 'Hochladen... ' + pct + '%';
+                    if (pct === 100) statusText.textContent = 'Stimmen werden erkannt und aufgeteilt...';
+                }
+            };
+
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState !== 4) return;
+                status.style.display = 'none';
+
+                var raw = xhr.responseText || '';
+                console.log('Split: readyState=4, status=' + xhr.status + ', response=' + raw.substring(0, 300));
+
+                // Fehler sofort als alert anzeigen – damit es auf keinen Fall still verschwindet
+                function fail(msg) {
+                    console.error('Split-Fehler:', msg);
+                    alert('Fehler beim Aufteilen:\n\n' + msg);
+                    showError(msg);
+                }
+
+                if (xhr.status === 0) {
+                    fail('Keine Antwort vom Server (Status 0). Ist die Datei api/noten_split_stimmen.php auf dem Server vorhanden?');
+                    return;
+                }
+                if (xhr.status === 404) {
+                    fail('API nicht gefunden (404). Bitte api/noten_split_stimmen.php auf den Server hochladen!');
+                    return;
+                }
+                if (xhr.status !== 200) {
+                    fail('HTTP-Fehler ' + xhr.status + '\n' + raw.substring(0, 300));
+                    return;
+                }
+
+                var resp;
+                try {
+                    resp = JSON.parse(raw);
+                } catch(ex) {
+                    fail('Server-Antwort ist kein JSON:\n' + raw.substring(0, 400));
+                    return;
+                }
+
+                console.log('Split-Antwort:', resp);
+
+                if (resp.success && resp.gespeichert > 0) {
+                    zeigErgebnis(resp);
+                    setTimeout(function() { window.location.reload(); }, 4000);
+                } else if (resp.success && resp.gespeichert === 0) {
+                    var fehler = '';
+                    if (resp.stimmen) {
+                        resp.stimmen.forEach(function(s) {
+                            if (s.fehler) fehler += '\n- ' + s.name + ': ' + s.fehler;
+                        });
+                    }
+                    fail('Keine PDFs gespeichert (' + (resp.seiten_gesamt||0) + ' Seiten analysiert).'
+                        + (fehler || '\n\nSind pdftk und pdftotext auf dem Server installiert?'));
+                } else {
+                    fail(resp.error || 'Unbekannter Fehler');
+                }
+            };
+
+            xhr.onerror = function() {
+                console.error('Split: XHR-Fehler');
+                status.style.display = 'none';
+                showError('Netzwerkfehler beim Upload.');
+            };
+
+            xhr.open('POST', 'api/noten_split_stimmen.php', true);
+            xhr.send(formData);
+        }
+
+        function zeigErgebnis(resp) {
+            var html = '';
+
+            if (resp.ist_scan) {
+                html += '<div class="alert alert-warning small py-2 mb-2">'
+                      + '<i class="bi bi-exclamation-triangle me-1"></i>'
+                      + '<strong>Scan-PDF erkannt</strong> – Stimmen konnten nicht automatisch erkannt werden.<br>'
+                      + 'Die Seiten wurden einzeln gespeichert. '
+                      + '<strong>Bitte die Dateien unten umbenennen</strong> (Bleistift-Symbol).'
+                      + '</div>';
+            }
+
+            html += '<div class="alert alert-success small py-2 mb-2">'
+                  + '<i class="bi bi-check-circle-fill me-1"></i>'
+                  + '<strong>' + resp.message + '</strong>'
+                  + '</div>';
+
+            if (resp.stimmen && resp.stimmen.length) {
+                html += '<ul class="list-group">';
+                resp.stimmen.forEach(function(s) {
+                    if (s.fehler) {
+                        html += '<li class="list-group-item list-group-item-warning py-1 small">'
+                              + '<i class="bi bi-exclamation-triangle me-1"></i>'
+                              + escHtml(s.name) + ': <em>' + escHtml(s.fehler) + '</em></li>';
+                    } else {
+                        var badge = s.erkannt
+                            ? '<span class="badge bg-success ms-1">erkannt</span>'
+                            : '<span class="badge bg-warning text-dark ms-1">bitte umbenennen</span>';
+                        html += '<li class="list-group-item py-1 small">'
+                              + '<i class="bi bi-file-earmark-pdf text-danger me-1"></i>'
+                              + '<strong>' + escHtml(s.name) + '</strong>' + badge;
+                        if (s.stimme) html += ' <span class="text-muted">(' + escHtml(s.stimme) + ')</span>';
+                        html += '</li>';
+                    }
+                });
+                html += '</ul>';
+            }
+            ergebnis.innerHTML = html;
+        }
+
+        function showError(msg) {
+            errorBox.innerHTML = msg;
+            errorBox.style.display = 'block';
+        }
+
+        function escHtml(str) {
+            return String(str)
+                .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+    }
+})();
+</script>
+<?php endif; ?>
+
 <?php include 'includes/footer.php'; ?>
+

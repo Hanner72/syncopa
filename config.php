@@ -69,6 +69,11 @@ define('GOOGLE_CLIENT_SECRET', 'XXX');
 define('GOOGLE_REDIRECT_URI', BASE_URL . '/login_google_callback.php');
 
 // ============================================================================
+// https://ocr.space/ocrapi → „Get API Key FREE" 
+// ============================================================================
+define('OCR_SPACE_API_KEY', 'K88394394XXX....');
+
+// ============================================================================
 // E-MAIL-KONFIGURATION (optional)
 // ============================================================================
 define('EMAIL_ENABLED', false);
