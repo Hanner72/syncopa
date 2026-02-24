@@ -8,6 +8,46 @@
 Eine moderne, umfassende Webapplikation zur Verwaltung von Musikvereinen. Entwickelt mit PHP 8, Bootstrap 5 und MySQL.
 
 ![Dashboard Screenshot](docs/screenshots/dashboard.png)
+---
+
+## DEMO
+
+https://syncopa.dannerbam.eu/
+
+Admin Login
+
+- Benutzer: admin
+- Passwort: admin123
+
+## 📋 Inhaltsverzeichnis
+
+1. [Funktionsübersicht](#funktionsübersicht)
+2. [Systemvoraussetzungen](#systemvoraussetzungen)
+3. [Installation](#installation)
+4. [Konfiguration](#konfiguration)
+5. [Benutzerrollen](#benutzerrollen--berechtigungen)
+6. [Module im Detail](#module-im-detail)
+7. [API-Dokumentation](#api-dokumentation)
+8. [Datenbankstruktur](#datenbankstruktur)
+9. [Sicherheit](#sicherheit)
+10. [Troubleshooting](#troubleshooting)
+
+---
+
+## 🎯 Funktionsübersicht
+
+### Kernmodule
+
+| Modul | Beschreibung |
+|-------|--------------|
+| **Mitglieder** | Vollständige Stammdatenverwaltung mit Instrumentenzuordnung |
+| **Instrumente** | Inventarverwaltung, Verleih und Wartungshistorie |
+| **Noten** | Digitaler Notenkatalog mit Archivnummern |
+| **Ausrückungen** | Termine, Anwesenheit und Programmplanung |
+| **Kalender** | Interaktiver Kalender mit iCal-Export |
+| **Finanzen** | Einnahmen, Ausgaben und Mitgliedsbeiträge |
+| **Uniformen** | Trachtenverwaltung und Ausgabehistorie |
+| **Benutzer** | Rollenbasierte Zugriffsverwaltung |
 
 ---
 
