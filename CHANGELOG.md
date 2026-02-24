@@ -7,6 +7,18 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [2.2.1] - 2026-02-24
+
+### Hinzugefügt
+
+- **Notenverwaltung**
+  - ein neuer Upload steht zur Verfügung wo eine Noten-PDF automatisch auf die Noten aufgesplittet wird
+
+### Geändert
+
+- **Notenverwaltung**
+  - wenn ganze PDF mit allen Stimmen hochgeladen wurde kann diese auf die Stimmen automatisch gesplittet werden
+
 ## [2.1.0] - 2026-02-12
 
 ### Hinzugefügt
