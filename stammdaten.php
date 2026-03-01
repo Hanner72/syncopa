@@ -97,6 +97,44 @@ if ($action === 'instrumenttyp_delete') {
     $tab = 'instrumenttypen';
 }
 
+// Nummernkreise verarbeiten
+if ($action === 'nummernkreise_save') {
+    $typen = ['mitglieder', 'noten', 'instrumente', 'uniformen'];
+    try {
+        foreach ($typen as $typ) {
+            $prefix  = trim($_POST['prefix_' . $typ]  ?? '');
+            $stellen = (int)($_POST['stellen_' . $typ] ?? 3);
+            $stellen = max(1, min(10, $stellen));
+
+            // Prefix speichern (Y/y als Platzhalter behalten – wird bei Nummerngenerierung aufgelöst)
+            $db->execute(
+                "INSERT INTO einstellungen (schluessel, wert, beschreibung)
+                 VALUES (?, ?, ?)
+                 ON DUPLICATE KEY UPDATE wert = VALUES(wert)",
+                [
+                    'nummernkreis_' . $typ . '_prefix',
+                    $prefix,
+                    'Nummernkreis ' . ucfirst($typ) . ' – Präfix'
+                ]
+            );
+            $db->execute(
+                "INSERT INTO einstellungen (schluessel, wert, beschreibung)
+                 VALUES (?, ?, ?)
+                 ON DUPLICATE KEY UPDATE wert = VALUES(wert)",
+                [
+                    'nummernkreis_' . $typ . '_stellen',
+                    (string)$stellen,
+                    'Nummernkreis ' . ucfirst($typ) . ' – Stellen'
+                ]
+            );
+        }
+        $success = 'Nummernkreise erfolgreich gespeichert';
+    } catch (Exception $e) {
+        $error = 'Fehler beim Speichern: ' . $e->getMessage();
+    }
+    $tab = 'nummernkreise';
+}
+
 // ===================== DATEN LADEN =====================
 
 $register = $db->fetchAll("SELECT r.*, 
@@ -110,6 +148,27 @@ $instrumentTypen = $db->fetchAll("SELECT it.*, r.name as register_name,
     FROM instrument_typen it
     LEFT JOIN register r ON it.register_id = r.id
     ORDER BY r.sortierung, it.name");
+
+// Nummernkreise aus einstellungen laden
+$nkTypen = ['mitglieder', 'noten', 'instrumente'];
+$nkConfig = [];
+foreach ($nkTypen as $typ) {
+    $pRow = $db->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = ?", ['nummernkreis_' . $typ . '_prefix']);
+    $sRow = $db->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = ?", ['nummernkreis_' . $typ . '_stellen']);
+    $nkConfig[$typ] = [
+        'prefix'  => $pRow ? $pRow['wert'] : '',
+        'stellen' => $sRow ? (int)$sRow['wert'] : 3,
+    ];
+}
+
+// Hilfsfunktion: Y/y → aktuelles Jahr auflösen (für Vorschau)
+function resolvePrefix(string $prefix): string {
+    $year = date('Y');
+    $yearShort = date('y');
+    $prefix = str_replace('Y', $year,      $prefix);
+    $prefix = str_replace('y', $yearShort, $prefix);
+    return $prefix;
+}
 
 include 'includes/header.php';
 ?>
@@ -147,6 +206,11 @@ include 'includes/header.php';
     <li class="nav-item">
         <a class="nav-link <?php echo $tab === 'ausrueckungstypen' ? 'active' : ''; ?>" href="?tab=ausrueckungstypen">
             <i class="bi bi-calendar-event"></i> Ausrückungstypen
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?php echo $tab === 'nummernkreise' ? 'active' : ''; ?>" href="?tab=nummernkreise">
+            <i class="bi bi-123"></i> Nummernkreise
         </a>
     </li>
 </ul>
@@ -351,7 +415,7 @@ include 'includes/header.php';
     </div>
 </div>
 
-<?php else: ?>
+<?php elseif ($tab === 'ausrueckungstypen'): ?>
 <!-- ==================== AUSRÜCKUNGSTYPEN ==================== -->
 <div class="row">
     <div class="col-lg-8">
@@ -395,6 +459,164 @@ include 'includes/header.php';
         </div>
     </div>
 </div>
+
+<?php else: ?>
+<!-- ==================== NUMMERNKREISE ==================== -->
+<?php
+$nkBadgeClass = [
+    'mitglieder' => 'bg-secondary',
+    'noten'      => 'bg-primary',
+    'instrumente'=> 'bg-warning text-dark',
+];
+$nkLabel = [
+    'mitglieder' => 'Mitglieder',
+    'noten'      => 'Noten',
+    'instrumente'=> 'Instrumente',
+];
+$nkIcon = [
+    'mitglieder' => 'bi-people',
+    'noten'      => 'bi-music-note-list',
+    'instrumente'=> 'bi-trumpet',
+];
+?>
+<form method="POST">
+    <input type="hidden" name="action" value="nummernkreise_save">
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-123"></i> Nummernkreise konfigurieren
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-4">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Präfix-Platzhalter:</strong>
+                        <code>Y</code> = aktuelles Jahr 4-stellig (<?php echo date('Y'); ?>),
+                        <code>y</code> = aktuelles Jahr 2-stellig (<?php echo date('y'); ?>).
+                        Beispiel: <code>Iy</code> ergibt <code>I<?php echo date('y'); ?>001</code>
+                    </div>
+
+                    <table class="table align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:160px">Bereich</th>
+                                <th>Präfix</th>
+                                <th style="width:140px">Stellen (Zahl)</th>
+                                <th>Vorschau nächste Nr.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($nkTypen as $typ): ?>
+                            <?php
+                                $prefix  = $nkConfig[$typ]['prefix'];
+                                $stellen = $nkConfig[$typ]['stellen'];
+                                $resolvedPrefix = resolvePrefix($prefix);
+                                $preview = $resolvedPrefix . str_pad('1', $stellen, '0', STR_PAD_LEFT);
+                            ?>
+                            <tr>
+                                <td>
+                                    <span class="badge <?php echo $nkBadgeClass[$typ]; ?>">
+                                        <i class="bi <?php echo $nkIcon[$typ]; ?>"></i>
+                                        <?php echo $nkLabel[$typ]; ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm" style="max-width:180px">
+                                        <input type="text"
+                                               class="form-control nk-prefix-input"
+                                               name="prefix_<?php echo $typ; ?>"
+                                               value="<?php echo htmlspecialchars($prefix); ?>"
+                                               data-typ="<?php echo $typ; ?>"
+                                               maxlength="20"
+                                               placeholder="z.B. M, NY, Iy">
+                                    </div>
+                                </td>
+                                <td>
+                                    <input type="number"
+                                           class="form-control form-control-sm nk-stellen-input"
+                                           name="stellen_<?php echo $typ; ?>"
+                                           value="<?php echo $stellen; ?>"
+                                           data-typ="<?php echo $typ; ?>"
+                                           min="1" max="10"
+                                           style="width:90px">
+                                </td>
+                                <td>
+                                    <code class="nk-preview" id="preview_<?php echo $typ; ?>">
+                                        <?php echo htmlspecialchars($preview); ?>
+                                    </code>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer text-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Nummernkreise speichern
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card bg-light mb-3">
+                <div class="card-body">
+                    <h6><i class="bi bi-info-circle"></i> Hinweise</h6>
+                    <p class="small text-muted mb-2">
+                        Der <strong>Präfix</strong> wird vor die fortlaufende Nummer gestellt.
+                        Die Anzahl der <strong>Stellen</strong> bestimmt, wie breit die Zahl mit führenden Nullen aufgefüllt wird.
+                    </p>
+                    <ul class="small text-muted mb-0 ps-3">
+                        <li><code>Y</code> → <?php echo date('Y'); ?> (4-stelliges Jahr)</li>
+                        <li><code>y</code> → <?php echo date('y'); ?> (2-stelliges Jahr)</li>
+                        <li>Stellen 3 + Präfix <code>M</code> → <code>M001</code></li>
+                        <li>Stellen 4 + Präfix <code>Ny</code> → <code>N<?php echo date('y'); ?>0001</code></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card border-warning">
+                <div class="card-body">
+                    <h6 class="text-warning"><i class="bi bi-exclamation-triangle"></i> Achtung</h6>
+                    <p class="small text-muted mb-0">
+                        Änderungen am Präfix oder den Stellen wirken sich nur auf <strong>neu angelegte</strong> Datensätze aus.
+                        Bestehende Nummern bleiben unverändert.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+(function () {
+    const yearFull  = '<?php echo date('Y'); ?>';
+    const yearShort = '<?php echo date('y'); ?>';
+
+    function resolvePrefix(prefix) {
+        return prefix.replace(/Y/g, yearFull).replace(/y/g, yearShort);
+    }
+
+    function updatePreview(typ) {
+        const prefixInput  = document.querySelector('.nk-prefix-input[data-typ="' + typ + '"]');
+        const stellenInput = document.querySelector('.nk-stellen-input[data-typ="' + typ + '"]');
+        const previewEl    = document.getElementById('preview_' + typ);
+
+        if (!prefixInput || !stellenInput || !previewEl) return;
+
+        const resolved = resolvePrefix(prefixInput.value);
+        const stellen  = Math.max(1, Math.min(10, parseInt(stellenInput.value) || 3));
+        previewEl.textContent = resolved + String(1).padStart(stellen, '0');
+    }
+
+    document.querySelectorAll('.nk-prefix-input, .nk-stellen-input').forEach(function (el) {
+        el.addEventListener('input', function () {
+            updatePreview(this.dataset.typ);
+        });
+    });
+})();
+</script>
+
 <?php endif; ?>
 
 <script>

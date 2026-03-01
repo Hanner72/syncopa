@@ -27,7 +27,7 @@ function isActive($page, $pages, $current) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title><?php echo APP_NAME; ?></title>
-    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="icon" type="image/png" href="assets/favicon.png">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -105,16 +105,20 @@ function isActive($page, $pages, $current) {
         .sidebar-header {
             height: var(--topbar-h);
             padding: 0 12px;
-            display: flex; align-items: center;
+            display: flex; align-items: center; justify-content: center;
+            position: relative;
             border-bottom: 1px solid rgba(255,255,255,0.08);
         }
-        .sidebar-logo { width: 26px; height: 26px; border-radius: 5px; margin-right: 10px; }
+        .sidebar-logo { width: 70px; height: auto; }
         .sidebar-brand { font-size: 15px; font-weight: 600; color: #fff; }
         .sidebar-close {
             display: none; margin-left: auto;
+            /* position: absolute; right: 8px; */
             background: none; border: none;
             color: #708090; font-size: 18px; padding: 4px; cursor: pointer;
+            line-height: 1;
         }
+        .sidebar-close:hover { color: #fff; }
         .sidebar-nav { flex: 1; padding: 8px; overflow-y: auto; }
         .sidebar-nav::-webkit-scrollbar { width: 3px; }
         .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
@@ -148,7 +152,7 @@ function isActive($page, $pages, $current) {
             transition: left var(--transition);
         }
         .topbar-toggle {
-            display: none; background: none; border: none;
+            display: block; background: none; border: none;
             font-size: 20px; color: var(--text-primary);
             padding: 4px; border-radius: var(--radius); cursor: pointer;
         }
@@ -349,6 +353,11 @@ function isActive($page, $pages, $current) {
             backdrop-filter: blur(2px);
         }
         
+        /* SIDEBAR COLLAPSED (Desktop) */
+        body.sidebar-collapsed .sidebar { transform: translateX(-100%); }
+        body.sidebar-collapsed .topbar { left: 0; }
+        body.sidebar-collapsed .main-wrapper { margin-left: 0; }
+        
         /* CHART CONTAINER */
         .chart-container { position: relative; min-height: 200px; }
         
@@ -358,9 +367,7 @@ function isActive($page, $pages, $current) {
             .sidebar { transform: translateX(-100%); }
             .sidebar.show { transform: translateX(0); }
             .sidebar-overlay.show { display: block; }
-            .sidebar-close { display: block; }
             .topbar { left: 0; }
-            .topbar-toggle { display: block; }
             .main-wrapper { margin-left: 0; }
             .topbar-user .topbar-info { display: none; }
         }
@@ -395,8 +402,8 @@ function isActive($page, $pages, $current) {
     
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <img src="assets/logo.svg" alt="" class="sidebar-logo">
-            <span class="sidebar-brand"><?php echo APP_NAME; ?></span>
+            <img src="assets/logo_full_white.png" alt="" class="sidebar-logo">
+            <!-- <span class="sidebar-brand"><?php echo APP_NAME; ?></span> -->
             <button class="sidebar-close" id="sidebarClose"><i class="bi bi-x-lg"></i></button>
         </div>
         
@@ -507,6 +514,43 @@ function isActive($page, $pages, $current) {
             </a>
         </div>
     </header>
+    <script>
+    (function() {
+        var sidebar = document.getElementById('sidebar');
+        var overlay = document.getElementById('sidebarOverlay');
+        var toggleBtn = document.getElementById('sidebarToggle');
+        var closeBtn = document.getElementById('sidebarClose');
+        var body = document.body;
+        var isMobile = function() { return window.innerWidth < 992; };
+
+        function openSidebar() {
+            if (isMobile()) {
+                sidebar.classList.add('show');
+                overlay.classList.add('show');
+            } else {
+                body.classList.remove('sidebar-collapsed');
+            }
+        }
+        function closeSidebar() {
+            if (isMobile()) {
+                sidebar.classList.remove('show');
+                overlay.classList.remove('show');
+            } else {
+                body.classList.add('sidebar-collapsed');
+            }
+        }
+
+        if (toggleBtn) toggleBtn.addEventListener('click', function() {
+            if (isMobile()) {
+                sidebar.classList.contains('show') ? closeSidebar() : openSidebar();
+            } else {
+                body.classList.contains('sidebar-collapsed') ? openSidebar() : closeSidebar();
+            }
+        });
+        if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
+        if (overlay) overlay.addEventListener('click', closeSidebar);
+    })();
+    </script>
     <?php endif; ?>
     
     <div class="main-wrapper">

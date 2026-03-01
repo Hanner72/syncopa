@@ -9,6 +9,11 @@ $notenObj = new Noten();
 $id = $_GET['id'] ?? null;
 $isEdit = !empty($id);
 
+// Nummernkreis
+require_once __DIR__ . '/classes/Nummernkreis.php';
+$nkObj = new Nummernkreis();
+$naechsteArchivNummer = $nkObj->naechsteNummer('noten');
+
 if ($isEdit) {
     $note = $notenObj->getById($id);
     if (!$note) {
@@ -41,7 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
     
     if (!$isEdit) {
-        $data['archiv_nummer'] = trim($_POST['archiv_nummer'] ?? '') ?: null;
+        $archivNr = trim($_POST['archiv_nummer'] ?? '');
+        $data['archiv_nummer'] = $archivNr !== '' ? $archivNr : $nkObj->naechsteNummer('noten');
     }
     
     // Validierung
@@ -114,7 +120,10 @@ include 'includes/header.php';
                             <label for="archiv_nummer" class="form-label">Archiv-Nr.</label>
                             <input type="text" class="form-control" id="archiv_nummer" name="archiv_nummer" 
                                    value="<?php echo htmlspecialchars($note['archiv_nummer'] ?? ''); ?>"
-                                   placeholder="Wird automatisch vergeben" <?php echo $isEdit ? 'readonly' : ''; ?>>
+                                   placeholder="<?php echo htmlspecialchars($naechsteArchivNummer); ?>" <?php echo $isEdit ? 'readonly' : ''; ?>>
+                            <?php if (!$isEdit): ?>
+                            <small class="text-muted">Leer lassen für automatische Vergabe (nächste: <strong><?php echo htmlspecialchars($naechsteArchivNummer); ?></strong>)</small>
+                            <?php endif; ?>
                         </div>
                     </div>
                     

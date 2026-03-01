@@ -27,6 +27,11 @@ if ($isEdit) {
 // Register laden
 $register = $db->fetchAll("SELECT * FROM register ORDER BY sortierung");
 
+// Nummernkreis: nächste Mitgliedsnummer vorberechnen
+require_once __DIR__ . '/classes/Nummernkreis.php';
+$nkObj = new Nummernkreis();
+$naechsteMitgliedsnummer = $nkObj->naechsteNummer('mitglieder');
+
 // Formular verarbeiten
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = [
@@ -47,7 +52,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
     
     if (!$isEdit) {
-        $data['mitgliedsnummer'] = $_POST['mitgliedsnummer'] ?? null;
+        $data['mitgliedsnummer'] = trim($_POST['mitgliedsnummer'] ?? '');
+        // Leer → automatisch aus Nummernkreis
+        if ($data['mitgliedsnummer'] === '') {
+            $data['mitgliedsnummer'] = $nkObj->naechsteNummer('mitglieder');
+        }
         $data['eintritt_datum'] = $_POST['eintritt_datum'] ?? date('Y-m-d');
     }
     
@@ -113,8 +122,8 @@ include 'includes/header.php';
                             <label for="mitgliedsnummer" class="form-label">Mitgliedsnummer</label>
                             <input type="text" class="form-control" id="mitgliedsnummer" name="mitgliedsnummer" 
                                    value="<?php echo htmlspecialchars($mitglied['mitgliedsnummer'] ?? ''); ?>"
-                                   placeholder="Automatisch">
-                            <small class="text-muted">Leer lassen für automatische Vergabe</small>
+                                   placeholder="<?php echo htmlspecialchars($naechsteMitgliedsnummer); ?>">
+                            <small class="text-muted">Leer lassen für automatische Vergabe (nächste: <strong><?php echo htmlspecialchars($naechsteMitgliedsnummer); ?></strong>)</small>
                         </div>
                         <?php endif; ?>
                         

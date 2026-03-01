@@ -379,6 +379,7 @@ class Noten {
                 WHERE archiv_nummer REGEXP '^N[0-9]+$'";
         $result = $this->db->fetchOne($sql);
         $nextNr = ($result['max_nr'] ?? 0) + 1;
-        return 'N' . str_pad($nextNr, 5, '0', STR_PAD_LEFT);
+        /* return str_pad($nextNr, 5, '0', STR_PAD_LEFT); */ // ohne Vorangestelltem N
+        return 'N' . str_pad($nextNr, 4, '0', STR_PAD_LEFT); // mit Vorangestelltem N
     }
 }

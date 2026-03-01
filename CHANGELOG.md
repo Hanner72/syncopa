@@ -7,6 +7,29 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [2.2.2] - 2026-02-24
+
+### Hinzugefügt
+
+### Geändert
+
+- **Generell**
+  - Logos und Favicon geändert
+  - Sidebar-Menü öffnen und schließen Button aktualisiert
+
+- **Stammdaten**
+  - Nummernkreise für Instrumente, Noten und Mitglieder können vergeben werden
+
+- **Dashboard**
+  - Geburtstagsliste richtig sortiert
+  - Deutsche Monatsnamen anzeigen
+
+- **Ausrückungen**
+  - Sortierung nach Datum stimmt jetzt
+
+- **Instrumente**
+  - auf der Haupttabelle die Spalte "Notizen" einblenden für weitere Infos
+
 ## [2.2.1] - 2026-02-24
 
 ### Hinzugefügt

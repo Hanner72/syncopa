@@ -114,7 +114,7 @@ include 'includes/header.php';
                 <tbody>
                     <?php foreach ($ausrueckungen as $a): ?>
                     <tr>
-                        <td>
+                        <td data-order="<?php echo date('Y-m-d H:i', strtotime($a['start_datum'])); ?>">
                             <strong><?php echo date('d.m.Y', strtotime($a['start_datum'])); ?></strong><br>
                             <small class="text-muted">
                                 <?php echo date('H:i', strtotime($a['start_datum'])); ?> Uhr
