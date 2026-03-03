@@ -27,6 +27,50 @@ $anwesenheit = $ausrueckungObj->getAnwesenheit($id);
 // Noten für diese Ausrückung
 $noten = $ausrueckungObj->getNoten($id);
 
+// Zugesagte Mitglieder nach Register
+$db_top = Database::getInstance();
+$zugesagteNachRegister = $db_top->fetchAll(
+    "SELECT m.vorname, m.nachname, r.name as register_name, r.sortierung
+     FROM anwesenheit a
+     JOIN mitglieder m ON a.mitglied_id = m.id
+     LEFT JOIN register r ON m.register_id = r.id
+     INNER JOIN (
+         SELECT mitglied_id, MAX(id) as max_id
+         FROM anwesenheit WHERE ausrueckung_id = ?
+         GROUP BY mitglied_id
+     ) latest ON a.id = latest.max_id AND a.mitglied_id = latest.mitglied_id
+     WHERE a.ausrueckung_id = ? AND a.status = 'zugesagt'
+     ORDER BY r.sortierung, r.name, m.nachname, m.vorname",
+    [$id, $id]
+);
+// Nach Register gruppieren
+$zugesagteGruppiert = [];
+foreach ($zugesagteNachRegister as $m) {
+    $reg = $m['register_name'] ?? 'Ohne Register';
+    $zugesagteGruppiert[$reg][] = $m['vorname'] . ' ' . $m['nachname'];
+}
+
+// Abgesagte Mitglieder nach Register
+$abgesagteNachRegister = $db_top->fetchAll(
+    "SELECT m.vorname, m.nachname, m.id as mitglied_id, r.name as register_name, r.sortierung, a.grund
+     FROM anwesenheit a
+     JOIN mitglieder m ON a.mitglied_id = m.id
+     LEFT JOIN register r ON m.register_id = r.id
+     INNER JOIN (
+         SELECT mitglied_id, MAX(id) as max_id
+         FROM anwesenheit WHERE ausrueckung_id = ?
+         GROUP BY mitglied_id
+     ) latest ON a.id = latest.max_id AND a.mitglied_id = latest.mitglied_id
+     WHERE a.ausrueckung_id = ? AND a.status = 'abgesagt'
+     ORDER BY r.sortierung, r.name, m.nachname, m.vorname",
+    [$id, $id]
+);
+$abgesagteGruppiert = [];
+foreach ($abgesagteNachRegister as $m) {
+    $reg = $m['register_name'] ?? 'Ohne Register';
+    $abgesagteGruppiert[$reg][] = ['name' => $m['vorname'] . ' ' . $m['nachname'], 'grund' => $m['grund']];
+}
+
 // Selbst-Anmeldung für normale Mitglieder
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['self_anmeldung'])) {
     $currentUserId = Session::getUserId();
@@ -178,6 +222,63 @@ include 'includes/header.php';
             </div>
         </div>
         
+        <!-- Zugesagte Mitglieder nach Register -->
+        <?php if (!empty($zugesagteGruppiert)): ?>
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-person-check text-success"></i> Zusagen</h5>
+                <span class="badge bg-success"><?php echo count($zugesagteNachRegister); ?></span>
+            </div>
+            <div class="card-body p-0">
+                <?php foreach ($zugesagteGruppiert as $registerName => $mitglieder): ?>
+                <div class="px-3 pt-2 pb-1">
+                    <small class="text-uppercase text-muted fw-semibold" style="font-size:0.7rem;letter-spacing:.05em;">
+                        <?php echo htmlspecialchars($registerName); ?>
+                    </small>
+                    <ul class="list-unstyled mb-2 mt-1">
+                        <?php foreach ($mitglieder as $name): ?>
+                        <li class="py-1 border-bottom">
+                            <i class="bi bi-check-circle-fill text-success me-1" style="font-size:.8rem;"></i>
+                            <small><?php echo htmlspecialchars($name); ?></small>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- Abgesagte Mitglieder nach Register -->
+        <?php if (!empty($abgesagteGruppiert)): ?>
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-person-x text-danger"></i> Absagen</h5>
+                <span class="badge bg-danger"><?php echo count($abgesagteNachRegister); ?></span>
+            </div>
+            <div class="card-body p-0">
+                <?php foreach ($abgesagteGruppiert as $registerName => $mitglieder): ?>
+                <div class="px-3 pt-2 pb-1">
+                    <small class="text-uppercase text-muted fw-semibold" style="font-size:0.7rem;letter-spacing:.05em;">
+                        <?php echo htmlspecialchars($registerName); ?>
+                    </small>
+                    <ul class="list-unstyled mb-2 mt-1">
+                        <?php foreach ($mitglieder as $m): ?>
+                        <li class="py-1 border-bottom">
+                            <i class="bi bi-x-circle-fill text-danger me-1" style="font-size:.8rem;"></i>
+                            <small><?php echo htmlspecialchars($m['name']); ?></small>
+                            <?php if (!empty($m['grund'])): ?>
+                            <br><small class="text-muted ms-3"><i class="bi bi-chat-left-text"></i> <?php echo htmlspecialchars($m['grund']); ?></small>
+                            <?php endif; ?>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <!-- Noten/Programm -->
         <?php if (!empty($noten)): ?>
         <div class="card">
@@ -221,46 +322,47 @@ include 'includes/header.php';
                 <h5 class="mb-0"><i class="bi bi-person-check"></i> Meine Anmeldung</h5>
             </div>
             <div class="card-body">
-                <form method="POST">
-                    <div class="row align-items-end">
-                        <div class="col-md-5">
-                            <label class="form-label">Ich nehme teil:</label>
-                            <select class="form-select" name="status" required>
-                                <option value="zugesagt" <?php echo ($meinStatus['status'] ?? '') === 'zugesagt' ? 'selected' : ''; ?>>
-                                    ✓ Ja, ich komme
-                                </option>
-                                <option value="abgesagt" <?php echo ($meinStatus['status'] ?? '') === 'abgesagt' ? 'selected' : ''; ?>>
-                                    ✗ Nein, ich kann nicht
-                                </option>
-                                <option value="ungewiss" <?php echo ($meinStatus['status'] ?? 'ungewiss') === 'ungewiss' ? 'selected' : ''; ?>>
-                                    ? Ungewiss
-                                </option>
-                            </select>
-                        </div>
-                        
-                        <div class="col-md-5">
-                            <label class="form-label">Grund (optional):</label>
-                            <input type="text" class="form-control" name="grund" 
-                                   value="<?php echo htmlspecialchars($meinStatus['grund'] ?? ''); ?>"
-                                   placeholder="z.B. Urlaub, Krankheit...">
-                        </div>
-                        
-                        <div class="col-md-2">
-                            <button type="submit" name="self_anmeldung" class="btn btn-primary w-100">
-                                <i class="bi bi-save"></i> Speichern
-                            </button>
-                        </div>
+                <?php
+                    $msStatus = $meinStatus['status'] ?? null;
+                    $abgestimmt = in_array($msStatus, ['zugesagt', 'abgesagt', 'ungewiss']);
+                ?>
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <div class="btn-group anwesenheit-buttons" data-ausrueckung-id="<?php echo $id; ?>" data-mein-status="<?php echo htmlspecialchars($msStatus ?? ''); ?>">
+                        <button type="button"
+                            class="btn btn-anwesenheit btn-lg <?php echo $abgestimmt && $msStatus !== 'zugesagt' ? 'btn-outline-success dimmed' : 'btn-success'; ?>"
+                            data-status="zugesagt">
+                            <i class="bi bi-check-lg"></i> Ja
+                        </button>
+                        <button type="button"
+                            class="btn btn-anwesenheit btn-lg <?php echo $abgestimmt && $msStatus !== 'ungewiss' ? 'btn-outline-warning dimmed' : 'btn-warning'; ?>"
+                            data-status="ungewiss">
+                            <i class="bi bi-question-lg"></i> Ungewiss
+                        </button>
+                        <button type="button"
+                            class="btn btn-anwesenheit btn-lg <?php echo $abgestimmt && $msStatus !== 'abgesagt' ? 'btn-outline-danger dimmed' : 'btn-danger'; ?>"
+                            data-status="abgesagt">
+                            <i class="bi bi-x-lg"></i> Nein
+                        </button>
                     </div>
-                    
-                    <?php if ($meinStatus && $meinStatus['gemeldet_am']): ?>
-                    <div class="mt-2">
-                        <small class="text-muted">
-                            <i class="bi bi-clock"></i> Zuletzt geändert: 
-                            <?php echo date('d.m.Y H:i', strtotime($meinStatus['gemeldet_am'])); ?> Uhr
-                        </small>
+                    <?php if (!empty($meinStatus['grund'])): ?>
+                    <div class="text-muted">
+                        <small><i class="bi bi-chat-left-text"></i> <?php echo htmlspecialchars($meinStatus['grund']); ?></small>
                     </div>
                     <?php endif; ?>
-                </form>
+                </div>
+                <?php if ($meinStatus && $meinStatus['gemeldet_am']): ?>
+                <div class="mt-2">
+                    <small class="text-muted" id="anwesenheit-zeitstempel">
+                        <i class="bi bi-clock"></i> Zuletzt geändert:
+                        <?php echo date('d.m.Y H:i', strtotime($meinStatus['gemeldet_am'])); ?> Uhr
+                    </small>
+                </div>
+                <?php else: ?>
+                <div class="mt-2">
+                    <small class="text-muted" id="anwesenheit-zeitstempel"></small>
+                </div>
+                <?php endif; ?>
+                <div class="mt-2" id="anwesenheit-feedback"></div>
             </div>
         </div>
         <?php } ?>
@@ -274,16 +376,16 @@ include 'includes/header.php';
                     $abgesagt = count(array_filter($anwesenheit, fn($a) => $a['status'] === 'abgesagt'));
                     $ungewiss = count(array_filter($anwesenheit, fn($a) => in_array($a['status'], ['ungewiss', 'keine_antwort'])));
                     ?>
-                    <span class="badge bg-success" title="Zugesagt">✓ <?php echo $zugesagt; ?></span>
-                    <span class="badge bg-danger" title="Abgesagt">✗ <?php echo $abgesagt; ?></span>
-                    <span class="badge bg-warning text-dark" title="Ungewiss / Keine Antwort">? <?php echo $ungewiss; ?></span>
+                    <span class="badge bg-success" title="Zugesagt" data-typ="zugesagt">✓ <?php echo $zugesagt; ?></span>
+                    <span class="badge bg-warning text-dark" title="Ungewiss" data-typ="ungewiss">? <?php echo $ungewiss; ?></span>
+                    <span class="badge bg-danger" title="Abgesagt" data-typ="abgesagt">✗ <?php echo $abgesagt; ?></span>
                 </div>
             </div>
             <div class="card-body">
                 <?php if (Session::checkPermission('ausrueckungen', 'schreiben')): ?>
                 <form method="POST">
                     <div class="table-responsive">
-                        <table class="table table-sm">
+                        <table class="table table-sm" id="anwesenheitAdminTable">
                             <thead>
                                 <tr>
                                     <th>Mitglied</th>
@@ -305,8 +407,7 @@ include 'includes/header.php';
                                             <option value="zugesagt" <?php echo $a['status'] === 'zugesagt' ? 'selected' : ''; ?>>✓ Zugesagt</option>
                                             <option value="ungewiss" <?php echo $a['status'] === 'ungewiss' ? 'selected' : ''; ?>>? Ungewiss</option>
                                             <option value="abgesagt" <?php echo $a['status'] === 'abgesagt' ? 'selected' : ''; ?>>✗ Abgesagt</option>
-                                            <option value="anwesend" <?php echo $a['status'] === 'anwesend' ? 'selected' : ''; ?>>Anwesend (nachträglich)</option>
-                                            <option value="abwesend" <?php echo $a['status'] === 'abwesend' ? 'selected' : ''; ?>>Abwesend (nachträglich)</option>
+
                                         </select>
                                     </td>
                                     <td>
@@ -331,7 +432,7 @@ include 'includes/header.php';
                 </form>
                 <?php else: ?>
                 <div class="table-responsive">
-                    <table class="table table-sm">
+                    <table class="table table-sm" id="anwesenheitTable">
                         <thead>
                             <tr>
                                 <th>Mitglied</th>
@@ -377,5 +478,110 @@ include 'includes/header.php';
         </div>
     </div>
 </div>
+
+<style>
+.btn-anwesenheit.dimmed {
+    opacity: 0.35;
+}
+.btn-anwesenheit {
+    transition: all 0.15s ease;
+}
+</style>
+
+<script>
+$(document).ready(function() {
+
+    // Anwesenheitsliste sortierbar machen
+    if ($'#anwesenheitAdminTable').length) {
+        $('#anwesenheitAdminTable').DataTable({
+            order: [[0, 'asc']],
+            pageLength: 25,
+            language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/de-DE.json' },
+            columnDefs: [{ orderable: false, targets: [1, 2] }]
+        });
+    }
+    if ($('#anwesenheitTable').length) {
+        $('#anwesenheitTable').DataTable({
+            order: [[1, 'asc']],
+            pageLength: 25,
+            language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/de-DE.json' }
+        });
+    }
+
+    const statusMap = {
+        'zugesagt': { solid: 'btn-success',  outline: 'btn-outline-success'  },
+        'ungewiss': { solid: 'btn-warning',  outline: 'btn-outline-warning'  },
+        'abgesagt': { solid: 'btn-danger',   outline: 'btn-outline-danger'   }
+    };
+
+    function updateButtons(gruppe, neuerStatus) {
+        gruppe.find('.btn-anwesenheit').each(function() {
+            const b = $(this);
+            const s = b.data('status');
+            const colors = statusMap[s];
+            b.removeClass('btn-success btn-warning btn-danger btn-outline-success btn-outline-warning btn-outline-danger dimmed');
+            if (s === neuerStatus) {
+                b.addClass(colors.solid);
+            } else {
+                b.addClass(colors.outline + ' dimmed');
+            }
+        });
+    }
+
+    function updateZaehlerDetail(alterStatus, neuerStatus) {
+        // Badges im Anwesenheit-Karten-Header aktualisieren
+        const header = $('.card-header [data-typ]');
+        if (!header.length) return;
+
+        if (alterStatus && statusMap[alterStatus]) {
+            const altEl = $('[data-typ="' + alterStatus + '"]');
+            altEl.each(function() {
+                const val = parseInt($(this).text().replace(/[^0-9]/g, '')) || 0;
+                if (val > 0) $(this).text($(this).text().replace(/[0-9]+/, val - 1));
+            });
+        }
+        const neuEl = $('[data-typ="' + neuerStatus + '"]');
+        neuEl.each(function() {
+            const val = parseInt($(this).text().replace(/[^0-9]/g, '')) || 0;
+            $(this).text($(this).text().replace(/[0-9]+/, val + 1));
+        });
+    }
+
+    $(document).on('click', '.btn-anwesenheit', function() {
+        const btn = $(this);
+        const gruppe = btn.closest('.anwesenheit-buttons');
+        const ausrueckungId = gruppe.data('ausrueckung-id');
+        const neuerStatus = btn.data('status');
+        const alterStatus = gruppe.data('mein-status') || '';
+        // Gleicher Status nochmal → nichts tun
+        if (neuerStatus === alterStatus) return;
+
+        updateButtons(gruppe, neuerStatus);
+        updateZaehlerDetail(alterStatus, neuerStatus);
+        gruppe.data('mein-status', neuerStatus);
+
+        fetch('api/anwesenheit_setzen.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'ausrueckung_id=' + ausrueckungId + '&status=' + encodeURIComponent(neuerStatus)
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const now = new Date();
+                const ts = now.toLocaleDateString('de-AT') + ' ' + now.toLocaleTimeString('de-AT', {hour: '2-digit', minute: '2-digit'});
+                $('#anwesenheit-zeitstempel').html('<i class="bi bi-clock"></i> Zuletzt geändert: ' + ts + ' Uhr');
+                $('#anwesenheit-feedback').html('<small class="text-success"><i class="bi bi-check-circle"></i> Gespeichert</small>');
+                setTimeout(() => $('#anwesenheit-feedback').html(''), 3000);
+            } else {
+                $('#anwesenheit-feedback').html('<small class="text-danger"><i class="bi bi-exclamation-circle"></i> Fehler: ' + data.message + '</small>');
+            }
+        })
+        .catch(() => {
+            $('#anwesenheit-feedback').html('<small class="text-danger"><i class="bi bi-exclamation-circle"></i> Netzwerkfehler</small>');
+        });
+    });
+});
+</script>
 
 <?php include 'includes/footer.php'; ?>

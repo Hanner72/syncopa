@@ -11,6 +11,9 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Hinzugefügt
 
+- **Dokumentation**
+  - vollständige Dokumentation der Applikation hinzugefügt (Bilder folgen...)
+
 ### Geändert
 
 - **Generell**
@@ -26,6 +29,9 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 - **Ausrückungen**
   - Sortierung nach Datum stimmt jetzt
+  - Buttons um die Anwesenheit einzutragen
+    - mit Grund bei einer Absage "Urlaub, Krankheit, etc."
+    - Auflistung der Anwesenden Mitglieder nach Register sortiert
 
 - **Instrumente**
   - auf der Haupttabelle die Spalte "Notizen" einblenden für weitere Infos
