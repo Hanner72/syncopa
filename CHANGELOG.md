@@ -14,6 +14,12 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - **Dokumentation**
   - vollständige Dokumentation der Applikation hinzugefügt (Bilder folgen...)
 
+- **Ausrückungen**
+  - Kalender Abos
+    - zwei Varianten können jetzt aboniert werden
+      - nur die Ausrückungen
+      - Ausrückungen UND Termine (z.B. für Vorstandsitzung etc.)
+
 ### Geändert
 
 - **Generell**
