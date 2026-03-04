@@ -33,6 +33,9 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
   - Geburtstagsliste richtig sortiert
   - Deutsche Monatsnamen anzeigen
 
+- **Kalender**
+  - Bei Klick auf ein Datumsfeld kann ein Termin eingetragen werden
+
 - **Ausrückungen**
   - Sortierung nach Datum stimmt jetzt
   - Buttons um die Anwesenheit einzutragen
