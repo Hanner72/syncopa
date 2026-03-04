@@ -224,7 +224,7 @@ include 'includes/header.php';
         
         <!-- Zugesagte Mitglieder nach Register -->
         <?php if (!empty($zugesagteGruppiert)): ?>
-        <div class="card mb-3">
+        <div class="card mb-3 border-success">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="bi bi-person-check text-success"></i> Zusagen</h5>
                 <span class="badge bg-success"><?php echo count($zugesagteNachRegister); ?></span>
@@ -251,7 +251,7 @@ include 'includes/header.php';
 
         <!-- Abgesagte Mitglieder nach Register -->
         <?php if (!empty($abgesagteGruppiert)): ?>
-        <div class="card mb-3">
+        <div class="card mb-3 border-danger">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="bi bi-person-x text-danger"></i> Absagen</h5>
                 <span class="badge bg-danger"><?php echo count($abgesagteNachRegister); ?></span>

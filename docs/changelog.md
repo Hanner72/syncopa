@@ -25,6 +25,7 @@
   - Buttons um die Anwesenheit einzutragen
     - mit Grund bei einer Absage "Urlaub, Krankheit, etc."
     - Auflistung der Anwesenden Mitglieder nach Register sortiert
+    - Ansicht für Mobilgeräte optimiert
 
 - **Instrumente**
   - auf der Haupttabelle die Spalte "Notizen" einblenden für weitere Infos

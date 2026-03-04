@@ -182,8 +182,8 @@ include 'includes/header.php';
     <div class="col-lg-6">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-calendar-event me-2"></i>Nächste Termine</span>
-                <a href="kalender.php" class="btn btn-sm btn-primary">Kalender</a>
+                <span><i class="bi bi-calendar-event me-2"></i>Nächste Ausrückungen</span>
+                <a href="ausrueckungen.php" class="btn btn-sm btn-outline-success">Ausrückungen</a>
             </div>
             <div class="card-body">
                 <?php if (empty($naechsteAusrueckungen)): ?>

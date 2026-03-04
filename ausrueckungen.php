@@ -24,6 +24,8 @@ if (!empty($_GET['status'])) {
 }
 
 $ausrueckungen = $ausrueckung->getAll($filter);
+// Für Mobile-Ansicht: aufsteigend nach Datum
+$ausrueckungenAsc = array_reverse($ausrueckungen);
 
 // Eigenen Anwesenheitsstatus für alle Ausrückungen laden
 $meineMitgliedId = null;
@@ -111,7 +113,8 @@ include 'includes/header.php';
     </div>
 </div>
 
-<!-- Liste -->
+<!-- Liste Desktop -->
+<div class="d-none d-md-block">
 <div class="card">
     <div class="card-body">
         <div class="table-responsive p-2">
@@ -246,6 +249,63 @@ include 'includes/header.php';
         </div>
     </div>
 </div>
+</div><!-- /d-none d-md-block -->
+
+<!-- Liste Mobile -->
+<div class="d-block d-md-none">
+    <?php
+    // Typ-Farben für Mobile-Badge
+    $typeColorsMobile = [
+        'Probe' => 'secondary', 'Konzert' => 'primary', 'Ausrückung' => 'success',
+        'Fest' => 'warning', 'Wertung' => 'danger', 'Sonstiges' => 'info'
+    ];
+    foreach ($ausrueckungenAsc as $a):
+        $meinStatus = $meineAnwesenheiten[$a['id']] ?? null;
+        $abgestimmt = in_array($meinStatus, ['zugesagt', 'abgesagt', 'ungewiss']);
+    ?>
+    <div class="card mb-2 <?php echo $a['status'] === 'abgesagt' ? 'border-danger' : ''; ?>">
+        <div class="card-body py-2 px-3">
+            <div class="d-flex align-items-center justify-content-between gap-2">
+                <!-- Spalte 1: Name + Datum -->
+                <div class="flex-grow-1 overflow-hidden">
+                    <div class="fw-semibold text-truncate">
+                        <a href="ausrueckung_detail.php?id=<?php echo $a['id']; ?>" class="text-decoration-none text-dark"><?php echo htmlspecialchars($a['titel']); ?></a>
+                    </div>
+                    <small class="text-muted">
+                        <i class="bi bi-calendar3"></i>
+                        <?php echo date('d.m.Y', strtotime($a['start_datum'])); ?>
+                        &nbsp;<?php echo date('H:i', strtotime($a['start_datum'])); ?> Uhr
+                    </small>
+                </div>
+                <!-- Spalte 2: 3 Buttons -->
+                <?php if ($meineMitgliedId): ?>
+                <div class="flex-shrink-0">
+                    <div class="btn-group anwesenheit-buttons"
+                         data-ausrueckung-id="<?php echo $a['id']; ?>"
+                         data-mein-status="<?php echo htmlspecialchars($meinStatus ?? ''); ?>">
+                        <button type="button"
+                            class="btn btn-anwesenheit btn-sm <?php echo $abgestimmt && $meinStatus !== 'zugesagt' ? 'btn-outline-success dimmed' : 'btn-success'; ?>"
+                            data-status="zugesagt" title="Ja">
+                            <i class="bi bi-check-lg"></i>
+                        </button>
+                        <button type="button"
+                            class="btn btn-anwesenheit btn-sm <?php echo $abgestimmt && $meinStatus !== 'ungewiss' ? 'btn-outline-warning dimmed' : 'btn-warning'; ?>"
+                            data-status="ungewiss" title="Ungewiss">
+                            <i class="bi bi-question-lg"></i>
+                        </button>
+                        <button type="button"
+                            class="btn btn-anwesenheit btn-sm <?php echo $abgestimmt && $meinStatus !== 'abgesagt' ? 'btn-outline-danger dimmed' : 'btn-danger'; ?>"
+                            data-status="abgesagt" title="Nein">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+    <?php endforeach; ?>
+</div>
 
 <!-- Modal: Grund für Absage -->
 <div class="modal fade" id="absageModal" tabindex="-1" aria-labelledby="absageModalLabel" aria-hidden="true">
@@ -286,12 +346,8 @@ include 'includes/header.php';
 
 @media (max-width: 767.98px) {
     .btn-anwesenheit {
-        padding: 0.5rem 0.75rem;
-        font-size: 1.1rem;
-    }
-    /* Tabelle kompakter auf Mobile */
-    #ausrueckungenTable td {
-        vertical-align: middle;
+        padding: 0.45rem 0.7rem;
+        font-size: 1.05rem;
     }
 }
 </style>
