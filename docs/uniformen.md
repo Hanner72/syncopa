@@ -3,7 +3,11 @@
 **Datei:** `uniformen.php` / `uniform_kleidungsstuecke.php`  
 **Berechtigung:** `uniformen – lesen`
 
-Die Uniformverwaltung erfasst alle Kleidungsstücke des Vereins und ermöglicht die Ausgabe und Rücknahme an Mitglieder.
+Die Uniformverwaltung erfasst alle Kleidungsstücke des Vereins und ermöglicht die Ausgabe an Mitglieder.
+
+Die Lagerverwaltung bzw. der Uniform Bestand ist aktuell noch nicht Verwaltbar, lediglich die ausgegebenen Kleidungsstücke und Accessoires. Coming soon...
+
+![Uniformen Übersicht](screenshots/uniformen1.png)
 
 ---
 
@@ -23,13 +27,16 @@ Uniforms-Kategorien (z.B. "Ausgehuniform", "Sommerkleidung")
 
 **Datei:** `uniform_kategorien.php`
 
-> 📸 **Screenshot:** *Kategorien-Liste mit Buttons zum Hinzufügen/Bearbeiten*
+Zu erreichen mit `Kleidungsstücke verwalten`
+
+![Uniformen verwalten](screenshots/uniformen2.png)
 
 Kategorien sind übergeordnete Gruppen (z.B. „Trachtenanzug", „Sommeruniform").
 
 1. Navigiere zu **Uniformen → Kategorien**
 2. Klicke auf **+ Neue Kategorie**
 3. Name eingeben → **Speichern**
+4. Sortierung → niedrigste Zahl oben
 
 ---
 
@@ -37,58 +44,50 @@ Kategorien sind übergeordnete Gruppen (z.B. „Trachtenanzug", „Sommeruniform
 
 **Datei:** `uniform_kleidungsstuecke.php`
 
-> 📸 **Screenshot:** *Liste der Kleidungsstücke mit Inventarnummer, Kategorie, Größe und Status (verfügbar/ausgegeben)*
+![Uniformen verwalten](screenshots/uniformen3.png)
 
 | Spalte | Beschreibung |
 |---|---|
-| Inventarnummer | Eindeutige Nummer |
-| Bezeichnung | z.B. „Jacke blau" |
 | Kategorie | Übergeordnete Gruppe |
-| Größe | Kleidergröße |
-| Zustand | gut / beschädigt |
-| Status | verfügbar / ausgegeben |
-| Mitglied | Bei Ausgabe: wem zugeordnet |
+| Name | z.B. „Jacke blau" |
+| Beschreibung | Beschreibungstext |
+| Verfügbare Größen | z.B.: S, M, L, XL |
+| Sortierung | niedrigste Zahl oben |
 
 ---
 
 ## Uniform ausgeben
 
-**Datei:** `uniform_ausgeben.php`  
+**Datei:** `uniform_mitglied.php`  
 **Berechtigung:** `uniformen – schreiben`
 
-> 📸 **Screenshot:** *Dialog „Uniform ausgeben" mit Mitglieder-Dropdown und Datum*
+![Uniformen ausgeben](screenshots/uniformen4.png)
 
-1. Öffne die Liste der **Kleidungsstücke**
-2. Klicke beim gewünschten Kleidungsstück auf **„Ausgeben"**
-3. Wähle das **Mitglied** aus der Dropdown-Liste
+1. Öffne die Liste der **Kleidungsstücke** bei Mitglied bearbeiten
+2. Im Formular auf der rechten Seite ** Kleidungsstücke zuweisen**
+3. alle Formularfelder ausfüllen bzw. auswählen
 4. Trage das **Ausgabedatum** ein
-5. Klicke **Ausgeben**
+5. Klicke **Zuweisen**
 
 Das Kleidungsstück wird als `ausgegeben` markiert und erscheint in der Mitgliederdetailseite.
 
 ---
+> 💡 **Info:** Die Lagerverwaltung bzw. der Uniform Bestand ist aktuell noch nicht Verwaltbar, lediglich die ausgegebenen Kleidungsstücke und Accessoires. Coming soon...
 
-## Uniform zurücknehmen
+    ## Uniform zurücknehmen
 
-**Datei:** `uniform_zuruecknehmen.php`  
-**Berechtigung:** `uniformen – schreiben`
+    **Datei:** `uniform_zuruecknehmen.php`  
+    **Berechtigung:** `uniformen – schreiben`
 
-> 📸 **Screenshot:** *Button „Zurücknehmen" neben ausgegebenen Kleidungsstücken in der Mitgliederdetailseite*
+    > 📸 **Screenshot:** *Button „Zurücknehmen" neben ausgegebenen Kleidungsstücken in der Mitgliederdetailseite*
 
-1. Öffne die **Detailseite des Mitglieds**
-2. Gehe zum Reiter **Uniform**
-3. Klicke beim Kleidungsstück auf **„Zurücknehmen"**
-4. Optional: Zustandsnotiz hinterlegen
-5. Bestätigen
+    1. Öffne die **Detailseite des Mitglieds**
+    2. Gehe zum Reiter **Uniform**
+    3. Klicke beim Kleidungsstück auf **„Zurücknehmen"**
+    4. Optional: Zustandsnotiz hinterlegen
+    5. Bestätigen
 
-Das Kleidungsstück ist wieder **verfügbar**.
+    Das Kleidungsstück ist wieder **verfügbar**.
 
 ---
 
-## Uniform einem Mitglied zuordnen
-
-**Datei:** `uniform_mitglied.php`
-
-Alternativ zur Ausgabe aus der Kleidungsstückliste kann auch direkt aus der Mitgliedermaske eine Uniform zugeordnet werden.
-
-> 📸 **Screenshot:** *Reiter „Uniform" in der Mitgliederdetailseite mit Button „Kleidungsstück hinzufügen"*

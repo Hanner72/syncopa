@@ -13,7 +13,7 @@ Syncopa vereint alle wichtigen Verwaltungsaufgaben eines Musikvereins in einer w
 | Modul | Beschreibung |
 |---|---|
 | 👥 **Mitglieder** | Stammdaten, Register, Mitgliedsnummern, Geburtstage |
-| 🎺 **Ausrückungen** | Termine planen, An-/Abmeldungen verwalten |
+| 🎺 **Ausrückungen** | Termine planen, An-/Abmeldungen verwalten, iCal-Export |
 | 📅 **Kalender** | Übersicht aller Termine, iCal-Export |
 | 💰 **Finanzen** | Einnahmen & Ausgaben, Mitgliedsbeiträge |
 | 🎼 **Noten** | Notenarchiv mit Kategorien |

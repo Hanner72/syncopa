@@ -9,16 +9,18 @@ Das Notenarchiv verwaltet den gesamten Notenbestand des Vereins.
 
 ## Übersicht
 
-> 📸 **Screenshot:** *Notenliste mit Such- und Filterleiste, Spalten: Titel, Komponist, Kategorie, Stimmen*
+![Noten Startseite](screenshots/noten1.png)
 
 Die Tabelle listet alle erfassten Werke mit:
 
 | Spalte | Beschreibung |
 |---|---|
+| Archivnummer | automatisch oder manuell - Nummernkreis kann in den Stammdaten geändert werden |
 | Titel | Name des Musikstücks |
 | Komponist / Arrangeur | Urheber |
 | Kategorie | z.B. Marsch, Polka, Konzert |
-| Stimmen | Anzahl vorhandener Stimmen |
+| Schwierigkeit | Schwierigkeit gewählt vom Kapellmeister |
+| PDFS | Anzahl der PDF Dateien |
 | Aktionen | Anzeigen · Bearbeiten · Löschen |
 
 ---
@@ -28,12 +30,15 @@ Die Tabelle listet alle erfassten Werke mit:
 **Datei:** `noten_bearbeiten.php`  
 **Berechtigung:** `noten – schreiben`
 
-> 📸 **Screenshot:** *Formular mit Feldern Titel, Komponist, Kategorie und Notizen*
+![Noten erfassen](screenshots/noten2.png)
 
 1. Klicke auf **+ Neue Noten**
 2. Erfasse Titel, Komponist und Kategorie
 3. Optional: Stimmenanzahl und Notizen ergänzen
 4. **Speichern**
+5. PDF Dateien hochladen
+6. PDF Dateien splitten (wenn gewünscht werden die PDF´s automatisch nach Stimmen gesplittet und auch umbenannt)
+7. **Speichern und Schließen**
 
 ### Formularfelder
 
@@ -45,6 +50,20 @@ Die Tabelle listet alle erfassten Werke mit:
 | Katalognummer | – | Interne Archivnummer |
 | Stimmen | – | Anzahl vorhandener Stimmhefte |
 | Notizen | – | Interne Anmerkungen |
+
+---
+
+## Noten PDF anzeigen und ausdrucken
+
+Noten können ganz bequem von der Notenlist ausgedruckt werden.
+
+![Noten drucken](screenshots/noten3.png)
+
+1. in der Liste auf die Anzahl der PDF´s klicken
+2. Alle PDF (Stimmen werden angezeigt)
+3. gewünschte Noten ausdrucken
+
+> 💡 **Tipp:** Wenn ein Netzwerkfähiger Drucker im Probelokal Verfügbar ist können die Noten ganz leicht ausgedruckt werden.
 
 ---
 

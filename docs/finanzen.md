@@ -9,14 +9,14 @@ Die Finanzverwaltung ermöglicht die Erfassung und Auswertung aller Einnahmen un
 
 ## Übersicht
 
-> 📸 **Screenshot:** *Finanztabelle mit Spalten Datum, Kategorie, Beschreibung, Betrag (grün/rot eingefärbt), Saldo*
+![Finanzen Übersicht](screenshots/finanzen1.png)
 
 Die Übersicht zeigt:
 
 - Alle Transaktionen chronologisch
 - **Einnahmen** in Grün, **Ausgaben** in Rot
 - Aktuellen **Kontostand / Saldo**
-- Summen nach Zeitraum filterbar
+- Summen nach Zeitraum und Typ filterbar
 
 ---
 
@@ -25,11 +25,11 @@ Die Übersicht zeigt:
 **Datei:** `transaktion_bearbeiten.php`  
 **Berechtigung:** `finanzen – schreiben`
 
-> 📸 **Screenshot:** *Formular „Neue Transaktion" mit Typ-Auswahl Einnahme/Ausgabe*
+![Neue Transaktion](screenshots/finanzen2.png)
 
 1. Klicke auf **+ Neue Transaktion**
 2. Wähle **Einnahme** oder **Ausgabe**
-3. Fülle Datum, Betrag, Kategorie und Beschreibung aus
+3. Fülle Datum, Betrag, Kategorie, Beschreibung und Belegnummer aus
 4. Klicke **Speichern**
 
 ### Formularfelder
@@ -40,6 +40,7 @@ Die Übersicht zeigt:
 | Datum | ✅ | Buchungsdatum |
 | Betrag | ✅ | Betrag in Euro (ohne Währungssymbol) |
 | Kategorie | – | Buchungskategorie |
+| Zahlungsart | - | wie wurde der Betrag beglichen |
 | Beschreibung | – | Verwendungszweck |
 | Beleg-Nr. | – | Referenz zu einem Beleg |
 
@@ -50,13 +51,13 @@ Die Übersicht zeigt:
 **Datei:** `beitraege_verwalten.php`  
 **Berechtigung:** `finanzen – schreiben`
 
-> 📸 **Screenshot:** *Beitragsverwaltung mit Liste aller Mitglieder und Bezahlt-Status je Jahr*
+![Mitgliedsbeiträge](screenshots/finanzen3.png)
 
 Über die Beitragsverwaltung können Mitgliedsbeiträge für das aktuelle (oder vergangene) Jahr erfasst werden:
 
 1. Navigiere zu **Finanzen → Mitgliedsbeiträge**
 2. Wähle das **Jahr**
-3. Setze für jedes Mitglied den Status: `bezahlt` / `offen` / `befreit`
+3. Setze für jedes Mitglied den Status: `bezahlt` / `unbezahlt`
 4. Änderungen werden automatisch gespeichert
 
-> 💡 **Tipp:** Mitglieder mit Status `Ehrenmitglied` können pauschal als `befreit` markiert werden.
+> 💡 **Tipp:** Mitgliederbeiträge können in den Einstellungen festgelegt werden. Für den Status `aktiv` kann ein Beitrag eingetragen werden, sowie für alle anderen Mitgliedstypen. Weiters kann festgelegt werden welcher Mitgliedstyp Beiträge zahlen muss.

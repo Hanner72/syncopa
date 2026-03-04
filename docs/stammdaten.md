@@ -13,49 +13,57 @@ Stammdaten sind die Grundkonfiguration der Anwendung – Werte die in Dropdowns 
 |---|---|
 | **Register** | Klarinette, Trompete, Flügelhorn, Posaune, Tuba, Schlagwerk |
 | **Instrumententypen** | Trompete B, Klarinette Es, Tuba F, Schlagzeug |
-| **Noten-Kategorien** | Marsch, Polka, Walzer, Konzertmusik, Pop/Rock |
-| **Uniform-Kategorien** | → Siehe [Uniformen](uniformen.md) |
+| **Ausrückungstypen** | Probe, Konzert, Fest etc. |
+| **Nummernkreise** | z.B. für Mitglieder, Noten |
 
 ---
 
 ## Register verwalten
 
-> 📸 **Screenshot:** *Register-Liste mit Buttons zum Hinzufügen, Bearbeiten und Löschen, drag-and-drop Sortierung*
+![Register verwalten](screenshots/stammdaten1.png)
 
 Register sind die musikalischen Gruppen im Verein (z.B. nach Instrumentenfamilien).
 
 1. Navigiere zu **Administration → Stammdaten → Register**
 2. Klicke **+ Neues Register**
 3. Name eingeben
-4. Reihenfolge per Drag & Drop anpassen
+4. Reihenfolge per Sortierung anpassen
 5. **Speichern**
 
 > ⚠️ **Hinweis:** Ein Register kann nur gelöscht werden, wenn ihm **keine Mitglieder** mehr zugeordnet sind.
 
 ---
 
-## Instrumententypen verwalten {#instrumententypen}
+## Instrumententypen verwalten
 
-> 📸 **Screenshot:** *Modal-Dialog „Instrumententyp bearbeiten" mit Feldern Name und Kategorie*
+![Instrumententypen verwalten](screenshots/stammdaten2.png)
 
 Instrumententypen definieren die verfügbaren Instrumentgattungen im Inventar.
 
 1. Navigiere zu **Administration → Stammdaten → Instrumententypen**
 2. Klicke **+ Neuer Instrumententyp**
-3. Name und optional eine Kategorie eingeben
+3. Name und (Haupt-)Register eingeben
 4. **Speichern**
 
 ---
 
-## Noten-Kategorien {#noten-kategorien}
+## Ausrückungstypen
 
-> 📸 **Screenshot:** *Kategorieliste mit Sortierung*
+![Ausrückungstypen](screenshots/stammdaten3.png)
 
-Kategorien zur Klassifizierung des Notenarchivs.
+Kategorien für die Ausrückungen.
 
-1. Navigiere zu **Administration → Stammdaten → Noten-Kategorien**
-2. Klicke **+ Neue Kategorie**
-3. Bezeichnung eingeben → **Speichern**
+> ⚠️ **Hinweis:** Diese sind momentan noch fix im System hinterlegt. Ausrückungstypen Verwaltung folgt...
+
+---
+
+## Nummernkreise
+
+![Nummernkreise](screenshots/stammdaten4.png)
+
+Nummernkreise für die Mitglieder, Noten und Instrumente.
+
+> ⚠️ **Hinweis:** Beschreibung in der rechten Tabelle
 
 ---
 

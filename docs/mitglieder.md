@@ -9,17 +9,21 @@ Die Mitgliederverwaltung ist das Herzstück von Syncopa. Hier werden alle Stammd
 
 ## Mitgliederliste
 
-> 📸 **Screenshot:** *Tabelle mit Mitgliedern, Suchleiste oben, Spalten: Name, Register, Status, Aktionen*
+![Mitglieder Startseite](screenshots/mitglieder1.png)
 
 Die Übersichtstabelle zeigt alle Mitglieder mit folgenden Informationen:
 
 | Spalte | Beschreibung |
 |---|---|
-| Mitgliedsnummer | Automatisch vergeben oder manuell gesetzt |
-| Name | Vor- und Nachname |
+| Mitgliedsnummer | Automatisch vergeben* oder manuell gesetzt |
+| Name | Vor- und Nachname, Alter |
 | Register | Musikalisches Register (z.B. Trompete, Klarinette) |
+| Instrumente | welche(s) Instrument(e) spielt(e) das Mitglied |
 | Status | `aktiv`, `inaktiv`, `Ehrenmitglied` |
+| Kontakt | Mail-Adresse und Tel.-Nr. |
 | Aktionen | Anzeigen · Bearbeiten · Löschen |
+
+*Nummmernkreise können in denStammdaten angepasst werden
 
 ### Filtern & Suchen
 
@@ -34,7 +38,7 @@ Die Übersichtstabelle zeigt alle Mitglieder mit folgenden Informationen:
 **Datei:** `mitglied_bearbeiten.php`  
 **Berechtigung:** `mitglieder – schreiben`
 
-> 📸 **Screenshot:** *Formular „Neues Mitglied" mit ausgefüllten Pflichtfeldern*
+![Neues Mitglied anlegen](screenshots/mitglieder2.png)
 
 1. Klicke in der Mitgliederliste auf **+ Neues Mitglied**
 2. Fülle das Formular aus (Pflichtfelder mit `*` markiert)
@@ -84,7 +88,7 @@ Die Übersichtstabelle zeigt alle Mitglieder mit folgenden Informationen:
 
 **Datei:** `mitglied_detail.php`
 
-> 📸 **Screenshot:** *Detailansicht eines Mitglieds mit Tabs: Stammdaten, Ausrückungen, Uniform, Instrumente*
+![Mitglied Detailseite](screenshots/mitglieder3.png)
 
 Die Detailseite eines Mitglieds zeigt:
 
@@ -101,5 +105,7 @@ Die Detailseite eines Mitglieds zeigt:
 **Berechtigung:** `mitglieder – löschen`
 
 > ⚠️ **Achtung:** Das Löschen eines Mitglieds entfernt **alle verknüpften Daten** (Ausrückungsteilnahmen, Uniformzuordnungen etc.). Diese Aktion kann nicht rückgängig gemacht werden!
+
+![Mitglied löschen](screenshots/mitglieder4.png)
 
 Alternativ empfiehlt es sich, das Mitglied auf **inaktiv** zu setzen statt es zu löschen.

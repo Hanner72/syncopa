@@ -7,31 +7,31 @@
 
 * **👥 Mitglieder**
   * [Übersicht](mitglieder.md)
-  * [Mitglied anlegen / bearbeiten](mitglied-bearbeiten.md)
-  * [Mitgliedsbeiträge](beitraege.md)
+  <!-- * [Mitglied anlegen / bearbeiten](mitglied-bearbeiten.md) -->
+  <!-- * [Mitgliedsbeiträge](beitraege.md) -->
 
 * **🎺 Ausrückungen**
   * [Übersicht & Planung](ausrueckungen.md)
-  * [Ausrückung anlegen](ausrueckung-anlegen.md)
-  * [An-/Abmeldung](ausrueckung-anmeldung.md)
+  <!-- * [Ausrückung anlegen](ausrueckung-anlegen.md) -->
+  <!-- * [An-/Abmeldung](ausrueckung-anmeldung.md) -->
 
 * **📅 Kalender**
   * [Kalender](kalender.md)
-  * [Kalender abonnieren](kalender-abo.md)
+  <!-- * [Kalender abonnieren](kalender-abo.md) -->
 
 * **💰 Finanzen**
-  * [Transaktionen](finanzen.md)
+  * [Kassenbuch](finanzen.md)
 
 * **🎼 Noten**
   * [Notenarchiv](noten.md)
 
 * **🎻 Instrumente**
   * [Inventar](instrumente.md)
-  * [Wartungen](instrumente.md#wartungen)
+  <!-- * [Wartungen](instrumente.md#wartungen) -->
 
 * **👔 Uniformen**
   * [Verwaltung](uniformen.md)
-  * [Ausgabe & Rücknahme](uniform-ausgabe.md)
+  <!-- * [Ausgabe & Rücknahme](uniform-ausgabe.md) -->
 
 * **⚙️ Administration**
   * [Benutzerverwaltung](benutzer.md)

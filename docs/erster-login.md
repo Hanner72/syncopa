@@ -2,7 +2,11 @@
 
 ## Admin-Konto anlegen
 
-Nach der Installation existiert noch kein Benutzer. Lege direkt in der Datenbank einen ersten Administrator an:
+Mit dem Import der database.sql wird ein erster Admin Benutzer angelegt. 
+Benutzer: admin
+Passwort admin123
+
+Falls nicht, lege einen ersten Administrator an:
 
 ```sql
 INSERT INTO benutzer (benutzername, email, passwort, rolle, aktiv, erstellt_am)
@@ -16,31 +20,9 @@ VALUES (
 );
 ```
 
-Alternativ kannst du ein kleines PHP-Skript einmalig ausführen:
-
-```php
-<?php
-// setup_admin.php  – NUR EINMALIG AUSFÜHREN, danach löschen!
-require_once 'config.php';
-require_once 'includes.php';
-
-$db = Database::getInstance();
-$hash = password_hash('MeinSicheresPasswort123!', PASSWORD_DEFAULT);
-
-$db->execute(
-  "INSERT INTO benutzer (benutzername, email, passwort, rolle, aktiv) VALUES (?,?,?,?,1)",
-  ['admin', 'admin@meinverein.at', $hash, 'admin']
-);
-echo "Admin angelegt!";
-```
-
-> ⚠️ **Sicherheit:** Das Skript `setup_admin.php` nach der Ausführung sofort **löschen**!
-
----
-
 ## Login-Vorgang
 
-> 📸 **Screenshot:** *Login-Seite mit Felder Benutzername, Passwort und "Mit Google anmelden"*
+![Dashboard Screenshot](screenshots/ersterlogin1.png)
 
 1. Öffne die Anwendung im Browser
 2. Gib **Benutzername** und **Passwort** ein
@@ -52,24 +34,24 @@ Bei Erfolg wirst du zum **Dashboard** weitergeleitet.
 
 ## Das Dashboard
 
-> 📸 **Screenshot:** *Dashboard mit Statistik-Kacheln, nächste Ausrückungen und Geburtstage*
+![Dashboard Screenshot](screenshots/ersterlogin2.png)
 
 Das Dashboard zeigt auf einen Blick:
 
 - 📊 **Statistiken** – Mitgliederanzahl, Notenbestand, Instrumente
 - 📅 **Nächste Ausrückungen** – die kommenden 5 Termine
-- 🎂 **Geburtstage** – Mitglieder mit Geburtstag in diesem Monat
-- 🔔 **Neue Benutzer** – Konten die noch keine Rolle zugewiesen haben *(nur Admin/Obmann)*
+- 🎂 **Geburtstage** – Mitglieder mit Geburtstag in diesem und nächsten Monat
+- 🔔 **Schnellaktionen** – Ausrückung, Mitglied, Noten anlegen *(nur wer Rechte dazu hat)*
 - 🔧 **Fällige Wartungen** – Instrumente deren Wartungsdatum überschritten ist
 
 ---
 
 ## Passwort ändern
 
-Nach dem ersten Login solltest du dein Passwort ändern:
+Nach dem ersten Login sollte der Admin das Passwort ändern:
 
-1. Klicke oben rechts auf deinen **Benutzernamen**
-2. Wähle **Profil / Einstellungen**
+1. Klicke links im Menü auf **Benutzer**
+2. Ändere beim Benutzer **Admin** das Passwort (Stiftsymbol)
 3. Trage das neue Passwort ein und bestätige es
 4. Klicke **Speichern**
 

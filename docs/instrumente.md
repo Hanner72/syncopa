@@ -9,17 +9,17 @@ Die Instrumentenverwaltung erfasst das komplette Instrumenteninventar des Verein
 
 ## Inventarübersicht
 
-> 📸 **Screenshot:** *Instrumentenliste mit Filterleiste, Spalten: Bezeichnung, Typ, Seriennummer, Zustand, zugeordnetes Mitglied*
+![Instrumente Übersicht](screenshots/instrumente1.png)
 
 | Spalte | Beschreibung |
 |---|---|
 | Inventarnummer | Eindeutige Nummer |
-| Bezeichnung | Name des Instruments |
-| Typ | Aus Stammdaten (z.B. Trompete, Tuba) |
-| Seriennummer | Hersteller-Seriennummer |
+| Instrument | Register / Instrument |
+| Hersteller/Modell | Hersteller und Modell |
 | Zustand | `gut` · `reparaturbedürftig` · `außer Betrieb` |
-| Mitglied | Aktuell ausgeliehenes Mitglied |
-| Wartung fällig | Datum der nächsten Wartung |
+| Status | Verfügbar oder aktuell ausgeliehenes Mitglied |
+| Notizen | optionale Notizen, z.B. Kinder B-Klarinette kurz |
+| Aktionen | Buttons zum Warten und ändern |
 
 ---
 
@@ -28,39 +28,44 @@ Die Instrumentenverwaltung erfasst das komplette Instrumenteninventar des Verein
 **Datei:** `instrument_bearbeiten.php`  
 **Berechtigung:** `instrumente – schreiben`
 
-> 📸 **Screenshot:** *Formular „Neues Instrument" mit Feldern Bezeichnung, Typ, Kaufdatum*
+![Instrumente erfassen](screenshots/instrumente2.png)
 
 1. Klicke auf **+ Neues Instrument**
 2. Wähle den **Instrumententyp** (aus Stammdaten)
 3. Ergänze Seriennummer, Kaufdatum und Zustand
-4. Optional: Nächstes Wartungsdatum eintragen
-5. **Speichern**
+4. Optional: Ausgeliehen an falls dieses Instrument jemand ausgeliehen hat
+5. **Erstellen**
 
 ### Formularfelder
 
 | Feld | Pflicht | Beschreibung |
 |---|---|---|
-| Bezeichnung | ✅ | Name / Modell |
-| Typ | ✅ | Aus den Stammdaten |
-| Inventarnummer | – | Wird vorgeschlagen |
+| Inventarnummer | – | Wird vorgeschlagen ||
+| Instrumententyp | ✅ | Aus den Stammdaten |
+| Hersteller | - | | Instrumentenhersteller
+| Modell | - | | Modellnummer des Herstellers
 | Seriennummer | – | Hersteller-ID |
-| Kaufdatum | – | Datum der Anschaffung |
-| Kaufpreis | – | Anschaffungskosten |
+| Baujahr | - | Jahr wann das Instrument gebaut wurde |
+| Anschaffungsdatum | – | Datum der Anschaffung |
+| Anschaffungspreis | – | Anschaffungskosten |
+| Versicherungswert | - | optional |
+| Standort | - | wo wird das Instrument gelagert |
 | Zustand | – | Aktueller Zustand |
-| Nächste Wartung | – | Datum der nächsten Fälligkeit |
 | Notizen | – | Interne Anmerkungen |
 
 ---
 
 ## Wartungen {#wartungen}
 
-> 📸 **Screenshot:** *Dashboard-Widget „Fällige Wartungen" mit roter Markierung bei überfälligen Instrumenten*
+Wartung werden in den Instrumentendetails gewartet.
 
 Das System erinnert automatisch an fällige Wartungen:
 
 - Im **Dashboard** erscheint eine Warnung bei überfälligen Instrumenten
 - In der Instrumentenliste werden fällige Wartungen **rot** markiert
 - Nach einer Wartung: Datum in `instrument_bearbeiten.php` aktualisieren und neues Datum setzen
+
+![Instrumente Wartung](screenshots/instrumente4.png)
 
 > 💡 **Empfehlung:** Trage für alle Instrumente ein Wartungsdatum ein, damit das System automatisch erinnern kann.
 
@@ -70,10 +75,12 @@ Das System erinnert automatisch an fällige Wartungen:
 
 Ein Instrument einem Mitglied zuordnen (Ausleihe):
 
-1. Öffne die **Detailseite** des Instruments (`instrument_detail.php`)
-2. Klicke auf **„Mitglied zuordnen"**
+1. Bearbeite das Instruments (`instrument_bearbeiten.php`)
+2. Klicke auf **„Ausgeliehen an"**
 3. Wähle das Mitglied aus der Liste
 4. Optional: Ausleihdatum und Notizen ergänzen
 5. **Speichern**
 
 Das Instrument erscheint nun in der Mitgliederdetailseite unter dem Reiter **Instrumente**.
+
+![Instrumente Zuordnung](screenshots/instrumente5.png)

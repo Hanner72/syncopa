@@ -5,7 +5,7 @@
 ### Hinzugefügt
 
 - **Dokumentation**
-  - vollständige Dokumentation der Applikation hinzugefügt (Bilder folgen...)
+  - vollständige Dokumentation der Applikation hinzugefügt
 
 - **Ausrückungen**
   - Kalender Abos

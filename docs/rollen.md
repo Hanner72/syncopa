@@ -5,6 +5,8 @@
 
 Das Rollen-Berechtigungssystem steuert granular, wer welche Aktionen in Syncopa durchführen darf.
 
+![Rollen Übersicht](screenshots/rollen1.png)
+
 ---
 
 ## Konzept
@@ -15,7 +17,7 @@ Jeder Benutzer hat genau **eine Rolle**. Jede Rolle hat für jedes Modul drei Be
 |---|---|
 | `lesen` | Daten ansehen |
 | `schreiben` | Daten anlegen und bearbeiten |
-| `löschen` | Datensätze löschen |
+| `voll` | Datensätze löschen |
 
 > ℹ️ Wer löschen darf, muss auch lesen und schreiben können. Das System prüft die Berechtigungen bei jedem Seitenaufruf.
 
@@ -34,7 +36,7 @@ Jeder Benutzer hat genau **eine Rolle**. Jede Rolle hat für jedes Modul drei Be
 
 ---
 
-## Rollenübersicht (Empfehlung)
+## Rollenübersicht (Beispiel)
 
 | Rolle | Mitglieder | Ausrückungen | Finanzen | Noten | Instrumente | Uniformen |
 |---|---|---|---|---|---|---|
@@ -52,12 +54,12 @@ Jeder Benutzer hat genau **eine Rolle**. Jede Rolle hat für jedes Modul drei Be
 
 **Datei:** `rolle_bearbeiten.php`
 
-> 📸 **Screenshot:** *Berechtigungsmatrix mit Checkboxen für jedes Modul × Berechtigung*
+![Rollen erstellen](screenshots/rollen2.png)
 
 1. Navigiere zu **Administration → Rollen**
 2. Klicke auf **+ Neue Rolle**
 3. Vergib einen **Namen** für die Rolle
-4. Setze die Berechtigungen für jedes Modul individuell
+4. Badge-Farbe für optische Zwecke
 5. Optional: Häkchen bei **„Ist Admin"** für Vollzugriff
 6. **Speichern**
 
@@ -73,6 +75,20 @@ Die Admin-Rolle hat immer **Vollzugriff** und kann nicht gelöscht werden. Sie g
 - Systemeinstellungen
 
 > ⚠️ **Sicherheitshinweis:** Vergib die Admin-Rolle nur an absolut vertrauenswürdige Personen. Im Normalbetrieb sollten Obmänner etc. eigene Rollen mit eingeschränkten Rechten bekommen.
+
+---
+
+## Rechte einer Rolle zuweisen
+
+Die Rechte können einer Rolle ganz individuell zugewiesen werden
+
+**Datei:** `berechtigungen_bearbeiten.php`
+
+![Rollenrechte](screenshots/rollen3.png)
+
+1. Auf den Schlüssel einer Rolle klicken zum Bearbeiten
+2. Haken bei den gewünschten Rechten setzen
+3. **Berechtigungen speichern**
 
 ---
 

@@ -9,7 +9,7 @@ Die Benutzerverwaltung steuert, wer Zugriff auf Syncopa hat und welche Berechtig
 
 ## Benutzerliste
 
-> 📸 **Screenshot:** *Tabelle aller Benutzer mit Spalten: Benutzername, E-Mail, Rolle, Aktiv-Status, zuletzt angemeldet*
+![Benutzer Übersicht](screenshots/benutzer1.png)
 
 Die Übersicht zeigt alle angelegten Benutzer-Konten.
 
@@ -19,13 +19,14 @@ Die Übersicht zeigt alle angelegten Benutzer-Konten.
 
 **Datei:** `benutzer_bearbeiten.php`
 
-> 📸 **Screenshot:** *Formular „Neuer Benutzer" mit Benutzername, E-Mail, Passwort und Rollen-Dropdown*
+![Benutzer Neu](screenshots/benutzer2.png)
 
 1. Klicke auf **+ Neuer Benutzer**
 2. Fülle das Formular aus
 3. Weise dem Benutzer eine **Rolle** zu
 4. Optional: Verknüpfe den Benutzer mit einem **Vereinsmitglied** (ermöglicht Ausrückungs-Anmeldung)
-5. **Speichern**
+5. Benutzer aktiv (Konto aktiviert / deaktiviert)?
+6. **Speichern**
 
 ### Formularfelder
 
@@ -42,11 +43,13 @@ Die Übersicht zeigt alle angelegten Benutzer-Konten.
 
 ## Benutzer befördern
 
-**Datei:** `benutzer_befoerdern.php`
+**Datei:** `benutzer_bearbeiten.php`
+
+![Benutzer Neu](screenshots/benutzer3.png)
 
 Schnelle Rollen-Zuweisung für einen bestehenden Benutzer:
 
-1. Klicke in der Benutzerliste auf **„Rolle ändern"**
+1. Klicke in der Benutzerliste auf **„Bearbeiten"**
 2. Wähle die neue Rolle
 3. **Speichern**
 
@@ -56,14 +59,15 @@ Schnelle Rollen-Zuweisung für einen bestehenden Benutzer:
 
 Wenn Musiker sich selbst registrieren (über den Login-Button „Registrieren"), erhalten sie zunächst die Basisrolle `user`. 
 
+Dieser User kann nur das Dashboard sehen mit dem hinweis, dass die Anmeldung noch von einem Admin freigeschaltet werden muss.
+
+> 💡 **Info:** Momentan nur über einen Google-Account möglich. Neue Benutzer können jedoch von jedem angelegt der Schreibrechte bei den Rollenberechtigungen hat.
+
 Im Dashboard erscheint für Admins und Obmänner eine **Benachrichtigung** über neue Benutzer ohne zugewiesene Rolle:
 
-> 📸 **Screenshot:** *Dashboard-Widget „Neue Benutzer" mit Liste und Button „Rolle zuweisen"*
+![Benutzer aktivieren](screenshots/benutzer4.png)
 
-1. Im Dashboard auf **„Rolle zuweisen"** klicken
-2. Den Benutzer mit einem Mitglied verknüpfen
-3. Passende Rolle auswählen
-4. **Speichern**
+Bei einem Klick auf **Freischalten** wird dem User der Benutzer `Mitglied` zugewiesen.
 
 ---
 
@@ -75,4 +79,4 @@ Wenn Google OAuth aktiviert ist (`config.php`), können sich Benutzer auch mit i
 - Das Konto erhält die Rolle `user`
 - Ein Admin muss dem Konto manuell eine Rolle zuweisen
 
-> 📸 **Screenshot:** *Login-Seite mit „Mit Google anmelden"-Button*
+![Google Login](screenshots/ersterlogin1.png)

@@ -19,13 +19,13 @@ Lade alle Dateien aus dem Projektordner in dein Webserver-Verzeichnis hoch, z.B.
 /var/www/html/syncopa/
 ```
 
-oder in ein Unterverzeichnis:
+oder in ein Unterverzeichnis (je nach Server):
 
 ```
-/var/www/html/meinverein/
+/domains/deineDomain/public_html/meinverein/
 ```
 
-> 📸 **Screenshot:** *FTP-Client mit hochgeladenen Dateien im Webroot*
+![Dashboard Screenshot](screenshots/einrichtung1.png)
 
 ---
 
@@ -111,7 +111,7 @@ Rufe die Anwendung im Browser auf:
 https://meinverein.at/syncopa/
 ```
 
-> 📸 **Screenshot:** *Login-Seite beim ersten Aufruf*
+![Dashboard Screenshot](screenshots/ersterlogin1.png)
 
 Du wirst zur Login-Seite weitergeleitet. Weiter geht es unter [Erster Login →](erster-login.md)
 

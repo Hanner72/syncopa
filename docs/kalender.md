@@ -1,29 +1,24 @@
 # Kalender
 
-**Datei:** `kalender.php`  
-**Berechtigung:** Öffentlich (ohne Login) oder eingeloggte Benutzer
-
-Der Kalender bietet eine visuelle Übersicht aller Vereinstermine und ermöglicht den Export als iCal-Feed.
+Der Kalender bietet eine visuelle Übersicht aller Vereinstermine und ermöglicht den Export als iCal-Feed (Menü -> Ausrückungen -> Kalender Abo).
 
 ---
 
 ## Kalenderansicht
 
-> 📸 **Screenshot:** *Monatsansicht des Kalenders mit eingetragenen Ausrückungen und Terminen in verschiedenen Farben*
+![Dashboard Screenshot](screenshots/kalender1.png)
 
 Der Kalender zeigt:
 
 - Alle **Ausrückungen** aus dem Ausrückungsmodul
 - Zusätzliche **Vereinstermine** (Probe, Sitzung, etc.)
-- Farbliche Unterscheidung nach Typ
+- Farbliche Unterscheidung nach Typ und variable Farben bei Terminen
 
 ---
 
 ## Termin hinzufügen
 
-**Datei:** `kalender_termin_bearbeiten.php`
-
-> 📸 **Screenshot:** *Modal-Formular „Neuer Termin" mit Datum, Uhrzeit, Bezeichnung und Typ*
+![Dashboard Screenshot](screenshots/kalender2.png)
 
 1. Klicke im Kalender auf ein **Datum** oder den Button **+ Termin**
 2. Fülle Bezeichnung, Datum und Uhrzeit aus
@@ -36,44 +31,12 @@ Der Kalender zeigt:
 
 ## Kalender abonnieren (iCal)
 
-**Datei:** `kalender_abonnement.php` / `kalender_export.php`
+Mit dem iCal-Export können alle Vereinstermine in externe Kalender-Apps eingebunden werden.
 
-> 📸 **Screenshot:** *Seite „Kalender-Abonnement" mit iCal-URL und Anleitung für Google Calendar, Apple Kalender, Outlook*
+Zu erreichen im Menüpunkt unter Ausrückungen.
 
-Mit dem iCal-Export können alle Vereinstermine in externe Kalender-Apps eingebunden werden:
+![Dashboard Screenshot](screenshots/kalender3.png)
 
-### Google Calendar
+Eine Beschreibung von Abos zu verschiedenen Programmen ist auf der Seite vorhanden.
 
-1. Navigiere zu **Kalender → Abonnement**
-2. Kopiere die **iCal-URL**
-3. Öffne Google Calendar
-4. Klicke auf **„+"** neben „Andere Kalender"
-5. Wähle **„Per URL"** und füge die URL ein
-6. Klicke **Kalender hinzufügen**
-
-### Apple Kalender (iOS / macOS)
-
-1. Kopiere die iCal-URL aus Syncopa
-2. Öffne auf dem iPhone: **Einstellungen → Kalender → Account hinzufügen → Andere → Kalenderabo hinzufügen**
-3. Füge die URL ein → **Weiter** → **Sichern**
-
-### Microsoft Outlook
-
-1. Öffne Outlook
-2. Klicke auf **Kalender hinzufügen → Aus dem Internet**
-3. Füge die iCal-URL ein → **OK**
-
----
-
-## Kalendervorschau
-
-**Datei:** `kalender_vorschau.php`
-
-Die Vorschau zeigt eine **öffentlich zugängliche** Ansicht des Kalenders (ohne Login), die z.B. auf der Vereinswebsite eingebettet werden kann.
-
-```html
-<!-- Einbettung als iFrame auf der Vereinswebsite -->
-<iframe src="https://meinverein.at/syncopa/kalender_vorschau.php"
-        width="100%" height="600" frameborder="0">
-</iframe>
-```
+![Dashboard Screenshot](screenshots/kalender4.png)
