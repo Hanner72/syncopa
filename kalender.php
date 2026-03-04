@@ -320,7 +320,42 @@ document.addEventListener('DOMContentLoaded', function() {
         eventDidMount: function(info) {
             // Tooltip hinzufügen
             info.el.title = info.event.title + '\n' + formatDate(info.event.start);
-        }
+        },
+        <?php if (Session::checkPermission('ausrueckungen', 'schreiben')): ?>
+        dateClick: function(info) {
+            // Datum ins Formular eintragen
+            const startInput = document.getElementById('start_datum');
+            const endeInput  = document.getElementById('ende_datum');
+            const ganztaegig = document.getElementById('ganztaegig');
+
+            if (ganztaegig && ganztaegig.checked) {
+                // Ganztägig-Modus: nur Datum
+                startInput.value = info.dateStr;
+            } else {
+                // Datum + Uhrzeit: angeklicktes Datum um 00:00, Ende +2h
+                const clicked = new Date(info.date);
+                const pad = n => String(n).padStart(2, '0');
+                const toLocal = d =>
+                    d.getFullYear() + '-' +
+                    pad(d.getMonth() + 1) + '-' +
+                    pad(d.getDate()) + 'T' +
+                    pad(d.getHours()) + ':' +
+                    pad(d.getMinutes());
+
+                startInput.value = toLocal(clicked);
+
+                // Ende auf +2 Stunden vorbelegen
+                const ende = new Date(clicked);
+                ende.setHours(ende.getHours() + 2);
+                endeInput.value = toLocal(ende);
+            }
+
+            // Modal öffnen
+            const modal = new bootstrap.Modal(document.getElementById('newEventModal'));
+            modal.show();
+        },
+        <?php endif; ?>
+        selectable: <?php echo Session::checkPermission('ausrueckungen', 'schreiben') ? 'true' : 'false'; ?>
     });
     
     calendar.render();

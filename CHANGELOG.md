@@ -7,6 +7,45 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [2.2.2] - 2026-02-24
+
+### Hinzugefügt
+
+- **Dokumentation**
+  - vollständige Dokumentation der Applikation hinzugefügt
+
+- **Ausrückungen**
+  - Kalender Abos
+    - zwei Varianten können jetzt aboniert werden
+      - nur die Ausrückungen
+      - Ausrückungen UND Termine (z.B. für Vorstandsitzung etc.)
+
+### Geändert
+
+- **Generell**
+  - Logos und Favicon geändert
+  - Sidebar-Menü öffnen und schließen Button aktualisiert
+
+- **Stammdaten**
+  - Nummernkreise für Instrumente, Noten und Mitglieder können vergeben werden
+
+- **Dashboard**
+  - Geburtstagsliste richtig sortiert
+  - Deutsche Monatsnamen anzeigen
+
+- **Kalender**
+  - Bei Klick auf ein Datumsfeld kann ein Termin eingetragen werden
+
+- **Ausrückungen**
+  - Sortierung nach Datum stimmt jetzt
+  - Buttons um die Anwesenheit einzutragen
+    - mit Grund bei einer Absage "Urlaub, Krankheit, etc."
+    - Auflistung der Anwesenden Mitglieder nach Register sortiert
+    - Ansicht für Mobilgeräte optimiert
+
+- **Instrumente**
+  - auf der Haupttabelle die Spalte "Notizen" einblenden für weitere Infos
+
 ## [2.2.1] - 2026-02-24
 
 ### Hinzugefügt

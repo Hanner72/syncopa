@@ -10,8 +10,12 @@ $host = $_SERVER['HTTP_HOST'];
 $baseUrl = $protocol . '://' . $host . dirname($_SERVER['PHP_SELF']);
 $calendarUrl = $baseUrl . '/kalender_export.php';
 
-// Webcal URL (für direktes Abonnieren)
+// Webcal URL (für direktes Abonnieren) - nur Ausrückungen
 $webcalUrl = str_replace(['http://', 'https://'], 'webcal://', $calendarUrl);
+
+// URL für kombinierten Kalender (Ausrückungen + Termine)
+$calendarUrlKombiniert = $calendarUrl . '?include=termine';
+$webcalUrlKombiniert = str_replace(['http://', 'https://'], 'webcal://', $calendarUrlKombiniert);
 
 include 'includes/header.php';
 ?>
@@ -33,51 +37,63 @@ include 'includes/header.php';
 </div>
 
 <div class="row">
-    <!-- Schnell-Abonnement -->
-    <div class="col-md-12 mb-4">
-        <div class="card border-primary">
+    <!-- Option 1: Nur Ausrückungen -->
+    <div class="col-md-6 mb-4">
+        <div class="card border-primary h-100">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="bi bi-lightning-fill"></i> Schnell-Abonnement</h5>
+                <h5 class="mb-0"><i class="bi bi-truck"></i> Nur Ausrückungen</h5>
             </div>
-            <div class="card-body">
-                <p class="lead">Klicke auf den Button um den Kalender zu deinem Kalender hinzuzufügen:</p>
+            <div class="card-body d-flex flex-column">
+                <p>Enthält ausschließlich die <strong>Ausrückungen</strong> (Einsätze, Übungen etc.).</p>
                 
-                <div class="d-grid gap-2">
+                <div class="d-grid mb-3">
                     <a href="<?php echo htmlspecialchars($webcalUrl); ?>" class="btn btn-lg btn-primary">
-                        <i class="bi bi-calendar-plus"></i> Kalender abonnieren
+                        <i class="bi bi-calendar-plus"></i> Ausrückungen abonnieren
                     </a>
                 </div>
                 
-                <div class="alert alert-info mt-3 mb-0">
-                    <i class="bi bi-info-circle"></i> 
-                    <strong>Hinweis:</strong> Der Kalender wird automatisch aktualisiert, wenn neue Ausrückungen 
-                    hinzugefügt oder geändert werden. Du musst nichts manuell aktualisieren!
+                <div class="input-group mt-auto">
+                    <input type="text" class="form-control form-control-sm" id="calendarUrl" 
+                           value="<?php echo htmlspecialchars($calendarUrl); ?>" readonly>
+                    <button class="btn btn-sm btn-outline-primary" type="button" onclick="copyUrl('calendarUrl', this)">
+                        <i class="bi bi-clipboard"></i> Kopieren
+                    </button>
                 </div>
             </div>
         </div>
     </div>
-    
-    <!-- Kalender-URL kopieren -->
-    <div class="col-md-12 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="bi bi-link-45deg"></i> Kalender-URL</h5>
+
+    <!-- Option 2: Ausrückungen + Termine -->
+    <div class="col-md-6 mb-4">
+        <div class="card border-success h-100">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-calendar2-week"></i> Ausrückungen + Termine</h5>
             </div>
-            <div class="card-body">
-                <p>Kopiere diese URL für manuelle Einrichtung:</p>
+            <div class="card-body d-flex flex-column">
+                <p>Enthält die <strong>Ausrückungen</strong> und zusätzlich alle <strong>Termine</strong> aus dem Terminkalender.</p>
                 
-                <div class="input-group mb-3">
-                    <input type="text" class="form-control" id="calendarUrl" 
-                           value="<?php echo htmlspecialchars($calendarUrl); ?>" readonly>
-                    <button class="btn btn-outline-primary" type="button" onclick="copyCalendarUrl()">
+                <div class="d-grid mb-3">
+                    <a href="<?php echo htmlspecialchars($webcalUrlKombiniert); ?>" class="btn btn-lg btn-success">
+                        <i class="bi bi-calendar-plus"></i> Ausrückungen + Termine abonnieren
+                    </a>
+                </div>
+                
+                <div class="input-group mt-auto">
+                    <input type="text" class="form-control form-control-sm" id="calendarUrlKombiniert" 
+                           value="<?php echo htmlspecialchars($calendarUrlKombiniert); ?>" readonly>
+                    <button class="btn btn-sm btn-outline-success" type="button" onclick="copyUrl('calendarUrlKombiniert', this)">
                         <i class="bi bi-clipboard"></i> Kopieren
                     </button>
                 </div>
-                
-                <small class="text-muted">
-                    Diese URL kannst du in deinem Kalender-Programm als "Kalender-Abonnement" hinzufügen.
-                </small>
             </div>
+        </div>
+    </div>
+
+    <!-- Hinweis -->
+    <div class="col-12 mb-4">
+        <div class="alert alert-info mb-0">
+            <i class="bi bi-info-circle"></i>
+            <strong>Hinweis:</strong> Beide Kalender werden automatisch aktualisiert, wenn Änderungen vorgenommen werden. Du musst nichts manuell aktualisieren!
         </div>
     </div>
 </div>
@@ -191,22 +207,30 @@ include 'includes/header.php';
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-md-6">
-                        <h6>Enthalten:</h6>
+                    <div class="col-md-4">
+                        <h6><i class="bi bi-truck text-primary"></i> Ausrückungen (beide Varianten):</h6>
                         <ul>
                             <li><i class="bi bi-check text-success"></i> Titel der Ausrückung</li>
                             <li><i class="bi bi-check text-success"></i> Datum und Uhrzeit</li>
                             <li><i class="bi bi-check text-success"></i> Ort</li>
                             <li><i class="bi bi-check text-success"></i> Beschreibung</li>
-                            <li><i class="bi bi-check text-success"></i> Automatische Updates</li>
                         </ul>
                     </div>
-                    <div class="col-md-6">
-                        <h6>Features:</h6>
+                    <div class="col-md-4">
+                        <h6><i class="bi bi-calendar2-week text-success"></i> Zusätzlich bei "Ausrückungen + Termine":</h6>
                         <ul>
-                            <li><i class="bi bi-clock text-primary"></i> Automatische Aktualisierung (stündlich)</li>
+                            <li><i class="bi bi-check text-success"></i> Alle Termine aus dem Terminkalender</li>
+                            <li><i class="bi bi-check text-success"></i> Titel & Beschreibung der Termine</li>
+                            <li><i class="bi bi-check text-success"></i> Datum und Uhrzeit</li>
+                            <li><i class="bi bi-check text-success"></i> Ort</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6><i class="bi bi-gear text-primary"></i> Features:</h6>
+                        <ul>
+                            <li><i class="bi bi-clock text-primary"></i> Automatische Aktualisierung</li>
                             <li><i class="bi bi-arrow-repeat text-primary"></i> Änderungen werden übernommen</li>
-                            <li><i class="bi bi-trash text-primary"></i> Gelöschte Ausrückungen verschwinden</li>
+                            <li><i class="bi bi-trash text-primary"></i> Gelöschte Einträge verschwinden</li>
                             <li><i class="bi bi-calendar-event text-primary"></i> Nur zukünftige Termine</li>
                         </ul>
                     </div>
@@ -225,11 +249,16 @@ include 'includes/header.php';
             </div>
             <div class="card-body">
                 <p>Wenn du den Kalender nur einmalig (ohne automatische Updates) importieren möchtest:</p>
-                <a href="kalender_export.php?download=1" class="btn btn-outline-primary">
-                    <i class="bi bi-download"></i> ICS-Datei herunterladen
-                </a>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="kalender_export.php?download=1" class="btn btn-outline-primary">
+                        <i class="bi bi-download"></i> Nur Ausrückungen (ICS)
+                    </a>
+                    <a href="kalender_export.php?download=1&include=termine" class="btn btn-outline-success">
+                        <i class="bi bi-download"></i> Ausrückungen + Termine (ICS)
+                    </a>
+                </div>
                 <small class="text-muted d-block mt-2">
-                    Diese Datei kannst du in jeden Kalender importieren, wird aber nicht automatisch aktualisiert.
+                    Diese Dateien kannst du in jeden Kalender importieren, werden aber nicht automatisch aktualisiert.
                 </small>
             </div>
         </div>
@@ -237,25 +266,24 @@ include 'includes/header.php';
 </div>
 
 <script>
-function copyCalendarUrl() {
-    const urlField = document.getElementById('calendarUrl');
+function copyUrl(fieldId, btn) {
+    const urlField = document.getElementById(fieldId);
     urlField.select();
-    urlField.setSelectionRange(0, 99999); // Für Mobile
+    urlField.setSelectionRange(0, 99999);
     
     navigator.clipboard.writeText(urlField.value).then(() => {
-        // Success feedback
-        const btn = event.target.closest('button');
         const originalHTML = btn.innerHTML;
+        const wasOutlinePrimary = btn.classList.contains('btn-outline-primary');
         btn.innerHTML = '<i class="bi bi-check"></i> Kopiert!';
-        btn.classList.remove('btn-outline-primary');
+        btn.classList.remove('btn-outline-primary', 'btn-outline-success');
         btn.classList.add('btn-success');
         
         setTimeout(() => {
             btn.innerHTML = originalHTML;
             btn.classList.remove('btn-success');
-            btn.classList.add('btn-outline-primary');
+            btn.classList.add(wasOutlinePrimary ? 'btn-outline-primary' : 'btn-outline-success');
         }, 2000);
-    }).catch(err => {
+    }).catch(() => {
         alert('Fehler beim Kopieren. Bitte manuell kopieren.');
     });
 }
