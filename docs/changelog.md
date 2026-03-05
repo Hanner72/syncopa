@@ -1,6 +1,14 @@
 # Changelog
 
-## v2.2.2 - aktuell
+## v2.2.3
+
+### Geändert
+
+- **Dashboard - Startseite**
+  - Ausrückungen und Geburtstage für Erstanmeldungen nur verschlüsselt zu sehen
+  - Hinweis dass erst bei Freischaltung ganz sichtbar ist
+
+## v2.2.2
 
 ### Hinzugefügt
 

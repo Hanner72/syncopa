@@ -182,7 +182,11 @@ include 'includes/header.php';
     <div class="col-lg-6">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-calendar-event me-2"></i>Nächste Ausrückungen</span>
+                <span><i class="bi bi-calendar-event me-2"></i>Nächste Ausrückungen
+                    <?php
+                    if (Session::getRole() === 'user'){
+                        echo '<br><span class="text-muted" style="font-size: 11px;"> (Erst ganz sichtbar wenn dein Konto freigeschaltet ist.)</span>';
+                    } ?></span>
                 <a href="ausrueckungen.php" class="btn btn-sm btn-outline-success">Ausrückungen</a>
             </div>
             <div class="card-body">
@@ -193,11 +197,25 @@ include 'includes/header.php';
                         <?php foreach ($naechsteAusrueckungen as $termin): ?>
                         <div class="list-group-item d-flex justify-content-between align-items-start">
                             <div>
-                                <strong style="font-size: 13px;"><?php echo htmlspecialchars($termin['titel']); ?></strong>
+                                <?php
+                                    if (Session::getRole() === 'user'){ ?>
+                                        <strong style="font-size: 13px;"><?php echo substr(htmlspecialchars($termin['titel']),0,5) . 'xxxxx'; ?></strong>
+                                    <?php }else{ ?>
+                                        <strong style="font-size: 13px;"><?php echo htmlspecialchars($termin['titel']); ?></strong>
+                                    <?php }
+                                ?>
+                                <!-- <strong style="font-size: 13px;"><?php echo htmlspecialchars($termin['titel']); ?></strong> -->
                                 <div class="text-muted" style="font-size: 11px;">
                                     <i class="bi bi-clock"></i> <?php echo date('d.m.Y H:i', strtotime($termin['start_datum'])); ?>
                                     <?php if ($termin['ort']): ?>
-                                    · <i class="bi bi-geo-alt"></i> <?php echo htmlspecialchars($termin['ort']); ?>
+                                    · <i class="bi bi-geo-alt"></i> 
+                                    <?php
+                                        if (Session::getRole() === 'user'){
+                                            echo substr(htmlspecialchars($termin['ort']),0,1) . 'xxxxx'; 
+                                        }else{
+                                            echo htmlspecialchars($termin['ort']); 
+                                        }
+                                    ?>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -216,6 +234,10 @@ include 'includes/header.php';
         <div class="card">
             <div class="card-header">
                 <i class="bi bi-gift me-2"></i>Geburtstage im <?php echo $aktuellerMonat; ?>
+                <?php
+                if (Session::getRole() === 'user'){
+                    echo '<br><span class="text-muted" style="font-size: 11px;"> (nur Initialen sichtbar, Namen sind erst sichtbar wenn dein Konto freigeschaltet ist.)</span>';
+                } ?>
             </div>
             <div class="card-body">
                 <div class="list-group list-group-flush">
@@ -224,7 +246,13 @@ include 'includes/header.php';
                             <i class="bi bi-balloon text-danger me-1"></i>
                             <?php
                                 // Name
-                                $name = htmlspecialchars($geburtstag['vorname'] . ' ' . strtoupper($geburtstag['nachname']));
+                                // Nur anzeigen wenn Benutzerrole > User, ansonsten nur Initialen + "xxx"
+                                if (Session::getRole() === 'user'){
+                                    $name = htmlspecialchars(substr($geburtstag['vorname'],0,1) . 'xxx ' . substr($geburtstag['nachname'], 0, 1) . 'XXX');
+                                }else{
+                                    $name = htmlspecialchars($geburtstag['vorname'] . ' ' . strtoupper($geburtstag['nachname']));
+                                }
+                                /* $name = htmlspecialchars($geburtstag['vorname'] . ' ' . strtoupper($geburtstag['nachname'])); */
                                 // Datum richtig formatiert
                                 $datum = new DateTime($geburtstag['geburtsdatum']);
                                 $geburtstagFormatiert = $fmtLang->format($datum); // zB: 8. Jänner
