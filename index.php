@@ -180,7 +180,7 @@ include 'includes/header.php';
 <div class="row">
     <!-- Nächste Ausrückungen -->
     <div class="col-lg-6">
-        <div class="card">
+        <div class="card border-success">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-calendar-event me-2"></i>Nächste Ausrückungen
                     <?php
@@ -231,9 +231,9 @@ include 'includes/header.php';
         </div>
         
         <?php if (!empty($geburtstage)): ?>
-        <div class="card">
+        <div class="card border-info">
             <div class="card-header">
-                <i class="bi bi-gift me-2"></i>Geburtstage im <?php echo $aktuellerMonat; ?>
+                <i class="bi bi-gift me-2"></i>nächste Geburtstage <!-- im <?php echo $aktuellerMonat; ?> -->
                 <?php
                 if (Session::getRole() === 'user'){
                     echo '<br><span class="text-muted" style="font-size: 11px;"> (nur Initialen sichtbar, Namen sind erst sichtbar wenn dein Konto freigeschaltet ist.)</span>';
@@ -271,7 +271,7 @@ include 'includes/header.php';
     
     <!-- Registerverteilung & Wartungen -->
     <div class="col-lg-6">
-        <div class="card">
+        <div class="card border-warning">
             <div class="card-header">
                 <i class="bi bi-pie-chart me-2"></i>Registerverteilung
             </div>
@@ -310,7 +310,7 @@ include 'includes/header.php';
         <?php endif; ?>
         
         <?php if (Session::checkPermission('ausrueckungen', 'schreiben')): ?>
-        <div class="card">
+        <div class="card border-danger">
             <div class="card-header">
                 <i class="bi bi-lightning me-2"></i>Schnellaktionen
             </div>

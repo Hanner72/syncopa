@@ -9,6 +9,10 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [2.2.3]
 
+### Hinzugefügt
+- **Installation**
+  - vollständiges Installationsscript hinzugefügt
+  
 ### Geändert
 
 - **Dashboard - Startseite**

@@ -1,10 +1,12 @@
 # Installation & Einrichtung
 
+Für eine leichte Installation wurde ein komplettes Installationsscript implementiert.
+
 ## Systemvoraussetzungen
 
 | Komponente | Mindestanforderung |
 |---|---|
-| PHP | 8.0 oder höher |
+| PHP | 7.4 oder höher |
 | MySQL / MariaDB | 5.7 / 10.3 oder höher |
 | Webserver | Apache (mod_rewrite) oder Nginx |
 | PHP-Extensions | `pdo_mysql`, `intl`, `zip`, `gd` |
@@ -31,79 +33,92 @@ oder in ein Unterverzeichnis (je nach Server):
 
 ## 2. Datenbank anlegen
 
-Erstelle eine neue MySQL-Datenbank und einen dedizierten Datenbankbenutzer:
+Erstelle eine neue MySQL-Datenbank und einen dedizierten Datenbankbenutzer per MQSQL Script oder ganz einfach in der Server Admin Oberfläche.
 
+Zugangsdaten zur Datenbank notieren, wird in Folge bei der Installation benötigt.
+
+MySQL-Script:
 ```sql
 CREATE DATABASE syncopa CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'syncopa_user'@'localhost' IDENTIFIED BY 'sicheres_passwort';
-GRANT ALL PRIVILEGES ON syncopa.* TO 'syncopa_user'@'localhost';
-FLUSH PRIVILEGES;
-```
-
-Importiere anschließend die mitgelieferte SQL-Datei:
-
-```bash
-mysql -u syncopa_user -p syncopa < syncopa_setup.sql
 ```
 
 ---
 
-## 3. Konfigurationsdatei anpassen
+### 3.1 Installation starten
 
-Öffne die Datei `config.php` und trage deine Zugangsdaten ein:
+Navigiere per Browser zur install.php um die Installation zu starten.
 
-```php
-// Datenbankverbindung
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'syncopa');       // Dein Datenbankname
-define('DB_USER', 'syncopa_user'); // Dein Datenbankbenutzer
-define('DB_PASS', 'sicheres_passwort');
-
-// App-URL (ohne abschließenden Slash!)
-define('BASE_URL', 'https://meinverein.at/syncopa');
-
-// App-Name (erscheint in der Navigation)
-define('APP_NAME', 'Mein Musikverein');
+```
+https://meinverein.at/syncopa/install.php
 ```
 
-> ⚠️ **Wichtig:** Die `config.php` enthält sensible Zugangsdaten. Stelle sicher, dass diese Datei **nicht** öffentlich zugänglich ist und füge sie zu `.gitignore` hinzu.
+![Dashboard Screenshot](screenshots/install1.png)
+
+Falls Systemvoraussetzungen nicht erfüllt werden, bitte die Servereinstellungen ändern, andernfalls kann die Installation nicht fortgesetzt werden.
 
 ---
 
-## 4. Schreibrechte setzen
+### 3.2 Datenbankverbindung
 
-Folgende Verzeichnisse benötigen Schreibrechte (z.B. `755` oder `775`):
+Hier einfach deine Zugangsdaten zur Datenbank eintragen und auf **Verbindung testen & weiter** klicken
 
-```
-syncopa/uploads/
-syncopa/docs/screenshots/    ← optional
-```
-
-```bash
-chmod -R 755 uploads/
-```
+![Dashboard Screenshot](screenshots/install2.png)
 
 ---
 
-## 5. Google Login (optional)
+### 3.3 Anwendungsdaten
 
-Falls du den Google OAuth Login aktivieren möchtest:
+Hier die Vereinsdaten eintragen und den Adminbenutzer anlegen.
 
-1. Öffne die [Google Cloud Console](https://console.cloud.google.com)
-2. Erstelle ein neues Projekt
-3. Aktiviere die **Google OAuth 2.0 API**
-4. Erstelle OAuth-Zugangsdaten und notiere `Client ID` und `Client Secret`
-5. Trage diese in `config.php` ein:
+Dies kann später in den Einstellungen in der Applikation nochmal geändert werden.
 
-```php
-define('GOOGLE_CLIENT_ID',     'deine-client-id.apps.googleusercontent.com');
-define('GOOGLE_CLIENT_SECRET', 'dein-client-secret');
-define('GOOGLE_REDIRECT_URI',  BASE_URL . '/login_google_callback.php');
-```
+![Dashboard Screenshot](screenshots/install3.png)
 
 ---
 
-## 6. Erster Aufruf
+### 3.4 Integrationen
+
+Google OAuth wird verwendet damit sich User per Google anmelden können. Einfach Client-ID anlegen und hier eintragen. Tutorials dazu gibt es auf [Youtube](https://youtu.be/D8DMj2lQMwo?si=ZrmyEeRz5g5ueB8V).
+
+![Dashboard Screenshot](screenshots/install4.png)
+
+Mit der Google Calendar API können Google Kalender Termine angezeigt werden (noch nicht getestet!).
+
+Die OCR Space API wird benötigt um die Aufsplittung der Noten auf die einzelnen Stimmen mit Benennung zu ermöglichen. Ohne dieses API werden alle Stimmen gleich benannt.
+
+Beim Email-Versand werden Mails bei Benutzeranmeldungen etc. dem Admin gesendet.
+
+---
+
+### 3.5 Installation
+
+Hier wird die Zusammenfassung der Anwendung angezeigt.
+
+Weiters kann hier angeklickt werden ob Beispieldaten geladen werden sollen. Dies ist hilfreich beim ersten Kennenlernen der Anwendung.
+
+![Dashboard Screenshot](screenshots/install5.png)
+
+---
+
+### 3.6 fertige Installation
+
+Die Installation ist abgeschlossen und die Anwendung kann geöffnet werden.
+
+![Dashboard Screenshot](screenshots/install6.png)
+
+---
+
+### 4 Neuistallation
+
+Bei nochmaligem Aufruf der install.php wird eine Meldung angezeigt dass SYNCOPA schon installiert ist. Wenn trotzdem neu installiert werden soll, muss einfach die Datei **install.lock** gelöscht werden.
+
+> 💡 Die Datenbanktabellen müssen ebenfalls gelöscht werden da dies sonst auch eine Fehlermeldung wegen doppelter Tabelleneinträge hervorruft!
+
+![Dashboard Screenshot](screenshots/install7.png)
+
+---
+
+## 5. Erster Aufruf
 
 Rufe die Anwendung im Browser auf:
 
@@ -117,11 +132,6 @@ Du wirst zur Login-Seite weitergeleitet. Weiter geht es unter [Erster Login →]
 
 ---
 
-## Fehlersuche bei der Installation
+## 6. erster Start
 
-| Problem | Lösung |
-|---|---|
-| Weiße Seite | PHP-Fehler in `config.php` – prüfe Syntax und Datenbankdaten |
-| `DB_HOST`-Fehler | Datenbankverbindung prüfen, Firewall, Hostname |
-| `403 Forbidden` | Dateirechte prüfen (`chmod 644 *.php`) |
-| Session-Probleme | PHP `session.save_path` prüfen, Schreibrechte |
+![Dashboard Screenshot](screenshots/install8.png)

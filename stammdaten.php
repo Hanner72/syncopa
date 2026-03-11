@@ -99,7 +99,7 @@ if ($action === 'instrumenttyp_delete') {
 
 // Nummernkreise verarbeiten
 if ($action === 'nummernkreise_save') {
-    $typen = ['mitglieder', 'noten', 'instrumente', 'uniformen'];
+    $typen = ['mitglieder', 'noten', 'instrumente'];
     try {
         foreach ($typen as $typ) {
             $prefix  = trim($_POST['prefix_' . $typ]  ?? '');
