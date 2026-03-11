@@ -7,7 +7,19 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
-## [2.2.2] - 2026-02-24
+## [2.2.3]
+
+### Hinzugefügt
+- **Installation**
+  - vollständiges Installationsscript hinzugefügt
+  
+### Geändert
+
+- **Dashboard - Startseite**
+  - Ausrückungen und Geburtstage für Erstanmeldungen nur verschlüsselt zu sehen
+  - Hinweis dass erst bei Freischaltung ganz sichtbar ist
+
+## [2.2.2] - 2026-03-04
 
 ### Hinzugefügt
 

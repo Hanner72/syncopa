@@ -193,12 +193,12 @@ include 'includes/header.php';
                         <div class="col-md-3 mb-3">
                             <label for="dauer_minuten" class="form-label">Dauer (Min.)</label>
                             <input type="number" class="form-control" id="dauer_minuten" name="dauer_minuten" 
-                                   value="<?php echo htmlspecialchars($note['dauer_minuten'] ?? ''); ?>" min="1" max="60">
+                                   value="<?php echo htmlspecialchars($note['dauer_minuten'] ?? ''); ?>">
                         </div>
                         <div class="col-md-3 mb-3">
                             <label for="anzahl_stimmen" class="form-label">Anzahl Stimmen</label>
                             <input type="number" class="form-control" id="anzahl_stimmen" name="anzahl_stimmen" 
-                                   value="<?php echo htmlspecialchars($note['anzahl_stimmen'] ?? ''); ?>" min="1" max="100">
+                                   value="<?php echo htmlspecialchars($note['anzahl_stimmen'] ?? ''); ?>">
                         </div>
                         <div class="col-md-3 mb-3">
                             <label for="zustand" class="form-label">Zustand</label>

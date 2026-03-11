@@ -219,6 +219,14 @@ include 'includes/header.php';
                                     <i class="bi bi-x-lg"></i>
                                 </button>
                             </div>
+                            <?php else: ?>
+                            <div class="btn-group btn-group-sm"
+                                 data-bs-toggle="tooltip" data-bs-placement="top"
+                                 title="Du bist mit keinem Mitglied verknüpft. Nur aktive Mitglieder können Abstimmen!">
+                                <button type="button" class="btn btn-success opacity-25" disabled><i class="bi bi-check-lg"></i></button>
+                                <button type="button" class="btn btn-warning opacity-25" disabled><i class="bi bi-question-lg"></i></button>
+                                <button type="button" class="btn btn-danger opacity-25" disabled><i class="bi bi-x-lg"></i></button>
+                            </div>
                             <?php endif; ?>
                         </td>
                         <td class="text-end no-print d-none d-md-table-cell">
@@ -300,6 +308,16 @@ include 'includes/header.php';
                         </button>
                     </div>
                 </div>
+                <?php else: ?>
+                <div class="flex-shrink-0"
+                     data-bs-toggle="tooltip" data-bs-placement="left"
+                     title="Du bist mit keinem Mitglied verknüpft. Nur aktive Mitglieder können Abstimmen!">
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-success opacity-25" disabled><i class="bi bi-check-lg"></i></button>
+                        <button type="button" class="btn btn-warning opacity-25" disabled><i class="bi bi-question-lg"></i></button>
+                        <button type="button" class="btn btn-danger opacity-25" disabled><i class="bi bi-x-lg"></i></button>
+                    </div>
+                </div>
                 <?php endif; ?>
             </div>
         </div>
@@ -354,6 +372,9 @@ include 'includes/header.php';
 
 <script>
 $(document).ready(function() {
+    // Tooltips initialisieren
+    $('[data-bs-toggle="tooltip"]').tooltip();
+
     $('#ausrueckungenTable').DataTable({
         order: [[0, 'asc']]
     });
