@@ -86,15 +86,15 @@ Admin Login
 - ZIP Datei von den Releases runterladen
 - diese ZIP auf deinen Server in den gewünschten Ordner (syncopa) laden und entpacken (ggf. zuerst entpacken und dann hochladen falls der Server das Entpacken nicht unterstützt)
 - wenn keine vorhanden ist dann eine Datenbank erstellen
-- ```database.sql``` von der ZIP importieren
-- ```config.php``` Datei anpassen
-- Verzeichnisrechte von ```uploads/``` auf 755 setzen
+- Intallationsscript starten -> `http://DeinServer/syncopa/install.php`
+
+![Dashboard Screenshot](docs/screenshots/install1.png)
 
 ### Erster Login
 
 | | |
 |---|---|
-| **URL** | `http://localhost/syncopa/` |
+| **URL** | `http://DeinServer/syncopa/` |
 | **Benutzer** | `admin` |
 | **Passwort** | `admin123` |
 
@@ -103,29 +103,6 @@ Admin Login
 ---
 
 ## 📖 Dokumentation
-
-### Konfiguration (config.php)
-
-```php
-// Datenbank
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'syncopa');
-define('DB_USER', 'syncopa_user');
-define('DB_PASS', 'sicheres_passwort');
-
-// Anwendung
-define('APP_NAME', 'Syncopa');
-define('BASE_URL', 'https://example.com/syncopa');
-
-// mit folgendem Link einen gratis API Key erstellen - nötig für die automatische PDF Splittung von Stimmen
-// https://ocr.space/ocrapi → „Get API Key FREE"
-define('OCR_SPACE_API_KEY', 'KXXXXXXXXXX....');
-
-// Optional: Google OAuth
-define('GOOGLE_OAUTH_ENABLED', true);
-define('GOOGLE_CLIENT_ID', 'your-client-id.apps.googleusercontent.com');
-define('GOOGLE_CLIENT_SECRET', 'your-client-secret');
-```
 
 ### Benutzerrollen
 
@@ -193,64 +170,7 @@ Options -Indexes
 
 ## 📋 Changelog
 
-### Version 2.2.1 (Februar 2026)
-
-#### Neue Funktion
-- ✨ **Notenverwaltung** - ein neuer Upload steht zur Verfügung wo eine Noten-PDF automatisch auf die Noten aufgesplittet wird
-
-### Verbesserungen
-- 🔧 **Notenverwaltung** - wenn ganze PDF mit allen Stimmen hochgeladen wurde kann diese auf die Stimmen automatisch gesplittet werden
-
-### Version 2.1.0 (Februar 2026)
-
-#### Neue Funktionen
-- ✨ **Stammdaten-Verwaltung** - Register und Instrumententypen können jetzt bearbeitet werden
-- ✨ **Löschfunktionen** - Kalendereinträge, Noten, Instrumente und Transaktionen können gelöscht werden
-- ✨ **Instrumentenanzeige** - Mitgliederliste zeigt Anzahl der gespielten Instrumente (Tooltip mit Details)
-- ✨ **Datum bei Instrumenten** - Beim Hinzufügen eines Instruments kann das "Spielt seit"-Datum gewählt werden
-
-#### Verbesserungen
-- 🔧 Admin-Benutzer haben jetzt automatisch alle Berechtigungen
-- 🔧 Lösch-Buttons in allen relevanten Listen hinzugefügt
-- 🔧 Kalender-Termine können jetzt bearbeitet und gelöscht werden
-- 🔧 Verbesserte Berechtigungsprüfung (Admin-Rolle wird berücksichtigt)
-
-#### Bugfixes
-- 🐛 Kalender: Bearbeiten-Button für Termine funktioniert jetzt
-- 🐛 Kalender: Löschen-Button wird jetzt korrekt angezeigt
-- 🐛 Dashboard: Charts werden korrekt initialisiert
-
----
-
-### Version 2.0.0 (Dezember 2025)
-
-#### Neue Funktionen
-- ✨ **Dark/Light Mode** - Theme-Umschaltung mit Persistierung
-- ✨ **Responsive Design** - Mobile-optimierte Oberfläche
-- ✨ **Google OAuth** - Login mit Google-Konto
-- ✨ **iCal-Export** - Kalender-Abonnement für externe Apps
-- ✨ **Dashboard** - Statistiken, Geburtstage, anstehende Termine
-- ✨ **Anwesenheitsverwaltung** - Zu-/Absagen für Ausrückungen
-- ✨ **Programmplanung** - Noten-Zuordnung zu Ausrückungen
-- ✨ **Wartungshistorie** - Instrumentenwartung mit Erinnerungen
-
-#### Verbesserungen
-- 🔧 Komplett überarbeitetes UI mit Bootstrap 5
-- 🔧 Neue Sidebar-Navigation
-- 🔧 DataTables für alle Listen
-- 🔧 Chart.js für Statistik-Visualisierung
-- 🔧 FullCalendar Integration
-
----
-
-### Version 1.0.0 (Oktober 2025)
-
-- 🎉 **Erste Veröffentlichung**
-- Mitgliederverwaltung
-- Instrumenteninventar
-- Notenarchiv
-- Einfacher Kalender
-- Benutzerverwaltung mit Rollen
+Alle Änderungen findest du hier: [CHANGELOG.md](./CHANGELOG.md)
 
 ---
 
@@ -300,6 +220,6 @@ Entwickelt mit:
 
 <p align="center">
   <strong>🎵 SYNCOPA</strong><br>
-  Entwickelt für österreichische (DACH) Musikvereine<br>
+  Entwickelt für deutschsprachige (DACH) Musikvereine<br>
   <sub>Made with ❤️ in Austria</sub>
 </p>
