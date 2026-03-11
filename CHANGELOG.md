@@ -12,12 +12,19 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 ### Hinzugefügt
 - **Installation**
   - vollständiges Installationsscript hinzugefügt
-  
+
+- **Uniformen**
+  - einfache Zuteilung der Uniformen bei Kleidungsstücke verwalten mit anzeige **Fehlend** und der Anzahl der Fehlenden um leicht rauszufinden wem was fehlt.
+
 ### Geändert
 
 - **Dashboard - Startseite**
   - Ausrückungen und Geburtstage für Erstanmeldungen nur verschlüsselt zu sehen
   - Hinweis dass erst bei Freischaltung ganz sichtbar ist
+
+- **Uniformen**
+  - ein Button **nicht benötigt** wurde integriert um nicht benötigte Kleidungsstücke einzutragen um "fehlende" richtig darstellen zu können
+  - Beispiel: Krawatte bei Männern, Tüchlein bei Frauen oder Hose bei Männern, Kleid bei Frauen etc.
 
 ## [2.2.2] - 2026-03-04
 
