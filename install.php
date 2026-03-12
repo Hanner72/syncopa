@@ -277,7 +277,7 @@ function insertBaseData($pdo) {
         (19,'uniform_groessen_verfuegbar','XS,S,M,L,XL,XXL','Verfügbare Größen',NOW()),(20,'uniform_pfand_betrag','50.00','Standard-Pfandbetrag',NOW()),
         (21,'probentag','Freitag','Regulärer Probentag',NOW()),(22,'probenzeit_beginn','19:30','Beginn der Probe',NOW()),
         (23,'probenzeit_ende','22:00','Ende der Probe',NOW()),(24,'probelokal_adresse','','Adresse Probelokal',NOW()),
-        (29,'beitrag_passiv_betrag','25','Betrag passive Mitglieder',NOW()),(39,'beitrag_ausgetreten','0','Beitrag ausgetretene Mitglieder',NOW())
+        (29,'beitrag_passiv_betrag','25','Betrag passive Mitglieder',NOW()),(39,'beitrag_ausgetreten','0','Beitrag ausgetretene Mitglieder',NOW()),
         (40,'nummernkreis_mitglieder_prefix','My','Nummernkreis Mitglieder – Präfix',NOW()),
         (41,'nummernkreis_mitglieder_stellen','3','Nummernkreis Mitglieder – Stellen',NOW()),
         (42,'nummernkreis_noten_prefix','Ny','Nummernkreis Noten – Präfix',NOW()),
