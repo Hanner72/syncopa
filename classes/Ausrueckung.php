@@ -34,9 +34,20 @@ class Ausrueckung {
         
         $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
         
+        // Die Subqueries zählen pro Mitglied nur den neuesten Eintrag (MAX id)
         $sql = "SELECT a.*, b.benutzername as erstellt_von_name,
-                (SELECT COUNT(*) FROM anwesenheit WHERE ausrueckung_id = a.id AND status = 'zugesagt') as zugesagt,
-                (SELECT COUNT(*) FROM anwesenheit WHERE ausrueckung_id = a.id AND status = 'abgesagt') as abgesagt
+                (SELECT COUNT(*) FROM anwesenheit an
+                 WHERE an.ausrueckung_id = a.id AND an.status = 'zugesagt'
+                   AND an.id = (SELECT MAX(id) FROM anwesenheit WHERE ausrueckung_id = a.id AND mitglied_id = an.mitglied_id)
+                ) as zugesagt,
+                (SELECT COUNT(*) FROM anwesenheit an
+                 WHERE an.ausrueckung_id = a.id AND an.status = 'abgesagt'
+                   AND an.id = (SELECT MAX(id) FROM anwesenheit WHERE ausrueckung_id = a.id AND mitglied_id = an.mitglied_id)
+                ) as abgesagt,
+                (SELECT COUNT(*) FROM anwesenheit an
+                 WHERE an.ausrueckung_id = a.id AND an.status = 'ungewiss'
+                   AND an.id = (SELECT MAX(id) FROM anwesenheit WHERE ausrueckung_id = a.id AND mitglied_id = an.mitglied_id)
+                ) as ungewiss
                 FROM ausrueckungen a
                 LEFT JOIN benutzer b ON a.erstellt_von = b.id
                 {$whereClause}
@@ -190,19 +201,54 @@ class Ausrueckung {
     }
     
     public function getAnwesenheit($ausrueckungId) {
+        // GROUP BY mitglied_id + MAX(id) stellt sicher, dass jedes Mitglied
+        // nur einmal erscheint (neuester Eintrag), auch wenn Duplikate in der DB sind
         $sql = "SELECT a.*, m.vorname, m.nachname, m.mitgliedsnummer
                 FROM anwesenheit a
                 JOIN mitglieder m ON a.mitglied_id = m.id
+                INNER JOIN (
+                    SELECT mitglied_id, MAX(id) as max_id
+                    FROM anwesenheit
+                    WHERE ausrueckung_id = ?
+                    GROUP BY mitglied_id
+                ) latest ON a.id = latest.max_id AND a.mitglied_id = latest.mitglied_id
                 WHERE a.ausrueckung_id = ?
                 ORDER BY m.nachname, m.vorname";
-        return $this->db->fetchAll($sql, [$ausrueckungId]);
+        return $this->db->fetchAll($sql, [$ausrueckungId, $ausrueckungId]);
     }
     
+    public function getAnwesenheitNachRegister($ausrueckungId) {
+        $sql = "SELECT r.id as register_id, r.name as register_name, r.sortierung,
+                COUNT(CASE WHEN an.status = 'zugesagt' THEN 1 END) as zugesagt,
+                COUNT(CASE WHEN an.status = 'abgesagt' THEN 1 END) as abgesagt,
+                COUNT(CASE WHEN an.status = 'ungewiss' THEN 1 END) as ungewiss,
+                COUNT(CASE WHEN an.status IN ('keine_antwort') OR an.status IS NULL THEN 1 END) as keine_antwort
+                FROM register r
+                LEFT JOIN mitglieder m ON m.register_id = r.id AND m.status = 'aktiv'
+                LEFT JOIN anwesenheit an ON an.mitglied_id = m.id AND an.ausrueckung_id = ?
+                GROUP BY r.id, r.name, r.sortierung
+                ORDER BY r.sortierung";
+        return $this->db->fetchAll($sql, [$ausrueckungId]);
+    }
+
     public function setAnwesenheit($ausrueckungId, $mitgliedId, $status, $grund = null) {
-        $sql = "INSERT INTO anwesenheit (ausrueckung_id, mitglied_id, status, grund, gemeldet_am)
-                VALUES (?, ?, ?, ?, NOW())
-                ON DUPLICATE KEY UPDATE status = ?, grund = ?, gemeldet_am = NOW()";
-        return $this->db->execute($sql, [$ausrueckungId, $mitgliedId, $status, $grund, $status, $grund]);
+        // Prüfen ob bereits ein Eintrag existiert
+        $existing = $this->db->fetchOne(
+            "SELECT id FROM anwesenheit WHERE ausrueckung_id = ? AND mitglied_id = ?",
+            [$ausrueckungId, $mitgliedId]
+        );
+
+        if ($existing) {
+            // Update des bestehenden Eintrags
+            $sql = "UPDATE anwesenheit SET status = ?, grund = ?, gemeldet_am = NOW()
+                    WHERE ausrueckung_id = ? AND mitglied_id = ?";
+            return $this->db->execute($sql, [$status, $grund, $ausrueckungId, $mitgliedId]);
+        } else {
+            // Neuen Eintrag erstellen
+            $sql = "INSERT INTO anwesenheit (ausrueckung_id, mitglied_id, status, grund, gemeldet_am)
+                    VALUES (?, ?, ?, ?, NOW())";
+            return $this->db->execute($sql, [$ausrueckungId, $mitgliedId, $status, $grund]);
+        }
     }
     
     public function getNoten($ausrueckungId) {

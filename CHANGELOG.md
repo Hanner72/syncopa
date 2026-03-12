@@ -7,6 +7,76 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
+## [2.2.3]
+
+### Hinzugefügt
+- **Installation**
+  - vollständiges Installationsscript hinzugefügt
+
+- **Uniformen**
+  - einfache Zuteilung der Uniformen bei Kleidungsstücke verwalten mit anzeige **Fehlend** und der Anzahl der Fehlenden um leicht rauszufinden wem was fehlt.
+
+### Geändert
+
+- **Dashboard - Startseite**
+  - Ausrückungen und Geburtstage für Erstanmeldungen nur verschlüsselt zu sehen
+  - Hinweis dass erst bei Freischaltung ganz sichtbar ist
+
+- **Uniformen**
+  - ein Button **nicht benötigt** wurde integriert um nicht benötigte Kleidungsstücke einzutragen um "fehlende" richtig darstellen zu können
+  - Beispiel: Krawatte bei Männern, Tüchlein bei Frauen oder Hose bei Männern, Kleid bei Frauen etc.
+
+## [2.2.2] - 2026-03-04
+
+### Hinzugefügt
+
+- **Dokumentation**
+  - vollständige Dokumentation der Applikation hinzugefügt
+
+- **Ausrückungen**
+  - Kalender Abos
+    - zwei Varianten können jetzt aboniert werden
+      - nur die Ausrückungen
+      - Ausrückungen UND Termine (z.B. für Vorstandsitzung etc.)
+
+### Geändert
+
+- **Generell**
+  - Logos und Favicon geändert
+  - Sidebar-Menü öffnen und schließen Button aktualisiert
+
+- **Stammdaten**
+  - Nummernkreise für Instrumente, Noten und Mitglieder können vergeben werden
+
+- **Dashboard**
+  - Geburtstagsliste richtig sortiert
+  - Deutsche Monatsnamen anzeigen
+
+- **Kalender**
+  - Bei Klick auf ein Datumsfeld kann ein Termin eingetragen werden
+
+- **Ausrückungen**
+  - Sortierung nach Datum stimmt jetzt
+  - Buttons um die Anwesenheit einzutragen
+    - mit Grund bei einer Absage "Urlaub, Krankheit, etc."
+    - Auflistung der Anwesenden Mitglieder nach Register sortiert
+    - Ansicht für Mobilgeräte optimiert
+
+- **Instrumente**
+  - auf der Haupttabelle die Spalte "Notizen" einblenden für weitere Infos
+
+## [2.2.1] - 2026-02-24
+
+### Hinzugefügt
+
+- **Notenverwaltung**
+  - ein neuer Upload steht zur Verfügung wo eine Noten-PDF automatisch auf die Noten aufgesplittet wird
+
+### Geändert
+
+- **Notenverwaltung**
+  - wenn ganze PDF mit allen Stimmen hochgeladen wurde kann diese auf die Stimmen automatisch gesplittet werden
+
 ## [2.1.0] - 2026-02-12
 
 ### Hinzugefügt

@@ -2,16 +2,15 @@
 /**
  * SYNCOPA - Musikvereinsverwaltung
  * Konfigurationsdatei
- * 
- * @version 2.1.0
+ * Copyright (c) 2026 by Johann Danner
  */
 
 // ============================================================================
 // FEHLERBEHANDLUNG
 // ============================================================================
 // Für Produktion: error_reporting(0); ini_set('display_errors', 0);
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+//error_reporting(E_ALL);
+//ini_set('display_errors', 1);
 
 // ============================================================================
 // DATENBANK-KONFIGURATION
@@ -26,7 +25,7 @@ define('DB_CHARSET', 'utf8mb4');
 // ANWENDUNGS-KONFIGURATION
 // ============================================================================
 define('APP_NAME', 'Syncopa');
-define('APP_VERSION', '2.1.0');
+define('APP_VERSION', '2.2.2');
 define('BASE_URL', 'https://MEINE-DOMAIN'); // Anpassen an Ihr Setup
 define('BASE_PATH', __DIR__);
 
@@ -67,6 +66,11 @@ define('GOOGLE_OAUTH_ENABLED', true);
 define('GOOGLE_CLIENT_ID', 'XXX');
 define('GOOGLE_CLIENT_SECRET', 'XXX');
 define('GOOGLE_REDIRECT_URI', BASE_URL . '/login_google_callback.php');
+
+// ============================================================================
+// https://ocr.space/ocrapi → „Get API Key FREE" 
+// ============================================================================
+define('OCR_SPACE_API_KEY', 'K88394394XXX....');
 
 // ============================================================================
 // E-MAIL-KONFIGURATION (optional)

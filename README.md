@@ -1,6 +1,6 @@
 # 🎵 SYNCOPA - Musikvereinsverwaltung
 
-[![Version](https://img.shields.io/badge/Version-2.1.0-blue.svg)](https://github.com/yourname/syncopa)
+[![Version](https://img.shields.io/badge/Version-2.2.1-blue.svg)](https://github.com/yourname/syncopa)
 [![PHP](https://img.shields.io/badge/PHP-8.0+-purple.svg)](https://php.net)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Made in Austria](https://img.shields.io/badge/Made%20in-Austria-red.svg)]()
@@ -8,6 +8,46 @@
 Eine moderne, umfassende Webapplikation zur Verwaltung von Musikvereinen. Entwickelt mit PHP 8, Bootstrap 5 und MySQL.
 
 ![Dashboard Screenshot](docs/screenshots/dashboard.png)
+---
+
+## DEMO
+
+https://syncopa.dannerbam.eu/
+
+Admin Login
+
+- Benutzer: admin
+- Passwort: admin123
+
+## 📋 Inhaltsverzeichnis
+
+1. [Funktionsübersicht](#funktionsübersicht)
+2. [Systemvoraussetzungen](#systemvoraussetzungen)
+3. [Installation](#installation)
+4. [Konfiguration](#konfiguration)
+5. [Benutzerrollen](#benutzerrollen--berechtigungen)
+6. [Module im Detail](#module-im-detail)
+7. [API-Dokumentation](#api-dokumentation)
+8. [Datenbankstruktur](#datenbankstruktur)
+9. [Sicherheit](#sicherheit)
+10. [Troubleshooting](#troubleshooting)
+
+---
+
+## 🎯 Funktionsübersicht
+
+### Kernmodule
+
+| Modul | Beschreibung |
+|-------|--------------|
+| **Mitglieder** | Vollständige Stammdatenverwaltung mit Instrumentenzuordnung |
+| **Instrumente** | Inventarverwaltung, Verleih und Wartungshistorie |
+| **Noten** | Digitaler Notenkatalog mit Archivnummern |
+| **Ausrückungen** | Termine, Anwesenheit und Programmplanung |
+| **Kalender** | Interaktiver Kalender mit iCal-Export |
+| **Finanzen** | Einnahmen, Ausgaben und Mitgliedsbeiträge |
+| **Uniformen** | Trachtenverwaltung und Ausgabehistorie |
+| **Benutzer** | Rollenbasierte Zugriffsverwaltung |
 
 ---
 
@@ -43,30 +83,18 @@ Eine moderne, umfassende Webapplikation zur Verwaltung von Musikvereinen. Entwic
 
 ### Installation
 
-```bash
-# 1. Repository klonen
-git clone https://github.com/yourname/syncopa.git
-cd syncopa
+- ZIP Datei von den Releases runterladen
+- diese ZIP auf deinen Server in den gewünschten Ordner (syncopa) laden und entpacken (ggf. zuerst entpacken und dann hochladen falls der Server das Entpacken nicht unterstützt)
+- wenn keine vorhanden ist dann eine Datenbank erstellen
+- Intallationsscript starten -> `http://DeinServer/syncopa/install.php`
 
-# 2. Datenbank erstellen
-mysql -u root -p -e "CREATE DATABASE syncopa CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-
-# 3. Schema importieren
-mysql -u root -p syncopa < database.sql
-
-# 4. Konfiguration anpassen
-cp config.example.php config.php
-nano config.php
-
-# 5. Verzeichnisrechte setzen
-chmod -R 755 uploads/
-```
+![Dashboard Screenshot](docs/screenshots/install1.png)
 
 ### Erster Login
 
 | | |
 |---|---|
-| **URL** | `http://localhost/syncopa/` |
+| **URL** | `http://DeinServer/syncopa/` |
 | **Benutzer** | `admin` |
 | **Passwort** | `admin123` |
 
@@ -75,25 +103,6 @@ chmod -R 755 uploads/
 ---
 
 ## 📖 Dokumentation
-
-### Konfiguration (config.php)
-
-```php
-// Datenbank
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'syncopa');
-define('DB_USER', 'syncopa_user');
-define('DB_PASS', 'sicheres_passwort');
-
-// Anwendung
-define('APP_NAME', 'Syncopa');
-define('BASE_URL', 'https://example.com/syncopa');
-
-// Optional: Google OAuth
-define('GOOGLE_OAUTH_ENABLED', true);
-define('GOOGLE_CLIENT_ID', 'your-client-id.apps.googleusercontent.com');
-define('GOOGLE_CLIENT_SECRET', 'your-client-secret');
-```
 
 ### Benutzerrollen
 
@@ -161,91 +170,7 @@ Options -Indexes
 
 ## 📋 Changelog
 
-### Version 2.1.0 (Februar 2026)
-
-#### Neue Funktionen
-- ✨ **Stammdaten-Verwaltung** - Register und Instrumententypen können jetzt bearbeitet werden
-- ✨ **Löschfunktionen** - Kalendereinträge, Noten, Instrumente und Transaktionen können gelöscht werden
-- ✨ **Instrumentenanzeige** - Mitgliederliste zeigt Anzahl der gespielten Instrumente (Tooltip mit Details)
-- ✨ **Datum bei Instrumenten** - Beim Hinzufügen eines Instruments kann das "Spielt seit"-Datum gewählt werden
-
-#### Verbesserungen
-- 🔧 Admin-Benutzer haben jetzt automatisch alle Berechtigungen
-- 🔧 Lösch-Buttons in allen relevanten Listen hinzugefügt
-- 🔧 Kalender-Termine können jetzt bearbeitet und gelöscht werden
-- 🔧 Verbesserte Berechtigungsprüfung (Admin-Rolle wird berücksichtigt)
-
-#### Bugfixes
-- 🐛 Kalender: Bearbeiten-Button für Termine funktioniert jetzt
-- 🐛 Kalender: Löschen-Button wird jetzt korrekt angezeigt
-- 🐛 Dashboard: Charts werden korrekt initialisiert
-
----
-
-### Version 2.0.0 (Dezember 2025)
-
-#### Neue Funktionen
-- ✨ **Dark/Light Mode** - Theme-Umschaltung mit Persistierung
-- ✨ **Responsive Design** - Mobile-optimierte Oberfläche
-- ✨ **Google OAuth** - Login mit Google-Konto
-- ✨ **iCal-Export** - Kalender-Abonnement für externe Apps
-- ✨ **Dashboard** - Statistiken, Geburtstage, anstehende Termine
-- ✨ **Anwesenheitsverwaltung** - Zu-/Absagen für Ausrückungen
-- ✨ **Programmplanung** - Noten-Zuordnung zu Ausrückungen
-- ✨ **Wartungshistorie** - Instrumentenwartung mit Erinnerungen
-
-#### Verbesserungen
-- 🔧 Komplett überarbeitetes UI mit Bootstrap 5
-- 🔧 Neue Sidebar-Navigation
-- 🔧 DataTables für alle Listen
-- 🔧 Chart.js für Statistik-Visualisierung
-- 🔧 FullCalendar Integration
-
----
-
-### Version 1.0.0 (Oktober 2025)
-
-- 🎉 **Erste Veröffentlichung**
-- Mitgliederverwaltung
-- Instrumenteninventar
-- Notenarchiv
-- Einfacher Kalender
-- Benutzerverwaltung mit Rollen
-
----
-
-## 🗄️ Datenbank
-
-### Haupttabellen
-
-| Tabelle | Beschreibung |
-|---------|--------------|
-| `benutzer` | Benutzerkonten |
-| `rollen` | Benutzerrollen |
-| `berechtigungen` | Modul-Berechtigungen |
-| `mitglieder` | Mitgliederstammdaten |
-| `register` | Musikregister (Holz, Blech, etc.) |
-| `instrument_typen` | Instrumentenkategorien |
-| `instrumente` | Instrumenteninventar |
-| `mitglied_instrumente` | Gespielte Instrumente |
-| `noten` | Notenkatalog |
-| `ausrueckungen` | Termine und Events |
-| `kalender_termine` | Allgemeine Termine |
-| `anwesenheit` | Zu-/Absagen |
-| `finanzen` | Kassenbuch |
-| `beitraege` | Mitgliedsbeiträge |
-
-### ER-Diagramm (vereinfacht)
-
-```
-benutzer ──< mitglieder ──< mitglied_instrumente >── instrument_typen
-                │                                           │
-                ├──< anwesenheit >── ausrueckungen          │
-                │                         │                 │
-                ├──< beitraege            ├──< ausrueckung_noten >── noten
-                │                         │
-                └──< instrumente ─────────┘
-```
+Alle Änderungen findest du hier: [CHANGELOG.md](./CHANGELOG.md)
 
 ---
 
@@ -295,6 +220,6 @@ Entwickelt mit:
 
 <p align="center">
   <strong>🎵 SYNCOPA</strong><br>
-  Entwickelt für österreichische Musikvereine<br>
+  Entwickelt für deutschsprachige (DACH) Musikvereine<br>
   <sub>Made with ❤️ in Austria</sub>
 </p>
