@@ -13,7 +13,17 @@ $pages = [
     'instrumente' => ['instrumente', 'instrument_detail', 'instrument_bearbeiten'],
     'uniformen' => ['uniformen', 'uniform_detail', 'uniform_bearbeiten', 'uniform_mitglied', 'uniform_kleidungsstuecke', 'uniform_kategorien'],
     'finanzen' => ['finanzen', 'transaktion_bearbeiten', 'beitraege_verwalten'],
-    'admin' => ['benutzer', 'benutzer_bearbeiten', 'rollen', 'rolle_bearbeiten', 'einstellungen', 'berechtigungen_bearbeiten']
+    'admin' => ['benutzer', 'benutzer_bearbeiten', 'rollen', 'rolle_bearbeiten', 'einstellungen', 'berechtigungen_bearbeiten'],
+    'fest'  => [
+        'feste', 'fest_bearbeiten', 'fest_detail',
+        'fest_stationen', 'fest_station_bearbeiten',
+        'fest_mitarbeiter', 'fest_mitarbeiter_bearbeiten',
+        'fest_dienstplan', 'fest_dienstplan_bearbeiten',
+        'fest_einkauefe', 'fest_einkauf_bearbeiten',
+        'fest_vertraege', 'fest_vertrag_bearbeiten',
+        'fest_todos', 'fest_todo_bearbeiten',
+        'fest_kopieren'
+    ]
 ];
 
 function isActive($page, $pages, $current) {
@@ -470,7 +480,21 @@ function isActive($page, $pages, $current) {
                 </ul>
             </div>
             <?php endif; ?>
-            
+
+            <?php if (Session::checkPermission('fest', 'lesen')): ?>
+            <div class="nav-group">
+                <div class="nav-label">Festverwaltung</div>
+                <ul class="nav flex-column">
+                    <li><a class="nav-link <?php echo isActive('fest', $pages, $currentPage); ?>" href="feste.php">
+                        <i class="bi bi-stars"></i> Feste
+                    </a></li>
+                    <li><a class="nav-link <?php echo in_array($currentPage, ['fest_todos', 'fest_todo_bearbeiten']) ? 'active' : ''; ?>" href="fest_todos.php">
+                        <i class="bi bi-check2-square"></i> Todos
+                    </a></li>
+                </ul>
+            </div>
+            <?php endif; ?>
+
             <?php if (Session::getRole() === 'admin'): ?>
             <div class="nav-group">
                 <div class="nav-label">System</div>

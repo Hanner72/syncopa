@@ -41,6 +41,7 @@ define('UPLOAD_DIR', BASE_PATH . DIRECTORY_SEPARATOR . 'uploads');
 define('NOTEN_DIR', UPLOAD_DIR . DIRECTORY_SEPARATOR . 'noten');
 define('FOTOS_DIR', UPLOAD_DIR . DIRECTORY_SEPARATOR . 'fotos');
 define('DOKUMENTE_DIR', UPLOAD_DIR . DIRECTORY_SEPARATOR . 'dokumente');
+define('FEST_VERTRAEGE_DIR', UPLOAD_DIR . DIRECTORY_SEPARATOR . 'fest_vertraege');
 
 // Maximale Upload-Größe (in Bytes)
 define('MAX_UPLOAD_SIZE', 10485760); // 10 MB
@@ -149,7 +150,7 @@ spl_autoload_register(function ($class) {
 // ============================================================================
 // UPLOAD-VERZEICHNISSE ERSTELLEN
 // ============================================================================
-$directories = [UPLOAD_DIR, NOTEN_DIR, FOTOS_DIR, DOKUMENTE_DIR];
+$directories = [UPLOAD_DIR, NOTEN_DIR, FOTOS_DIR, DOKUMENTE_DIR, FEST_VERTRAEGE_DIR];
 foreach ($directories as $dir) {
     if (!file_exists($dir)) {
         @mkdir($dir, 0755, true);

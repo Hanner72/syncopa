@@ -1,0 +1,124 @@
+<?php
+// classes/FestEinkauf.php
+// Festverwaltung – Einkaufsliste
+
+class FestEinkauf {
+    private $db;
+
+    public function __construct() {
+        $this->db = Database::getInstance();
+    }
+
+    /**
+     * Einkäufe eines Festes abrufen, optional gefiltert
+     */
+    public function getByFest(int $festId, array $filter = []): array {
+        $sql = "SELECT e.*, k.name as kategorie_name, k.sortierung as kat_sortierung
+                FROM fest_einkauefe e
+                LEFT JOIN fest_einkauf_kategorien k ON e.kategorie_id = k.id
+                WHERE e.fest_id = ?";
+        $params = [$festId];
+
+        if (!empty($filter['status'])) {
+            $sql .= " AND e.status = ?";
+            $params[] = $filter['status'];
+        }
+        if (!empty($filter['kategorie_id'])) {
+            $sql .= " AND e.kategorie_id = ?";
+            $params[] = (int)$filter['kategorie_id'];
+        }
+        if (isset($filter['ist_vorlage'])) {
+            $sql .= " AND e.ist_vorlage = ?";
+            $params[] = (int)$filter['ist_vorlage'];
+        }
+
+        $sql .= " ORDER BY k.sortierung, k.name, e.bezeichnung";
+        return $this->db->fetchAll($sql, $params);
+    }
+
+    /**
+     * Einkäufe gruppiert nach Kategorie (für Listenansicht)
+     */
+    public function getByFestGrouped(int $festId, array $filter = []): array {
+        $rows = $this->getByFest($festId, $filter);
+        $grouped = [];
+        foreach ($rows as $row) {
+            $key = $row['kategorie_id'] ?? 0;
+            $grouped[$key]['name'] = $row['kategorie_name'] ?? 'Ohne Kategorie';
+            $grouped[$key]['items'][] = $row;
+        }
+        return $grouped;
+    }
+
+    public function getById(int $id) {
+        $sql = "SELECT e.*, k.name as kategorie_name
+                FROM fest_einkauefe e
+                LEFT JOIN fest_einkauf_kategorien k ON e.kategorie_id = k.id
+                WHERE e.id = ?";
+        return $this->db->fetchOne($sql, [$id]);
+    }
+
+    public function create(array $data): int {
+        $sql = "INSERT INTO fest_einkauefe (fest_id, kategorie_id, bezeichnung, menge, einheit, preis_gesamt, lieferant, status, ist_vorlage, notizen, erstellt_von)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $this->db->execute($sql, [
+            (int)$data['fest_id'],
+            !empty($data['kategorie_id']) ? (int)$data['kategorie_id'] : null,
+            $data['bezeichnung'],
+            !empty($data['menge']) ? (float)$data['menge'] : null,
+            $data['einheit'] ?: null,
+            !empty($data['preis_gesamt']) ? (float)$data['preis_gesamt'] : null,
+            $data['lieferant'] ?: null,
+            $data['status'] ?? 'geplant',
+            isset($data['ist_vorlage']) ? (int)$data['ist_vorlage'] : 0,
+            $data['notizen'] ?: null,
+            $data['erstellt_von'] ?? null
+        ]);
+        return $this->db->lastInsertId();
+    }
+
+    public function update(int $id, array $data): bool {
+        $sql = "UPDATE fest_einkauefe SET kategorie_id=?, bezeichnung=?, menge=?, einheit=?, preis_gesamt=?, lieferant=?, status=?, ist_vorlage=?, notizen=?
+                WHERE id=?";
+        return $this->db->execute($sql, [
+            !empty($data['kategorie_id']) ? (int)$data['kategorie_id'] : null,
+            $data['bezeichnung'],
+            !empty($data['menge']) ? (float)$data['menge'] : null,
+            $data['einheit'] ?: null,
+            !empty($data['preis_gesamt']) ? (float)$data['preis_gesamt'] : null,
+            $data['lieferant'] ?: null,
+            $data['status'] ?? 'geplant',
+            isset($data['ist_vorlage']) ? (int)$data['ist_vorlage'] : 0,
+            $data['notizen'] ?: null,
+            $id
+        ]);
+    }
+
+    public function delete(int $id): bool {
+        return $this->db->execute("DELETE FROM fest_einkauefe WHERE id = ?", [$id]);
+    }
+
+    /**
+     * Alle Einkauf-Kategorien
+     */
+    public function getKategorien(): array {
+        return $this->db->fetchAll("SELECT * FROM fest_einkauf_kategorien ORDER BY sortierung, name");
+    }
+
+    /**
+     * Gesamtsummen pro Status und gesamt
+     */
+    public function getSummen(int $festId): array {
+        $sql = "SELECT status, COUNT(*) as anzahl, COALESCE(SUM(preis_gesamt), 0) as summe
+                FROM fest_einkauefe WHERE fest_id = ? GROUP BY status";
+        $rows = $this->db->fetchAll($sql, [$festId]);
+
+        $result = ['geplant' => 0, 'bestellt' => 0, 'erhalten' => 0, 'storniert' => 0, 'gesamt' => 0, 'anzahl' => 0];
+        foreach ($rows as $row) {
+            $result[$row['status']] = (float)$row['summe'];
+            $result['gesamt'] += (float)$row['summe'];
+            $result['anzahl'] += (int)$row['anzahl'];
+        }
+        return $result;
+    }
+}
