@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 Session::setFlashMessage('success', 'Schicht eingetragen.');
             }
             header('Location: fest_dienstplan.php?fest_id=' . $festId . '&datum=' . $data['datum']); exit;
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $error = $e->getMessage();
         }
     }

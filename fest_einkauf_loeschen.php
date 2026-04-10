@@ -16,7 +16,7 @@ $obj    = new FestEinkauf();
 try {
     $obj->delete($id);
     Session::setFlashMessage('success', 'Einkauf gelöscht.');
-} catch (Exception $e) {
+} catch (\Throwable $e) {
     Session::setFlashMessage('danger', 'Fehler: ' . $e->getMessage());
 }
 

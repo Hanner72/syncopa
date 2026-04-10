@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'vertrags_datum' => $_POST['vertrags_datum'] ?? '',
         'auftritt_datum' => $_POST['auftritt_datum'] ?? '',
         'auftritt_zeit'  => $_POST['auftritt_zeit'] ?? '',
-        'honorar'        => $_POST['honorar'] !== '' ? (float)$_POST['honorar'] : null,
+        'honorar'        => (($_POST['honorar'] ?? '') !== '') ? (float)$_POST['honorar'] : null,
         'zahlungsstatus' => $_POST['zahlungsstatus'] ?? 'offen',
         'zahlungsdatum'  => $_POST['zahlungsdatum'] ?? '',
         'notizen'        => trim($_POST['notizen'] ?? ''),
@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 try {
                     $upload = $vObj->handleUpload($_FILES['dokument'], $festId);
                     $vObj->updateDokument($savedId, $upload['pfad'], $upload['name']);
-                } catch (Exception $ue) {
+                } catch (\Throwable $ue) {
                     Session::setFlashMessage('warning', 'Vertrag gespeichert, aber Upload-Fehler: ' . $ue->getMessage());
                     header('Location: fest_vertraege.php?fest_id=' . $festId); exit;
                 }
@@ -61,8 +61,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             Session::setFlashMessage('success', $isEdit ? 'Vertrag aktualisiert.' : 'Vertrag angelegt.');
             header('Location: fest_vertraege.php?fest_id=' . $festId); exit;
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $error = $e->getMessage();
+            error_log('[Festverwaltung] Vertrag-Fehler: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
         }
     }
 }

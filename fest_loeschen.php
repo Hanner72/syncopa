@@ -21,7 +21,7 @@ if (!$fest) {
 try {
     $festObj->delete($id);
     Session::setFlashMessage('success', 'Fest «' . htmlspecialchars($fest['name']) . '» wurde gelöscht.');
-} catch (Exception $e) {
+} catch (\Throwable $e) {
     Session::setFlashMessage('danger', 'Fehler beim Löschen: ' . $e->getMessage());
 }
 

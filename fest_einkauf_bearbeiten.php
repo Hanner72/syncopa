@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 Session::setFlashMessage('success', 'Einkauf hinzugefügt.');
             }
             header('Location: fest_einkauefe.php?fest_id=' . $festId); exit;
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $error = $e->getMessage();
         }
     }

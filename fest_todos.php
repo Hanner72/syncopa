@@ -150,20 +150,26 @@ include 'includes/header.php';
                 <tr class="<?php echo $istUeberfaellig ? 'table-danger' : ''; ?>">
                     <td>
                         <!-- AJAX Status-Toggle -->
-                        <button class="btn btn-xs btn-toggle-status <?php echo $t['status'] === 'erledigt' ? 'btn-success' : 'btn-outline-secondary'; ?>"
+                        <?php
+                            $toggleIcon  = ['offen' => 'bi-circle',            'in_arbeit' => 'bi-circle-half',       'erledigt' => 'bi-check-circle-fill'];
+                            $toggleColor = ['offen' => '#adb5bd',              'in_arbeit' => '#0dcaf0',              'erledigt' => '#198754'];
+                            $toggleTitle = ['offen' => 'Klick: In Arbeit',     'in_arbeit' => 'Klick: Erledigt',      'erledigt' => 'Klick: Zurücksetzen'];
+                            $s = $t['status']; if (!isset($toggleIcon[$s])) $s = 'offen';
+                        ?>
+                        <button class="btn-toggle-status"
                                 data-id="<?php echo $t['id']; ?>"
-                                data-status="<?php echo $t['status']; ?>"
-                                style="font-size:16px;padding:0;border:none;background:none"
-                                title="Status umschalten">
-                            <i class="bi <?php echo $t['status'] === 'erledigt' ? 'bi-check-circle-fill' : 'bi-circle'; ?>"></i>
+                                data-status="<?php echo $s; ?>"
+                                style="font-size:22px;padding:0;border:none;background:none;cursor:pointer;line-height:1;color:<?php echo $toggleColor[$s]; ?>"
+                                title="<?php echo $toggleTitle[$s]; ?>">
+                            <i class="bi <?php echo $toggleIcon[$s]; ?>"></i>
                         </button>
                     </td>
-                    <td>
+                    <td <?php if ($t['beschreibung']): ?>data-bs-toggle="tooltip" data-bs-placement="right" title="<?php echo htmlspecialchars($t['beschreibung']); ?>"<?php endif; ?>>
                         <span class="<?php echo $t['status'] === 'erledigt' ? 'text-decoration-line-through text-muted' : ''; ?>">
                             <?php echo htmlspecialchars($t['titel']); ?>
                         </span>
                         <?php if ($t['beschreibung']): ?>
-                        <div class="small text-muted"><?php echo htmlspecialchars(mb_substr($t['beschreibung'], 0, 80)); ?></div>
+                        <div class="small text-muted"><?php echo htmlspecialchars(mb_substr($t['beschreibung'], 0, 80)); ?><?php echo mb_strlen($t['beschreibung']) > 80 ? '…' : ''; ?></div>
                         <?php endif; ?>
                     </td>
                     <?php if (!$festId): ?>
@@ -175,7 +181,7 @@ include 'includes/header.php';
                         <?php if ($istUeberfaellig): ?><i class="bi bi-exclamation-triangle-fill"></i><?php endif; ?>
                     </td>
                     <td class="small"><?php echo htmlspecialchars($t['zustaendig_name'] ?? '–'); ?></td>
-                    <td><span class="badge bg-<?php echo $sl['badge']; ?>"><?php echo $sl['label']; ?></span></td>
+                    <td><span class="badge bg-<?php echo $sl['badge']; ?> badge-status"><?php echo $sl['label']; ?></span></td>
                     <td class="text-end">
                         <div class="btn-group btn-group-sm">
                             <?php if (Session::checkPermission('fest', 'schreiben')): ?>
@@ -201,42 +207,66 @@ include 'includes/header.php';
 </div>
 <?php endif; ?>
 
+<style>
+.tooltip-wide .tooltip-inner { max-width: 400px; text-align: left; white-space: pre-wrap; }
+</style>
 <?php include 'includes/footer.php'; ?>
 <script>
 if (typeof $ !== 'undefined' && $.fn.DataTable) {
     $('#todosTable').DataTable({ order: [[3, 'asc'], [4, 'asc']] });
 }
 
-// AJAX Status-Toggle
+// Bootstrap Tooltips
+document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+    new bootstrap.Tooltip(el, { trigger: 'hover', customClass: 'tooltip-wide' });
+});
+
+// AJAX Status-Toggle (3-Stufen: offen → in_arbeit → erledigt → offen)
+var toggleNext  = { 'offen': 'in_arbeit', 'in_arbeit': 'erledigt', 'erledigt': 'offen' };
+var toggleIcon  = { 'offen': 'bi-circle', 'in_arbeit': 'bi-circle-half', 'erledigt': 'bi-check-circle-fill' };
+var toggleColor = { 'offen': '#adb5bd',   'in_arbeit': '#0dcaf0',        'erledigt': '#198754' };
+var toggleTitle = { 'offen': 'Klick: In Arbeit', 'in_arbeit': 'Klick: Erledigt', 'erledigt': 'Klick: Zuruecksetzen' };
+var statusLabels = {
+    'offen':       ['Offen',      'warning'],
+    'in_arbeit':   ['In Arbeit',  'info'],
+    'erledigt':    ['Erledigt',   'success'],
+    'abgebrochen': ['Abgebrochen','secondary']
+};
+
 document.querySelectorAll('.btn-toggle-status').forEach(function(btn) {
     btn.addEventListener('click', function() {
-        var id     = this.dataset.id;
-        var status = this.dataset.status;
-        var newStatus = status === 'erledigt' ? 'offen' : 'erledigt';
-        var btnEl  = this;
+        var btnEl     = this;
+        var status    = btnEl.dataset.status;
+        var newStatus = toggleNext[status] || 'offen';
 
         fetch('api/fest_todo_status.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: 'id=' + id + '&status=' + newStatus
+            body: 'id=' + btnEl.dataset.id + '&status=' + newStatus
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.success) {
-                btnEl.dataset.status = newStatus;
-                var icon = btnEl.querySelector('i');
-                if (newStatus === 'erledigt') {
-                    icon.className = 'bi bi-check-circle-fill';
-                    btnEl.classList.add('btn-success');
-                    btnEl.classList.remove('btn-outline-secondary');
-                    var titleCell = btnEl.closest('tr').querySelector('td:nth-child(2) span');
-                    if (titleCell) { titleCell.classList.add('text-decoration-line-through', 'text-muted'); }
-                } else {
-                    icon.className = 'bi bi-circle';
-                    btnEl.classList.remove('btn-success');
-                    btnEl.classList.add('btn-outline-secondary');
-                    var titleCell = btnEl.closest('tr').querySelector('td:nth-child(2) span');
-                    if (titleCell) { titleCell.classList.remove('text-decoration-line-through', 'text-muted'); }
+                btnEl.dataset.status  = newStatus;
+                btnEl.title           = toggleTitle[newStatus] || '';
+                btnEl.style.color     = toggleColor[newStatus];
+                btnEl.querySelector('i').className = 'bi ' + toggleIcon[newStatus];
+
+                var row        = btnEl.closest('tr');
+                var titleCell  = row.querySelector('td:nth-child(2) span');
+                var statusBadge = row.querySelector('.badge-status');
+
+                if (titleCell) {
+                    if (newStatus === 'erledigt') {
+                        titleCell.classList.add('text-decoration-line-through', 'text-muted');
+                    } else {
+                        titleCell.classList.remove('text-decoration-line-through', 'text-muted');
+                    }
+                }
+                if (statusBadge && statusLabels[newStatus]) {
+                    var sl = statusLabels[newStatus];
+                    statusBadge.className   = 'badge bg-' + sl[1] + ' badge-status';
+                    statusBadge.textContent = sl[0];
                 }
             }
         })

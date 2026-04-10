@@ -49,7 +49,7 @@ if ($method === 'POST') {
         $newId = $dpObj->create($data);
         $entry = $dpObj->getById($newId);
         echo json_encode(['success' => true, 'id' => $newId, 'eintrag' => $entry]);
-    } catch (Exception $e) {
+    } catch (\Throwable $e) {
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     }
     exit;

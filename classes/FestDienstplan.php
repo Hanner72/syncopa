@@ -82,10 +82,10 @@ class FestDienstplan {
         return $this->db->lastInsertId();
     }
 
-    public function update(int $id, array $data): bool {
+    public function update(int $id, array $data): void {
         $sql = "UPDATE fest_dienstplaene SET station_id=?, mitarbeiter_id=?, datum=?, zeit_von=?, zeit_bis=?, notizen=?
                 WHERE id=?";
-        return $this->db->execute($sql, [
+        $this->db->execute($sql, [
             (int)$data['station_id'],
             (int)$data['mitarbeiter_id'],
             $data['datum'],
@@ -97,6 +97,7 @@ class FestDienstplan {
     }
 
     public function delete(int $id): bool {
-        return $this->db->execute("DELETE FROM fest_dienstplaene WHERE id = ?", [$id]);
+        $stmt = $this->db->execute("DELETE FROM fest_dienstplaene WHERE id = ?", [$id]);
+        return $stmt->rowCount() > 0;
     }
 }

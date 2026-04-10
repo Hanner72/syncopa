@@ -77,10 +77,10 @@ class FestEinkauf {
         return $this->db->lastInsertId();
     }
 
-    public function update(int $id, array $data): bool {
+    public function update(int $id, array $data): void {
         $sql = "UPDATE fest_einkauefe SET kategorie_id=?, bezeichnung=?, menge=?, einheit=?, preis_gesamt=?, lieferant=?, status=?, ist_vorlage=?, notizen=?
                 WHERE id=?";
-        return $this->db->execute($sql, [
+        $this->db->execute($sql, [
             !empty($data['kategorie_id']) ? (int)$data['kategorie_id'] : null,
             $data['bezeichnung'],
             !empty($data['menge']) ? (float)$data['menge'] : null,
@@ -94,8 +94,8 @@ class FestEinkauf {
         ]);
     }
 
-    public function delete(int $id): bool {
-        return $this->db->execute("DELETE FROM fest_einkauefe WHERE id = ?", [$id]);
+    public function delete(int $id): void {
+        $this->db->execute("DELETE FROM fest_einkauefe WHERE id = ?", [$id]);
     }
 
     /**

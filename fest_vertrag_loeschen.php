@@ -16,7 +16,7 @@ $obj    = new FestVertrag();
 try {
     $obj->delete($id); // löscht auch Datei
     Session::setFlashMessage('success', 'Vertrag gelöscht.');
-} catch (Exception $e) {
+} catch (\Throwable $e) {
     Session::setFlashMessage('danger', 'Fehler: ' . $e->getMessage());
 }
 

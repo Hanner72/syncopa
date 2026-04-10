@@ -16,7 +16,7 @@ $obj    = new FestTodo();
 try {
     $obj->delete($id);
     Session::setFlashMessage('success', 'Todo gelöscht.');
-} catch (Exception $e) {
+} catch (\Throwable $e) {
     Session::setFlashMessage('danger', 'Fehler: ' . $e->getMessage());
 }
 

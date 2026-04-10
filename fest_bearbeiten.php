@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 Session::setFlashMessage('success', 'Fest erfolgreich angelegt.');
             }
             header('Location: fest_detail.php?id=' . $id); exit;
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $error = $e->getMessage();
         }
     }

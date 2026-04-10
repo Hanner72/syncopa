@@ -37,10 +37,10 @@ class FestStation {
         return $this->db->lastInsertId();
     }
 
-    public function update(int $id, array $data): bool {
+    public function update(int $id, array $data): void {
         $sql = "UPDATE fest_stationen SET name=?, beschreibung=?, benoetigte_helfer=?, oeffnung_von=?, oeffnung_bis=?, sortierung=?
                 WHERE id=?";
-        return $this->db->execute($sql, [
+        $this->db->execute($sql, [
             $data['name'],
             $data['beschreibung'] ?: null,
             (int)($data['benoetigte_helfer'] ?? 1),
@@ -51,7 +51,7 @@ class FestStation {
         ]);
     }
 
-    public function delete(int $id): bool {
-        return $this->db->execute("DELETE FROM fest_stationen WHERE id = ?", [$id]);
+    public function delete(int $id): void {
+        $this->db->execute("DELETE FROM fest_stationen WHERE id = ?", [$id]);
     }
 }

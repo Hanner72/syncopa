@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 Session::setFlashMessage('success', 'Todo angelegt.');
             }
             header('Location: fest_todos.php?fest_id=' . $data['fest_id']); exit;
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $error = $e->getMessage();
         }
     }

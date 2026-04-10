@@ -17,7 +17,7 @@ $obj    = new FestDienstplan();
 try {
     $obj->delete($id);
     Session::setFlashMessage('success', 'Schicht gelöscht.');
-} catch (Exception $e) {
+} catch (\Throwable $e) {
     Session::setFlashMessage('danger', 'Fehler: ' . $e->getMessage());
 }
 

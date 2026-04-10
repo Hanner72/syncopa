@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 Session::setFlashMessage('success', 'Station angelegt.');
             }
             header('Location: fest_stationen.php?fest_id=' . $festId); exit;
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $error = $e->getMessage();
         }
     }

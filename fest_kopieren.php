@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ergebnis = $kopObj->kopieren($quellId, $zielId, $optionen);
             $step = 3;
             Session::setFlashMessage('success', 'Daten erfolgreich kopiert.');
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $error = 'Fehler beim Kopieren: ' . $e->getMessage();
             $step = 2;
         }

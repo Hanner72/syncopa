@@ -42,10 +42,10 @@ class FestVertrag {
         return $this->db->lastInsertId();
     }
 
-    public function update(int $id, array $data): bool {
+    public function update(int $id, array $data): void {
         $sql = "UPDATE fest_vertraege SET band_name=?, vertrags_datum=?, auftritt_datum=?, auftritt_zeit=?, honorar=?, zahlungsstatus=?, zahlungsdatum=?, notizen=?
                 WHERE id=?";
-        return $this->db->execute($sql, [
+        $this->db->execute($sql, [
             $data['band_name'],
             $data['vertrags_datum'] ?: null,
             $data['auftritt_datum'] ?: null,
@@ -61,19 +61,19 @@ class FestVertrag {
     /**
      * Dokument-Pfad eines Vertrags aktualisieren
      */
-    public function updateDokument(int $id, string $pfad, string $name): bool {
-        return $this->db->execute(
+    public function updateDokument(int $id, string $pfad, string $name): void {
+        $this->db->execute(
             "UPDATE fest_vertraege SET dokument_pfad=?, dokument_name=? WHERE id=?",
             [$pfad, $name, $id]
         );
     }
 
-    public function delete(int $id): bool {
+    public function delete(int $id): void {
         $vertrag = $this->getById($id);
         if ($vertrag && !empty($vertrag['dokument_pfad']) && file_exists($vertrag['dokument_pfad'])) {
             @unlink($vertrag['dokument_pfad']);
         }
-        return $this->db->execute("DELETE FROM fest_vertraege WHERE id = ?", [$id]);
+        $this->db->execute("DELETE FROM fest_vertraege WHERE id = ?", [$id]);
     }
 
     /**
@@ -88,13 +88,19 @@ class FestVertrag {
             throw new Exception('Datei zu groß (max. ' . (MAX_UPLOAD_SIZE / 1048576) . ' MB)');
         }
 
-        $erlaubteTypen = ['application/pdf', 'application/x-pdf'];
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = finfo_file($finfo, $file['tmp_name']);
-        finfo_close($finfo);
+        // Dateiendung prüfen (keine externe Extension nötig)
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if ($ext !== 'pdf') {
+            throw new Exception('Nur PDF-Dateien erlaubt (.pdf)');
+        }
 
-        if (!in_array($mimeType, $erlaubteTypen)) {
-            throw new Exception('Nur PDF-Dateien erlaubt');
+        // MIME-Type zusätzlich prüfen (mit Fallback falls fileinfo nicht verfügbar)
+        if (function_exists('mime_content_type')) {
+            $mimeType = mime_content_type($file['tmp_name']);
+            $erlaubteTypen = ['application/pdf', 'application/x-pdf', 'application/octet-stream'];
+            if (!in_array($mimeType, $erlaubteTypen)) {
+                throw new Exception('Ungültiger Dateityp: ' . htmlspecialchars($mimeType));
+            }
         }
 
         $dir = FEST_VERTRAEGE_DIR . DIRECTORY_SEPARATOR . 'fest' . $festId;

@@ -47,10 +47,10 @@ class FestMitarbeiter {
         return $this->db->lastInsertId();
     }
 
-    public function update(int $id, array $data): bool {
+    public function update(int $id, array $data): void {
         $sql = "UPDATE fest_mitarbeiter SET mitglied_id=?, vorname=?, nachname=?, telefon=?, email=?, funktion=?, ist_extern=?, notizen=?
                 WHERE id=?";
-        return $this->db->execute($sql, [
+        $this->db->execute($sql, [
             !empty($data['mitglied_id']) ? (int)$data['mitglied_id'] : null,
             $data['vorname'] ?: null,
             $data['nachname'] ?: null,
@@ -63,8 +63,8 @@ class FestMitarbeiter {
         ]);
     }
 
-    public function delete(int $id): bool {
-        return $this->db->execute("DELETE FROM fest_mitarbeiter WHERE id = ?", [$id]);
+    public function delete(int $id): void {
+        $this->db->execute("DELETE FROM fest_mitarbeiter WHERE id = ?", [$id]);
     }
 
     /**
