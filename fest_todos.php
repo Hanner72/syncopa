@@ -53,26 +53,15 @@ include 'includes/header.php';
 ?>
 
 <?php if ($fest): ?>
-<nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="feste.php">Feste</a></li>
-        <li class="breadcrumb-item"><a href="fest_detail.php?id=<?php echo $festId; ?>"><?php echo htmlspecialchars($fest['name']); ?></a></li>
-        <li class="breadcrumb-item active">Todos</li>
-    </ol>
-</nav>
+<?php include 'includes/fest_tabs.php'; ?>
 <?php endif; ?>
 
 <div class="page-header">
     <h1 class="page-title">
         <i class="bi bi-check2-square"></i>
-        <?php echo $fest ? 'Todos – ' . htmlspecialchars($fest['name']) : 'Meine Todos'; ?>
+        <?php echo $fest ? 'Todos' : 'Meine Todos'; ?>
     </h1>
     <div class="d-flex gap-2">
-        <?php if ($fest): ?>
-        <a href="fest_todos.php" class="btn btn-sm btn-outline-secondary">
-            <i class="bi bi-person-check"></i> Meine Todos
-        </a>
-        <?php endif; ?>
         <?php if (Session::checkPermission('fest', 'schreiben')): ?>
         <a href="fest_todo_bearbeiten.php<?php echo $festId ? '?fest_id='.$festId : ''; ?>" class="btn btn-primary">
             <i class="bi bi-plus-lg"></i> Todo hinzufügen
@@ -207,9 +196,6 @@ include 'includes/header.php';
 </div>
 <?php endif; ?>
 
-<style>
-.tooltip-wide .tooltip-inner { max-width: 400px; text-align: left; white-space: pre-wrap; }
-</style>
 <?php include 'includes/footer.php'; ?>
 <script>
 if (typeof $ !== 'undefined' && $.fn.DataTable) {

@@ -14,7 +14,9 @@ if (!$fest) {
     header('Location: feste.php'); exit;
 }
 
-$stats = $festObj->getDashboardStats($id);
+$stats    = $festObj->getDashboardStats($id);
+$dpObj    = new FestDienstplan();
+$besetzung = $dpObj->getBesetzungByFest($id);
 
 $statusBadge = [
     'geplant'      => 'warning',
@@ -31,31 +33,17 @@ $statusLabel = [
 ][$fest['status']] ?? $fest['status'];
 
 include 'includes/header.php';
+$festId = $id;
 ?>
 
-<!-- Breadcrumb -->
-<nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="feste.php">Feste</a></li>
-        <li class="breadcrumb-item active"><?php echo htmlspecialchars($fest['name']); ?></li>
-    </ol>
-</nav>
+<?php include 'includes/fest_tabs.php'; ?>
 
 <div class="page-header">
     <div>
-        <h1 class="page-title">
-            <i class="bi bi-stars"></i> <?php echo htmlspecialchars($fest['name']); ?>
-            <span class="badge bg-<?php echo $statusBadge; ?> ms-2" style="font-size:13px"><?php echo $statusLabel; ?></span>
-        </h1>
-        <div class="text-muted small mt-1">
-            <i class="bi bi-calendar3"></i> <?php echo date('d.m.Y', strtotime($fest['datum_von'])); ?>
-            <?php if ($fest['datum_bis'] && $fest['datum_bis'] !== $fest['datum_von']): ?>
-            – <?php echo date('d.m.Y', strtotime($fest['datum_bis'])); ?>
-            <?php endif; ?>
-            <?php if ($fest['ort']): ?>
-            &nbsp;|&nbsp;<i class="bi bi-geo-alt"></i> <?php echo htmlspecialchars($fest['ort']); ?>
-            <?php endif; ?>
-        </div>
+        <span class="badge bg-<?php echo $statusBadge; ?>"><?php echo $statusLabel; ?></span>
+        <?php if ($fest['ort']): ?>
+        <span class="text-muted small ms-2"><i class="bi bi-geo-alt"></i> <?php echo htmlspecialchars($fest['ort']); ?></span>
+        <?php endif; ?>
     </div>
     <div class="d-flex gap-2">
         <?php if (Session::checkPermission('fest', 'schreiben')): ?>
@@ -63,7 +51,6 @@ include 'includes/header.php';
             <i class="bi bi-pencil"></i> Bearbeiten
         </a>
         <?php endif; ?>
-        <a href="feste.php" class="btn btn-secondary btn-sm"><i class="bi bi-arrow-left"></i> Alle Feste</a>
     </div>
 </div>
 
@@ -169,15 +156,44 @@ include 'includes/header.php';
             <div class="col-md-6 mb-3">
                 <div class="card h-100">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="bi bi-table"></i> Dienstplan</h5>
-                        <?php if (Session::checkPermission('fest', 'schreiben')): ?>
-                        <a href="fest_dienstplan_bearbeiten.php?fest_id=<?php echo $id; ?>" class="btn btn-xs btn-outline-secondary" style="font-size:11px;padding:2px 8px">
-                            <i class="bi bi-plus"></i>
-                        </a>
-                        <?php endif; ?>
+                        <h5 class="mb-0"><i class="bi bi-calendar3"></i> Dienstplan</h5>
+                        <?php
+                        $allVoll   = !empty($besetzung) && array_reduce($besetzung, fn($c, $r) => $c && $r['voll'], true);
+                        $irgendVoll = array_reduce($besetzung, fn($c, $r) => $c || $r['eingeplant'] > 0, false);
+                        ?>
+                        <span class="badge bg-<?php echo empty($besetzung) ? 'secondary' : ($allVoll ? 'success' : ($irgendVoll ? 'warning' : 'danger')); ?>">
+                            <?php echo empty($besetzung) ? 'Kein Plan' : ($allVoll ? 'Vollständig' : ($irgendVoll ? 'Teilweise' : 'Nicht besetzt')); ?>
+                        </span>
                     </div>
                     <div class="card-body">
-                        <p class="text-muted small mb-3">Schichtplan erstellen – wer wann wo arbeitet.</p>
+                        <?php if (!empty($besetzung)): ?>
+                        <div class="mb-3">
+                            <?php foreach ($besetzung as $b): ?>
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <div class="small text-truncate me-2" style="max-width:55%">
+                                    <i class="bi bi-geo-alt-fill" style="font-size:10px;color:#6c757d"></i>
+                                    <?php echo htmlspecialchars($b['name']); ?>
+                                    <?php if ($b['oeffnung_von']): ?>
+                                    <span class="text-muted" style="font-size:10px"><?php echo substr($b['oeffnung_von'],0,5); ?>–<?php echo substr($b['oeffnung_bis'],0,5); ?></span>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                                    <div class="progress" style="width:60px;height:7px">
+                                        <?php $pct = $b['benoetigte_helfer'] > 0 ? min(100, round($b['eingeplant'] / $b['benoetigte_helfer'] * 100)) : ($b['eingeplant'] > 0 ? 100 : 0); ?>
+                                        <div class="progress-bar bg-<?php echo $b['voll'] ? 'success' : ($b['eingeplant'] > 0 ? 'warning' : 'danger'); ?>"
+                                             style="width:<?php echo $pct; ?>%"></div>
+                                    </div>
+                                    <span class="small <?php echo $b['voll'] ? 'text-success' : ($b['eingeplant'] > 0 ? 'text-warning' : 'text-danger'); ?>" style="font-size:11px;min-width:32px;text-align:right">
+                                        <?php echo $b['eingeplant']; ?>/<?php echo $b['benoetigte_helfer']; ?>
+                                    </span>
+                                    <i class="bi bi-<?php echo $b['voll'] ? 'check-circle-fill text-success' : ($b['eingeplant'] > 0 ? 'exclamation-circle-fill text-warning' : 'x-circle-fill text-danger'); ?>" style="font-size:13px"></i>
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <?php else: ?>
+                        <p class="text-muted small mb-3">Noch keine Schichten erfasst.</p>
+                        <?php endif; ?>
                         <a href="fest_dienstplan.php?fest_id=<?php echo $id; ?>" class="btn btn-sm btn-outline-secondary w-100">
                             <i class="bi bi-arrow-right-circle"></i> Dienstplan öffnen (<?php echo $stats['dienstplaene']; ?> Schichten)
                         </a>

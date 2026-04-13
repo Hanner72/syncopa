@@ -100,4 +100,25 @@ class FestDienstplan {
         $stmt = $this->db->execute("DELETE FROM fest_dienstplaene WHERE id = ?", [$id]);
         return $stmt->rowCount() > 0;
     }
+
+    /**
+     * Besetzungsstatus pro Station: eingeplante vs. benötigte Mitarbeiter
+     * Gibt pro Station zurück: id, name, benoetigte_helfer, eingeplant (eindeutige MA), voll
+     */
+    public function getBesetzungByFest(int $festId): array {
+        $sql = "SELECT s.id, s.name, s.oeffnung_von, s.oeffnung_bis,
+                       s.benoetigte_helfer,
+                       COUNT(DISTINCT d.mitarbeiter_id) as eingeplant
+                FROM fest_stationen s
+                LEFT JOIN fest_dienstplaene d ON d.station_id = s.id
+                WHERE s.fest_id = ?
+                GROUP BY s.id
+                ORDER BY s.sortierung, s.name";
+        $rows = $this->db->fetchAll($sql, [$festId]);
+        foreach ($rows as &$r) {
+            $r['voll'] = (int)$r['eingeplant'] >= (int)$r['benoetigte_helfer'];
+        }
+        unset($r);
+        return $rows;
+    }
 }

@@ -404,6 +404,7 @@ function isActive($page, $pages, $current) {
             .main-content { padding: 0; }
             body { background: #fff; }
         }
+    .tooltip-wide .tooltip-inner { max-width: 450px; text-align: left; white-space: pre-wrap; }
     </style>
 </head>
 <body>
@@ -487,9 +488,6 @@ function isActive($page, $pages, $current) {
                 <ul class="nav flex-column">
                     <li><a class="nav-link <?php echo isActive('fest', $pages, $currentPage); ?>" href="feste.php">
                         <i class="bi bi-stars"></i> Feste
-                    </a></li>
-                    <li><a class="nav-link <?php echo in_array($currentPage, ['fest_todos', 'fest_todo_bearbeiten']) ? 'active' : ''; ?>" href="fest_todos.php">
-                        <i class="bi bi-check2-square"></i> Todos
                     </a></li>
                 </ul>
             </div>

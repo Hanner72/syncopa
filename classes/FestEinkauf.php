@@ -27,9 +27,17 @@ class FestEinkauf {
             $sql .= " AND e.kategorie_id = ?";
             $params[] = (int)$filter['kategorie_id'];
         }
-        if (isset($filter['ist_vorlage'])) {
+        if (isset($filter['ist_vorlage']) && $filter['ist_vorlage'] !== '') {
             $sql .= " AND e.ist_vorlage = ?";
             $params[] = (int)$filter['ist_vorlage'];
+        }
+        if (!empty($filter['bezeichnung'])) {
+            $sql .= " AND e.bezeichnung LIKE ?";
+            $params[] = '%' . $filter['bezeichnung'] . '%';
+        }
+        if (!empty($filter['lieferant'])) {
+            $sql .= " AND e.lieferant LIKE ?";
+            $params[] = '%' . $filter['lieferant'] . '%';
         }
 
         $sql .= " ORDER BY k.sortierung, k.name, e.bezeichnung";
@@ -96,6 +104,16 @@ class FestEinkauf {
 
     public function delete(int $id): void {
         $this->db->execute("DELETE FROM fest_einkauefe WHERE id = ?", [$id]);
+    }
+
+    /**
+     * Alle vorhandenen Lieferanten eines Festes (für Datalist)
+     */
+    public function getLieferanten(int $festId): array {
+        $sql = "SELECT DISTINCT lieferant FROM fest_einkauefe
+                WHERE fest_id = ? AND lieferant IS NOT NULL AND lieferant != ''
+                ORDER BY lieferant";
+        return array_column($this->db->fetchAll($sql, [$festId]), 'lieferant');
     }
 
     /**

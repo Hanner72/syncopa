@@ -23,16 +23,10 @@ $extern  = array_filter($mitarbeiter, fn($m) => $m['ist_extern']);
 include 'includes/header.php';
 ?>
 
-<nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="feste.php">Feste</a></li>
-        <li class="breadcrumb-item"><a href="fest_detail.php?id=<?php echo $festId; ?>"><?php echo htmlspecialchars($fest['name']); ?></a></li>
-        <li class="breadcrumb-item active">Mitarbeiter</li>
-    </ol>
-</nav>
+<?php include 'includes/fest_tabs.php'; ?>
 
 <div class="page-header">
-    <h1 class="page-title"><i class="bi bi-people"></i> Mitarbeiter – <?php echo htmlspecialchars($fest['name']); ?></h1>
+    <h1 class="page-title"><i class="bi bi-people"></i> Mitarbeiter</h1>
     <?php if (Session::checkPermission('fest', 'schreiben')): ?>
     <a href="fest_mitarbeiter_bearbeiten.php?fest_id=<?php echo $festId; ?>" class="btn btn-primary">
         <i class="bi bi-plus-lg"></i> Mitarbeiter hinzufügen
