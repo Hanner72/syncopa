@@ -528,43 +528,45 @@ function isActive($page, $pages, $current) {
         <button class="topbar-toggle" id="sidebarToggle"><i class="bi bi-list"></i></button>
 
         <div class="topbar-right">
-            <button class="theme-toggle" id="themeToggle" title="Design wechseln">
+            <button class="theme-toggle" id="themeToggle" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Design wechseln">
                 <i class="bi bi-moon"></i>
             </button>
 
-            <?php if (Session::isAdmin()): ?>
-            <a href="update.php" class="theme-toggle position-relative text-decoration-none" id="updateBtn" title="System-Update" style="display:none">
-                <i class="bi bi-arrow-up-circle"></i>
+            <?php if (Session::isAdmin()):
+                // Update-Check: max. einmal pro Stunde in der Session cachen
+                $updateAvailable = false;
+                $cacheKey = '_update_check';
+                $cacheTs  = '_update_check_ts';
+                $ttl      = 3600; // 1 Stunde
+                if (!Session::has($cacheKey) || (time() - (int)Session::get($cacheTs, 0)) > $ttl) {
+                    $ch = curl_init("https://raw.githubusercontent.com/Hanner72/syncopa/main/docs/changelog.md");
+                    curl_setopt_array($ch, [
+                        CURLOPT_RETURNTRANSFER => true,
+                        CURLOPT_TIMEOUT        => 5,
+                        CURLOPT_USERAGENT      => 'syncopa-updater/1.0',
+                        CURLOPT_SSL_VERIFYPEER => true,
+                        CURLOPT_FOLLOWLOCATION => true,
+                    ]);
+                    $body = curl_exec($ch);
+                    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    curl_close($ch);
+                    if ($code === 200 && $body) {
+                        preg_match('/##\s*\[([0-9]+\.[0-9]+\.[0-9]+)\]/', $body, $m);
+                        $remoteVersion = $m[1] ?? null;
+                        $updateAvailable = $remoteVersion && version_compare(APP_VERSION, $remoteVersion, '<');
+                    }
+                    Session::set($cacheKey, $updateAvailable);
+                    Session::set($cacheTs,  time());
+                } else {
+                    $updateAvailable = (bool)Session::get($cacheKey, false);
+                }
+            ?>
+            <?php if ($updateAvailable): ?>
+            <a href="update.php" class="theme-toggle position-relative text-decoration-none" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Update verfügbar!">
+                <i class="bi bi-arrow-up-circle text-warning"></i>
                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning" style="font-size:9px;padding:2px 5px;">!</span>
             </a>
-            <script>
-            (function() {
-                var CACHE_KEY = 'syncopa_update_check';
-                var CACHE_TTL = 3600000; // 1 Stunde
-                function showBtn() {
-                    var btn = document.getElementById('updateBtn');
-                    if (btn) btn.style.display = '';
-                }
-                function check() {
-                    fetch('api/system_update.php?action=check')
-                        .then(function(r) { return r.json(); })
-                        .then(function(d) {
-                            var result = { upToDate: d.upToDate, ts: Date.now() };
-                            localStorage.setItem(CACHE_KEY, JSON.stringify(result));
-                            if (!d.upToDate) showBtn();
-                        })
-                        .catch(function() {});
-                }
-                try {
-                    var cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
-                    if (cached && (Date.now() - cached.ts) < CACHE_TTL) {
-                        if (!cached.upToDate) showBtn();
-                    } else {
-                        check();
-                    }
-                } catch(e) { check(); }
-            })();
-            </script>
+            <?php endif; ?>
             <?php endif; ?>
 
             <?php if (Session::checkPermission('fest', 'lesen')):
@@ -573,7 +575,7 @@ function isActive($page, $pages, $current) {
                 $todoCounts = $todoObj->getOffeneCount($benutzerId);
             ?>
             <div class="dropdown">
-                <a href="fest_todos_alle.php" class="theme-toggle position-relative text-decoration-none" title="Todos">
+                <a href="fest_todos_alle.php" class="theme-toggle position-relative text-decoration-none" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Todos">
                     <i class="bi bi-check2-square"></i>
                     <?php if ($todoCounts['ueberfaellig'] > 0): ?>
                     <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:9px;padding:2px 5px;">
@@ -596,7 +598,7 @@ function isActive($page, $pages, $current) {
                 </div>
             </div>
             
-            <a href="logout.php" class="topbar-logout" title="Abmelden">
+            <a href="logout.php" class="topbar-logout" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Abmelden">
                 <i class="bi bi-box-arrow-right"></i>
             </a>
         </div>
@@ -638,8 +640,15 @@ function isActive($page, $pages, $current) {
         if (overlay) overlay.addEventListener('click', closeSidebar);
     })();
     </script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+            new bootstrap.Tooltip(el);
+        });
+    });
+    </script>
     <?php endif; ?>
-    
+
     <div class="main-wrapper">
         <main class="main-content">
             <?php if ($flash = Session::getFlashMessage()): ?>

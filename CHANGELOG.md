@@ -1,11 +1,16 @@
 # Changelog
 
+## [2.3.4]
+
+### Geändert
+
+- kleine grafische Updates
+
 ## [2.3.3]
 
 ### Hinzugefügt
 
-- **Update** - Anzeige ob ein Update vorhanden ist im 
-Topmenü
+- **Update** - Anzeige ob ein Update vorhanden ist im Topmenü
 
 ### Geändert
 
