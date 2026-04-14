@@ -6,3 +6,5 @@ config.php.update_backup
 
 # Uploads – Benutzerdaten
 uploads/
+
+ENTWICKLUNG.md

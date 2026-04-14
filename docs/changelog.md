@@ -31,7 +31,7 @@
     - Automatische Übernahme bezahlter Einkäufe und Honorare
     - Manuelle Einnahmen- und Ausgabenposten
     - Statuskarten: Einnahmen, Ausgaben, Ergebnis, Deckungsgrad
-    - Druckfunktion (Navigation wird beim Drucken ausgeblendet
+    - Druckfunktion (Navigation wird beim Drucken ausgeblendet)
 
 - **Berechtigungssystem – Mehrfachrollen**
   - Ein Benutzer kann jetzt mehrere Rollen gleichzeitig haben
