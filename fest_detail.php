@@ -17,6 +17,8 @@ if (!$fest) {
 $stats    = $festObj->getDashboardStats($id);
 $dpObj    = new FestDienstplan();
 $besetzung = $dpObj->getBesetzungByFest($id);
+$eObj     = new FestEinkauf();
+$einkaufByLieferant = $eObj->getGeplantByLieferant($id);
 
 $statusBadge = [
     'geplant'      => 'warning',
@@ -213,11 +215,27 @@ $festId = $id;
                         <?php endif; ?>
                     </div>
                     <div class="card-body">
-                        <p class="text-muted small mb-2">Einkaufsliste verwalten, Lieferanten, Kosten erfassen.</p>
-                        <p class="mb-3">
-                            <strong><?php echo number_format($stats['einkauefe_summe'], 2, ',', '.'); ?> €</strong>
-                            <span class="text-muted small">geplant</span>
-                        </p>
+                        <?php if (!empty($einkaufByLieferant)): ?>
+                        <div class="mb-3">
+                            <?php foreach ($einkaufByLieferant as $el): ?>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <a href="fest_einkauefe.php?fest_id=<?php echo $id; ?>&lieferant=<?php echo urlencode($el['lieferant']); ?>&ansicht=lieferant"
+                                   class="small text-truncate me-2" style="max-width:65%">
+                                    <i class="bi bi-truck" style="font-size:10px;color:#6c757d"></i>
+                                    <?php echo htmlspecialchars($el['lieferant']); ?>
+                                </a>
+                                <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                                    <span class="badge bg-warning" title="Geplant"><?php echo $el['anzahl']; ?></span>
+                                    <?php if ($el['bestellt'] > 0): ?>
+                                    <span class="badge bg-info" title="Davon bestellt"><?php echo $el['bestellt']; ?> bestellt</span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <?php else: ?>
+                        <p class="text-muted small mb-2">Noch keine geplanten Einkäufe.</p>
+                        <?php endif; ?>
                         <a href="fest_einkauefe.php?fest_id=<?php echo $id; ?>" class="btn btn-sm btn-outline-warning w-100">
                             <i class="bi bi-arrow-right-circle"></i> Einkäufe verwalten (<?php echo $stats['einkauefe_gesamt']; ?>)
                         </a>

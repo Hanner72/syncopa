@@ -11,6 +11,7 @@ $tabs = [
     'fest_einkauefe'  => ['icon' => 'bi-cart3',           'label' => 'Einkäufe',     'url' => 'fest_einkauefe.php?fest_id='  . $festId],
     'fest_vertraege'  => ['icon' => 'bi-file-earmark-text','label' => 'Verträge',    'url' => 'fest_vertraege.php?fest_id='  . $festId],
     'fest_todos'      => ['icon' => 'bi-check2-square',   'label' => 'Todos',        'url' => 'fest_todos.php?fest_id='      . $festId],
+    'fest_abrechnung' => ['icon' => 'bi-calculator',      'label' => 'Abrechnung',   'url' => 'fest_abrechnung.php?fest_id=' . $festId],
 ];
 
 // Seiten die zu einem Tab gehören (für aktiv-Erkennung)
@@ -22,6 +23,7 @@ $tabPages = [
     'fest_einkauefe'   => ['fest_einkauefe', 'fest_einkauf_bearbeiten'],
     'fest_vertraege'   => ['fest_vertraege', 'fest_vertrag_bearbeiten'],
     'fest_todos'       => ['fest_todos', 'fest_todo_bearbeiten'],
+    'fest_abrechnung'  => ['fest_abrechnung'],
 ];
 ?>
 <div class="fest-tabs-header mb-4">

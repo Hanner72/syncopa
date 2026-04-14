@@ -526,12 +526,33 @@ function isActive($page, $pages, $current) {
     
     <header class="topbar">
         <button class="topbar-toggle" id="sidebarToggle"><i class="bi bi-list"></i></button>
-        
+
         <div class="topbar-right">
             <button class="theme-toggle" id="themeToggle" title="Design wechseln">
                 <i class="bi bi-moon"></i>
             </button>
-            
+
+            <?php if (Session::checkPermission('fest', 'lesen')):
+                $todoObj   = new FestTodo();
+                $benutzerId = Session::getRole() === 'admin' ? null : Session::getUserId();
+                $todoCounts = $todoObj->getOffeneCount($benutzerId);
+            ?>
+            <div class="dropdown">
+                <a href="fest_todos_alle.php" class="theme-toggle position-relative text-decoration-none" title="Todos">
+                    <i class="bi bi-check2-square"></i>
+                    <?php if ($todoCounts['ueberfaellig'] > 0): ?>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:9px;padding:2px 5px;">
+                        <?php echo $todoCounts['ueberfaellig']; ?>
+                    </span>
+                    <?php elseif ($todoCounts['offen'] > 0): ?>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning" style="font-size:9px;padding:2px 5px;">
+                        <?php echo $todoCounts['offen']; ?>
+                    </span>
+                    <?php endif; ?>
+                </a>
+            </div>
+            <?php endif; ?>
+
             <div class="topbar-user">
                 <div class="topbar-avatar"><?php echo strtoupper(substr(Session::getUsername(), 0, 1)); ?></div>
                 <div class="topbar-info d-none d-sm-block">

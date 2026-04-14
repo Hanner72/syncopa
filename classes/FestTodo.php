@@ -61,6 +61,59 @@ class FestTodo {
         return $this->db->fetchAll($sql, [$benutzerId]);
     }
 
+    /**
+     * Alle Todos über alle Feste (für globale Übersicht)
+     * Admin: alle; sonst nur eigene
+     * $nurOffene: true = nur offen/in_arbeit, false = alle inkl. erledigt/abgebrochen
+     */
+    public function getAllOffene(?int $benutzerId = null, bool $nurOffene = true): array {
+        $where = $nurOffene ? "t.status NOT IN ('erledigt','abgebrochen')" : "1=1";
+        $params = [];
+        if ($benutzerId) {
+            $where .= " AND t.zustaendig_id = ?";
+            $params[] = $benutzerId;
+        }
+        $sql = "SELECT t.*, f.name as fest_name,
+                    CASE WHEN mz.id IS NOT NULL AND (mz.vorname IS NOT NULL OR mz.nachname IS NOT NULL)
+                    THEN TRIM(CONCAT_WS(' ', mz.vorname, mz.nachname))
+                    ELSE b.benutzername END as zustaendig_name
+                FROM fest_todos t
+                JOIN feste f ON t.fest_id = f.id
+                LEFT JOIN benutzer b ON t.zustaendig_id = b.id
+                LEFT JOIN mitglieder mz ON b.mitglied_id = mz.id
+                WHERE $where
+                ORDER BY
+                    CASE WHEN t.status IN ('erledigt','abgebrochen') THEN 1 ELSE 0 END,
+                    CASE WHEN t.faellig_am < CURDATE() AND t.faellig_am IS NOT NULL THEN 0 ELSE 1 END,
+                    FIELD(t.prioritaet,'kritisch','hoch','normal','niedrig'),
+                    t.faellig_am, t.titel";
+        return $this->db->fetchAll($sql, $params);
+    }
+
+    /**
+     * Zählt offene und überfällige Todos (für Topbar-Badge)
+     * Wenn $benutzerId gesetzt: nur eigene, sonst alle (für Admins)
+     */
+    public function getOffeneCount(?int $benutzerId = null): array {
+        $today = date('Y-m-d');
+        $where = "t.status NOT IN ('erledigt','abgebrochen')";
+        $params = [];
+        if ($benutzerId) {
+            $where .= " AND t.zustaendig_id = ?";
+            $params[] = $benutzerId;
+        }
+        $rows = $this->db->fetchAll(
+            "SELECT t.faellig_am FROM fest_todos t WHERE $where",
+            $params
+        );
+        $offen = 0; $ueberfaellig = 0;
+        foreach ($rows as $r) {
+            if ($r['faellig_am'] && $r['faellig_am'] < $today) $ueberfaellig++;
+            else $offen++;
+        }
+        return ['offen' => $offen, 'ueberfaellig' => $ueberfaellig, 'gesamt' => $offen + $ueberfaellig];
+    }
+
     public function getById(int $id) {
         $sql = "SELECT t.*, f.name as fest_name,
                     CASE WHEN mz.id IS NOT NULL AND (mz.vorname IS NOT NULL OR mz.nachname IS NOT NULL)

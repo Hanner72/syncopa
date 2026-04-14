@@ -23,14 +23,18 @@ if ($isEdit) {
 $fest = $festObj->getById($festId);
 if (!$fest) { Session::setFlashMessage('danger', 'Fest nicht gefunden.'); header('Location: feste.php'); exit; }
 
-$kategorien = $eObj->getKategorien();
+$kategorien  = $eObj->getKategorien();
+$lieferanten = $eObj->getLieferanten($festId);
+$stationObj  = new FestStation();
+$stationen   = $stationObj->getByFest($festId);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = [
         'fest_id'      => $festId,
         'kategorie_id' => $_POST['kategorie_id'] ?: null,
+        'station_id'   => $_POST['station_id']   ?: null,
         'bezeichnung'  => trim($_POST['bezeichnung'] ?? ''),
-        'menge'        => $_POST['menge'] !== '' ? (float)$_POST['menge'] : null,
+        'menge'        => $_POST['menge'] !== '' ? (int)$_POST['menge'] : null,
         'einheit'      => trim($_POST['einheit'] ?? ''),
         'preis_gesamt' => $_POST['preis_gesamt'] !== '' ? (float)$_POST['preis_gesamt'] : null,
         'lieferant'    => trim($_POST['lieferant'] ?? ''),
@@ -106,11 +110,25 @@ include 'includes/header.php';
                         </div>
                     </div>
                     <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label for="station_id" class="form-label">Station</label>
+                            <select class="form-select" id="station_id" name="station_id">
+                                <option value="">– Keine Station –</option>
+                                <?php foreach ($stationen as $st): ?>
+                                <option value="<?php echo $st['id']; ?>"
+                                        <?php echo ($einkauf['station_id'] ?? '') == $st['id'] ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($st['name']); ?>
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
                         <div class="col-md-3 mb-3">
                             <label for="menge" class="form-label">Menge</label>
                             <input type="number" class="form-control" id="menge" name="menge"
-                                   value="<?php echo htmlspecialchars($einkauf['menge'] ?? ''); ?>"
-                                   step="0.001" min="0" placeholder="z.B. 50">
+                                   value="<?php echo htmlspecialchars($einkauf['menge'] !== null ? (int)$einkauf['menge'] : ''); ?>"
+                                   step="1" min="0" placeholder="z.B. 50">
                         </div>
                         <div class="col-md-3 mb-3">
                             <label for="einheit" class="form-label">Einheit</label>
@@ -140,7 +158,13 @@ include 'includes/header.php';
                             <label for="lieferant" class="form-label">Lieferant</label>
                             <input type="text" class="form-control" id="lieferant" name="lieferant"
                                    value="<?php echo htmlspecialchars($einkauf['lieferant'] ?? ''); ?>"
-                                   placeholder="z.B. METRO, Getränkehändler">
+                                   placeholder="z.B. METRO, Getränkehändler"
+                                   list="lieferanten-list" autocomplete="off">
+                            <datalist id="lieferanten-list">
+                                <?php foreach ($lieferanten as $l): ?>
+                                <option value="<?php echo htmlspecialchars($l); ?>">
+                                <?php endforeach; ?>
+                            </datalist>
                         </div>
                     </div>
                     <div class="mb-3">
