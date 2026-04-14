@@ -11,7 +11,7 @@ Das Rollen-Berechtigungssystem steuert granular, wer welche Aktionen in Syncopa 
 
 ## Konzept
 
-Jeder Benutzer hat genau **eine Rolle**. Jede Rolle hat für jedes Modul drei Berechtigungsstufen:
+Ein Benutzer kann **mehrere Rollen gleichzeitig** haben. Die kombinierten Berechtigungen aller zugewiesenen Rollen gelten. Jede Rolle hat für jedes Modul drei Berechtigungsstufen:
 
 | Berechtigung | Beschreibung |
 |---|---|
@@ -33,20 +33,27 @@ Jeder Benutzer hat genau **eine Rolle**. Jede Rolle hat für jedes Modul drei Be
 | `noten` | Notenarchiv |
 | `instrumente` | Instrumenteninventar |
 | `uniformen` | Uniformverwaltung |
+| `fest` | Festverwaltung |
 
 ---
 
 ## Rollenübersicht (Beispiel)
 
-| Rolle | Mitglieder | Ausrückungen | Finanzen | Noten | Instrumente | Uniformen |
-|---|---|---|---|---|---|---|
-| Admin | ✅✅✅ | ✅✅✅ | ✅✅✅ | ✅✅✅ | ✅✅✅ | ✅✅✅ |
-| Obmann | ✅✅✅ | ✅✅✅ | 👁️ | ✅✅ | ✅✅ | ✅✅ |
-| Kassier | 👁️ | 👁️ | ✅✅✅ | – | – | – |
-| Schriftführer | ✅✅ | ✅✅ | – | ✅✅✅ | 👁️ | 👁️ |
-| Musiker | 👁️ | 👁️ | – | 👁️ | – | – |
+| Rolle | Mitglieder | Ausrückungen | Finanzen | Noten | Instrumente | Uniformen | Fest |
+|---|---|---|---|---|---|---|---|
+| Admin | ✅✅✅ | ✅✅✅ | ✅✅✅ | ✅✅✅ | ✅✅✅ | ✅✅✅ | ✅✅✅ |
+| Obmann | ✅✅✅ | ✅✅✅ | 👁️ | ✅✅ | ✅✅ | ✅✅ | – |
+| Kassier | 👁️ | 👁️ | ✅✅✅ | – | – | – | – |
+| Schriftführer | ✅✅ | ✅✅ | – | ✅✅✅ | 👁️ | 👁️ | – |
+| Musiker | 👁️ | 👁️ | – | 👁️ | – | – | – |
 
 > 👁️ = nur Lesen · ✅✅ = Lesen + Schreiben · ✅✅✅ = Vollzugriff
+
+---
+
+## Rollen sortieren
+
+Die Reihenfolge der Rollen in der Übersicht kann per **Drag & Drop** geändert werden – einfach die Zeile an der Griffleiste links ziehen. Die neue Reihenfolge wird automatisch gespeichert.
 
 ---
 

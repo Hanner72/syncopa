@@ -532,9 +532,44 @@ function isActive($page, $pages, $current) {
                 <i class="bi bi-moon"></i>
             </button>
 
+            <?php if (Session::isAdmin()): ?>
+            <a href="update.php" class="theme-toggle position-relative text-decoration-none" id="updateBtn" title="System-Update" style="display:none">
+                <i class="bi bi-arrow-up-circle"></i>
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning" style="font-size:9px;padding:2px 5px;">!</span>
+            </a>
+            <script>
+            (function() {
+                var CACHE_KEY = 'syncopa_update_check';
+                var CACHE_TTL = 3600000; // 1 Stunde
+                function showBtn() {
+                    var btn = document.getElementById('updateBtn');
+                    if (btn) btn.style.display = '';
+                }
+                function check() {
+                    fetch('api/system_update.php?action=check')
+                        .then(function(r) { return r.json(); })
+                        .then(function(d) {
+                            var result = { upToDate: d.upToDate, ts: Date.now() };
+                            localStorage.setItem(CACHE_KEY, JSON.stringify(result));
+                            if (!d.upToDate) showBtn();
+                        })
+                        .catch(function() {});
+                }
+                try {
+                    var cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+                    if (cached && (Date.now() - cached.ts) < CACHE_TTL) {
+                        if (!cached.upToDate) showBtn();
+                    } else {
+                        check();
+                    }
+                } catch(e) { check(); }
+            })();
+            </script>
+            <?php endif; ?>
+
             <?php if (Session::checkPermission('fest', 'lesen')):
                 $todoObj   = new FestTodo();
-                $benutzerId = Session::getRole() === 'admin' ? null : Session::getUserId();
+                $benutzerId = Session::isAdmin() ? null : Session::getUserId();
                 $todoCounts = $todoObj->getOffeneCount($benutzerId);
             ?>
             <div class="dropdown">

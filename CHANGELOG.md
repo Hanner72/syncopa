@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.3.3]
+
+### Hinzugefügt
+
+- **Update** - Anzeige ob ein Update vorhanden ist im 
+Topmenü
+
+### Geändert
+
+- **Dokumentation** - an die Festverwaltung angepasst
+
 ## [2.3.2]
 
 - update Test

@@ -108,6 +108,19 @@ Die Installation ist abgeschlossen und die Anwendung kann geöffnet werden.
 
 ---
 
+### 3.7 Konfigurationsdateien
+
+Nach der Installation gibt es zwei Konfigurationsdateien:
+
+| Datei | Zweck | Wird bei Update überschrieben? |
+|---|---|---|
+| `config.php` | DB-Zugangsdaten, BASE_URL, API-Keys | **Nein** |
+| `config.app.php` | App-Konstanten, Autoloader, Hilfsfunktionen | Ja |
+
+> ⚠️ Eigene Anpassungen nur in `config.php` vornehmen – `config.app.php` wird bei jedem System-Update automatisch aktualisiert.
+
+---
+
 ### 4 Neuistallation
 
 Bei nochmaligem Aufruf der install.php wird eine Meldung angezeigt dass SYNCOPA schon installiert ist. Wenn trotzdem neu installiert werden soll, muss einfach die Datei **install.lock** gelöscht werden.
