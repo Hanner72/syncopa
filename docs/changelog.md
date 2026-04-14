@@ -1,11 +1,8 @@
 # Changelog
 
-Alle wichtigen Änderungen an diesem Projekt werden in dieser Datei dokumentiert.
+## [2.3.2]
 
-Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
-und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
-
----
+- update Test
 
 ## [2.3.1]
 
