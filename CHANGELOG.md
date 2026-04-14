@@ -1,11 +1,25 @@
 # Changelog
 
-Alle wichtigen Änderungen an diesem Projekt werden in dieser Datei dokumentiert.
+## [2.3.3]
 
-Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
-und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
+### Hinzugefügt
 
----
+- **Update** - Anzeige ob ein Update vorhanden ist im 
+Topmenü
+
+### Geändert
+
+- **Dokumentation** - an die Festverwaltung angepasst
+
+## [2.3.2]
+
+- update Test
+
+## [2.3.1]
+
+### Geändert
+
+- install.php
 
 ## [2.3.0]
 
@@ -28,7 +42,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
     - Automatische Übernahme bezahlter Einkäufe und Honorare
     - Manuelle Einnahmen- und Ausgabenposten
     - Statuskarten: Einnahmen, Ausgaben, Ergebnis, Deckungsgrad
-    - Druckfunktion (Navigation wird beim Drucken ausgeblendet
+    - Druckfunktion (Navigation wird beim Drucken ausgeblendet)
 
 - **Berechtigungssystem – Mehrfachrollen**
   - Ein Benutzer kann jetzt mehrere Rollen gleichzeitig haben

@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.3.3]
+
+### Hinzugefügt
+
+- **Update** - Anzeige ob ein Update vorhanden ist im 
+Topmenü
+
+### Geändert
+
+- **Dokumentation** - an die Festverwaltung angepasst
+
 ## [2.3.2]
 
 - update Test
@@ -31,7 +42,7 @@
     - Automatische Übernahme bezahlter Einkäufe und Honorare
     - Manuelle Einnahmen- und Ausgabenposten
     - Statuskarten: Einnahmen, Ausgaben, Ergebnis, Deckungsgrad
-    - Druckfunktion (Navigation wird beim Drucken ausgeblendet
+    - Druckfunktion (Navigation wird beim Drucken ausgeblendet)
 
 - **Berechtigungssystem – Mehrfachrollen**
   - Ein Benutzer kann jetzt mehrere Rollen gleichzeitig haben

@@ -23,7 +23,7 @@ Die Übersicht zeigt alle angelegten Benutzer-Konten.
 
 1. Klicke auf **+ Neuer Benutzer**
 2. Fülle das Formular aus
-3. Weise dem Benutzer eine **Rolle** zu
+3. Weise dem Benutzer eine oder **mehrere Rollen** zu (Mehrfachauswahl per Checkboxen)
 4. Optional: Verknüpfe den Benutzer mit einem **Vereinsmitglied** (ermöglicht Ausrückungs-Anmeldung)
 5. Benutzer aktiv (Konto aktiviert / deaktiviert)?
 6. **Speichern**
@@ -35,22 +35,22 @@ Die Übersicht zeigt alle angelegten Benutzer-Konten.
 | Benutzername | ✅ | Eindeutiger Loginname |
 | E-Mail | ✅ | E-Mail-Adresse |
 | Passwort | ✅ (neu) | Mindestens 8 Zeichen |
-| Rolle | ✅ | Zugriffsrolle aus der Rollenverwaltung |
+| Rollen | ✅ | Eine oder mehrere Rollen per Checkbox |
 | Mitglied | – | Verknüpftes Vereinsmitglied |
 | Aktiv | – | Konto aktiviert / deaktiviert |
 
+> 💡 Ein Benutzer mit mehreren Rollen erhält die kombinierten Berechtigungen aller zugewiesenen Rollen. In der Benutzerliste werden alle Rollen als farbige Badges angezeigt.
+
 ---
 
-## Benutzer befördern
+## Rollen eines Benutzers ändern
 
 **Datei:** `benutzer_bearbeiten.php`
 
 ![Benutzer Neu](screenshots/benutzer3.png)
 
-Schnelle Rollen-Zuweisung für einen bestehenden Benutzer:
-
 1. Klicke in der Benutzerliste auf **„Bearbeiten"**
-2. Wähle die neue Rolle
+2. Haken bei den gewünschten Rollen setzen bzw. entfernen
 3. **Speichern**
 
 ---

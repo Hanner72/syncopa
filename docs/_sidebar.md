@@ -33,6 +33,9 @@
   * [Verwaltung](uniformen.md)
   <!-- * [Ausgabe & Rücknahme](uniform-ausgabe.md) -->
 
+* **🎪 Festverwaltung**
+  * [Übersicht & Module](festverwaltung.md)
+
 * **⚙️ Administration**
   * [Benutzerverwaltung](benutzer.md)
   * [Rollen & Berechtigungen](rollen.md)

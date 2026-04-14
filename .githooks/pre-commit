@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # .githooks/pre-commit
 # Synchronisiert die Versionsnummer automatisch vor jedem Commit.
 # Einmalige Einrichtung: git config core.hooksPath .githooks
