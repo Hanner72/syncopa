@@ -2,6 +2,12 @@
 
 ## v2.2.3
 
+### Geändert
+
+- install.php
+
+## [2.3.0]
+
 ### Hinzugefügt
 - **Installation**
   - vollständiges Installationsscript hinzugefügt
