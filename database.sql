@@ -742,6 +742,166 @@ CREATE TABLE IF NOT EXISTS `uniform_zuweisungen` (
   KEY `kleidungsstueck_id` (`kleidungsstueck_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=162 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ============================================================================
+-- FESTVERWALTUNG
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS `feste` (
+  `id`           INT AUTO_INCREMENT PRIMARY KEY,
+  `name`         VARCHAR(100) NOT NULL,
+  `jahr`         YEAR NOT NULL,
+  `datum_von`    DATE NOT NULL,
+  `datum_bis`    DATE NULL,
+  `ort`          VARCHAR(100) NULL,
+  `adresse`      VARCHAR(255) NULL,
+  `beschreibung` TEXT NULL,
+  `status`       ENUM('geplant','aktiv','abgeschlossen','abgesagt') NOT NULL DEFAULT 'geplant',
+  `erstellt_von` INT NULL,
+  `erstellt_am`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY `erstellt_von` (`erstellt_von`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `fest_stationen` (
+  `id`                INT AUTO_INCREMENT PRIMARY KEY,
+  `fest_id`           INT NOT NULL,
+  `name`              VARCHAR(100) NOT NULL,
+  `beschreibung`      TEXT NULL,
+  `oeffnung_von`      TIME NULL,
+  `oeffnung_bis`      TIME NULL,
+  `benoetigte_helfer` INT NOT NULL DEFAULT 1,
+  `farbe`             VARCHAR(20) NULL DEFAULT 'primary',
+  `sortierung`        INT NOT NULL DEFAULT 0,
+  `erstellt_am`       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`fest_id`) REFERENCES `feste`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `fest_station_tage` (
+  `id`                INT AUTO_INCREMENT PRIMARY KEY,
+  `station_id`        INT NOT NULL,
+  `datum`             DATE NOT NULL,
+  `aktiv`             TINYINT(1) NOT NULL DEFAULT 1,
+  `oeffnung_von`      TIME NULL,
+  `oeffnung_bis`      TIME NULL,
+  `benoetigte_helfer` INT NOT NULL DEFAULT 1,
+  UNIQUE KEY `station_datum` (`station_id`, `datum`),
+  FOREIGN KEY (`station_id`) REFERENCES `fest_stationen`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `fest_mitarbeiter` (
+  `id`          INT AUTO_INCREMENT PRIMARY KEY,
+  `fest_id`     INT NOT NULL,
+  `mitglied_id` INT NULL,
+  `vorname`     VARCHAR(50) NULL,
+  `nachname`    VARCHAR(50) NULL,
+  `telefon`     VARCHAR(30) NULL,
+  `email`       VARCHAR(100) NULL,
+  `funktion`    VARCHAR(100) NULL,
+  `ist_extern`  TINYINT(1) NOT NULL DEFAULT 0,
+  `notizen`     TEXT NULL,
+  `erstellt_am` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`fest_id`)     REFERENCES `feste`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`mitglied_id`) REFERENCES `mitglieder`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `fest_dienstplaene` (
+  `id`             INT AUTO_INCREMENT PRIMARY KEY,
+  `fest_id`        INT NOT NULL,
+  `station_id`     INT NOT NULL,
+  `mitarbeiter_id` INT NOT NULL,
+  `datum`          DATE NOT NULL,
+  `zeit_von`       TIME NULL,
+  `zeit_bis`       TIME NULL,
+  `notizen`        TEXT NULL,
+  `erstellt_am`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`fest_id`)        REFERENCES `feste`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`station_id`)     REFERENCES `fest_stationen`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`mitarbeiter_id`) REFERENCES `fest_mitarbeiter`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `fest_einkauf_kategorien` (
+  `id`          INT AUTO_INCREMENT PRIMARY KEY,
+  `name`        VARCHAR(80) NOT NULL,
+  `sortierung`  INT NOT NULL DEFAULT 0,
+  `erstellt_am` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `fest_einkauefe` (
+  `id`           INT AUTO_INCREMENT PRIMARY KEY,
+  `fest_id`      INT NOT NULL,
+  `kategorie_id` INT NULL,
+  `station_id`   INT NULL,
+  `bezeichnung`  VARCHAR(255) NOT NULL,
+  `menge`        INT NOT NULL DEFAULT 1,
+  `einheit`      VARCHAR(20) NULL,
+  `preis`        DECIMAL(10,2) NULL,
+  `lieferant`    VARCHAR(100) NULL,
+  `status`       ENUM('geplant','bestellt','erhalten','storniert') NOT NULL DEFAULT 'geplant',
+  `ist_vorlage`  TINYINT(1) NOT NULL DEFAULT 0,
+  `notizen`      TEXT NULL,
+  `erstellt_von` INT NULL,
+  `erstellt_am`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`fest_id`)      REFERENCES `feste`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`kategorie_id`) REFERENCES `fest_einkauf_kategorien`(`id`) ON DELETE SET NULL,
+  FOREIGN KEY (`station_id`)   REFERENCES `fest_stationen`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `fest_vertraege` (
+  `id`              INT AUTO_INCREMENT PRIMARY KEY,
+  `fest_id`         INT NOT NULL,
+  `band_name`       VARCHAR(150) NOT NULL,
+  `vertrags_datum`  DATE NULL,
+  `auftritt_datum`  DATE NULL,
+  `auftritt_zeit`   TIME NULL,
+  `honorar`         DECIMAL(10,2) NULL,
+  `zahlungsstatus`  ENUM('offen','angezahlt','bezahlt','storniert') NOT NULL DEFAULT 'offen',
+  `zahlungsdatum`   DATE NULL,
+  `dokument_pfad`   VARCHAR(255) NULL,
+  `dokument_name`   VARCHAR(255) NULL,
+  `notizen`         TEXT NULL,
+  `erstellt_von`    INT NULL,
+  `erstellt_am`     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`fest_id`) REFERENCES `feste`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `fest_todos` (
+  `id`            INT AUTO_INCREMENT PRIMARY KEY,
+  `fest_id`       INT NOT NULL,
+  `titel`         VARCHAR(255) NOT NULL,
+  `beschreibung`  TEXT NULL,
+  `prioritaet`    ENUM('niedrig','normal','hoch','kritisch') NOT NULL DEFAULT 'normal',
+  `status`        ENUM('offen','in_bearbeitung','erledigt') NOT NULL DEFAULT 'offen',
+  `faellig_am`    DATE NULL,
+  `zustaendig_id` INT NULL,
+  `erstellt_von`  INT NULL,
+  `erstellt_am`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `erledigt_am`   DATETIME NULL,
+  FOREIGN KEY (`fest_id`)       REFERENCES `feste`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`zustaendig_id`) REFERENCES `benutzer`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `fest_abrechnung_posten` (
+  `id`           INT AUTO_INCREMENT PRIMARY KEY,
+  `fest_id`      INT NOT NULL,
+  `typ`          ENUM('einnahme','ausgabe') NOT NULL,
+  `kategorie`    VARCHAR(80) NOT NULL DEFAULT 'sonstiges',
+  `bezeichnung`  VARCHAR(255) NOT NULL,
+  `betrag`       DECIMAL(10,2) NOT NULL DEFAULT 0,
+  `station_id`   INT NULL,
+  `notizen`      TEXT NULL,
+  `erstellt_von` INT NULL,
+  `erstellt_am`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`fest_id`)    REFERENCES `feste`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`station_id`) REFERENCES `fest_stationen`(`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `benutzer_rollen` (
+  `benutzer_id` INT NOT NULL,
+  `rolle_id`    INT NOT NULL,
+  PRIMARY KEY (`benutzer_id`, `rolle_id`),
+  FOREIGN KEY (`benutzer_id`) REFERENCES `benutzer`(`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`rolle_id`)    REFERENCES `rollen`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 --
 -- Constraints der exportierten Tabellen
 --

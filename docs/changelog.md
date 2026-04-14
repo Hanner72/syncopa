@@ -5,6 +5,7 @@
 ### Geändert
 
 - kleine grafische Updates
+- Installationsscript Update
 
 ## [2.3.3]
 
