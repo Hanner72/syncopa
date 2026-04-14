@@ -93,8 +93,8 @@ function rmRecursive(string $path): void {
 if ($action === 'check') {
     $localVersion = APP_VERSION;
 
-    // Remote CHANGELOG.md holen
-    $rawUrl = "https://raw.githubusercontent.com/{$repoOwner}/{$repoName}/{$branch}/CHANGELOG.md";
+    // Remote Changelog holen
+    $rawUrl = "https://raw.githubusercontent.com/{$repoOwner}/{$repoName}/{$branch}/docs/changelog.md";
     $resp = httpGet($rawUrl);
 
     if ($resp['code'] !== 200 || !$resp['body']) {
@@ -183,7 +183,7 @@ if ($action === 'update') {
     $extractedRoot = $subDirs[0];
 
     // 3. Neue Version aus CHANGELOG ermitteln
-    $changelogPath = $extractedRoot . DIRECTORY_SEPARATOR . 'CHANGELOG.md';
+    $changelogPath = $extractedRoot . DIRECTORY_SEPARATOR . 'docs' . DIRECTORY_SEPARATOR . 'changelog.md';
     $newVersion = null;
     if (file_exists($changelogPath)) {
         $newVersion = parseVersionFromChangelog(file_get_contents($changelogPath));
