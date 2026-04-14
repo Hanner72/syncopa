@@ -9,6 +9,12 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [2.3.0]
 
+### Geändert
+
+- install.php
+
+## [2.3.0]
+
 ### Hinzugefügt
 
 - **Festverwaltung** – vollständiges Modul zur Verwaltung von Vereinsfesten

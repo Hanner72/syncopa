@@ -162,6 +162,8 @@ function runInstallation($p) {
         $email = trim($p['admin_email'] ?? '');
         $pdo->exec("DELETE FROM `benutzer` WHERE `benutzername` = 'admin'");
         $pdo->prepare("INSERT INTO `benutzer` (`benutzername`,`email`,`passwort_hash`,`rolle`,`rolle_id`,`aktiv`,`erstellt_am`) VALUES (?,?,?,'admin',1,1,NOW())")->execute(array($bname, $email, $hash));
+        $adminId = (int)$pdo->lastInsertId();
+        $pdo->prepare("INSERT IGNORE INTO `benutzer_rollen` (`benutzer_id`, `rolle_id`) VALUES (?, 1)")->execute(array($adminId));
 
         if (!empty($p['beispieldaten']) && $p['beispieldaten'] === '1') {
             insertSampleData($pdo);
@@ -171,7 +173,7 @@ function runInstallation($p) {
 
         writeConfig($p);
 
-        foreach (array('uploads','uploads/noten','uploads/fotos','uploads/dokumente') as $dir) {
+        foreach (array('uploads','uploads/noten','uploads/fotos','uploads/dokumente','uploads/fest_vertraege') as $dir) {
             $path = __DIR__ . '/' . $dir;
             if (!is_dir($path)) mkdir($path, 0755, true);
             if (!file_exists($path . '/index.php')) {
@@ -209,6 +211,15 @@ function importSchema($pdo) {
 
 // ── Basisdaten ───────────────────────────────────────────────
 function insertBaseData($pdo) {
+    // Pivot-Tabelle für Mehrfachrollen sicherstellen
+    $pdo->exec("CREATE TABLE IF NOT EXISTS `benutzer_rollen` (
+        `benutzer_id` INT NOT NULL,
+        `rolle_id` INT NOT NULL,
+        PRIMARY KEY (`benutzer_id`, `rolle_id`),
+        FOREIGN KEY (`benutzer_id`) REFERENCES `benutzer`(`id`) ON DELETE CASCADE,
+        FOREIGN KEY (`rolle_id`) REFERENCES `rollen`(`id`) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
     $pdo->exec("DELETE FROM `rollen`");
     $pdo->exec("ALTER TABLE `rollen` AUTO_INCREMENT = 1");
     $pdo->exec("INSERT INTO `rollen` (`id`,`name`,`beschreibung`,`ist_admin`,`farbe`,`sortierung`,`aktiv`,`erstellt_am`) VALUES
@@ -245,7 +256,8 @@ function insertBaseData($pdo) {
         (58,9,'mitglied','mitglieder',1,0,0),(59,9,'mitglied','ausrueckungen',1,0,0),(60,9,'mitglied','noten',1,0,0),
         (61,9,'mitglied','instrumente',1,0,0),(62,9,'mitglied','uniformen',1,0,0),
         (77,10,'notenwart','mitglieder',1,0,0),(78,10,'notenwart','ausrueckungen',1,0,0),(79,10,'notenwart','noten',1,1,1),
-        (80,10,'notenwart','instrumente',1,0,0),(81,10,'notenwart','uniformen',1,0,0),(82,10,'notenwart','finanzen',0,0,0),(83,10,'notenwart','benutzer',0,0,0)");
+        (80,10,'notenwart','instrumente',1,0,0),(81,10,'notenwart','uniformen',1,0,0),(82,10,'notenwart','finanzen',0,0,0),(83,10,'notenwart','benutzer',0,0,0),
+        (84,1,'admin','fest',1,1,1)");
 
     $pdo->exec("DELETE FROM `register`");
     $pdo->exec("INSERT INTO `register` (`id`,`name`,`beschreibung`,`sortierung`) VALUES
@@ -324,8 +336,12 @@ function insertSampleData($pdo) {
         array('e.schmid',  'e.schmid@example.at',  4),
         array('p.wagner',  'p.wagner@example.at',  5),
     );
+    $stmtBr = $pdo->prepare("INSERT IGNORE INTO `benutzer_rollen` (`benutzer_id`, `rolle_id`) VALUES (?, 9)");
     foreach ($demoUsers as $u) {
-        try { $stmt->execute(array($u[0], $u[1], $demoHash, $u[2])); }
+        try {
+            $stmt->execute(array($u[0], $u[1], $demoHash, $u[2]));
+            $stmtBr->execute(array((int)$pdo->lastInsertId()));
+        }
         catch (Exception $ex) { /* ignorieren */ }
     }
 
@@ -408,43 +424,38 @@ function insertSampleData($pdo) {
 // ── config.php schreiben ─────────────────────────────────────
 function writeConfig($p) {
     $host      = addslashes($p['db_host']    ?? 'localhost');
-    $port      = (int)($p['db_port']         ?? 3306);
     $dbname    = addslashes($p['db_name']    ?? '');
     $user      = addslashes($p['db_user']    ?? '');
     $pass      = addslashes($p['db_pass']    ?? '');
-    $appName   = addslashes($p['verein_name']?? 'Syncopa');
     $baseUrl   = rtrim(addslashes($p['base_url'] ?? ''), '/');
     $ts        = date('Y-m-d H:i:s');
 
-    $googleOauthEnabled = !empty($p['google_oauth_enabled'])   ? 'true'  : 'false';
-    $googleClientId     = addslashes($p['google_client_id']     ?? '');
-    $googleClientSecret = addslashes($p['google_client_secret'] ?? '');
-    $googleCalEnabled   = !empty($p['google_calendar_enabled']) ? 'true'  : 'false';
+    $googleOauthEnabled = !empty($p['google_oauth_enabled'])      ? 'true'  : 'false';
+    $googleClientId     = addslashes($p['google_client_id']       ?? '');
+    $googleClientSecret = addslashes($p['google_client_secret']   ?? '');
+    $googleCalEnabled   = !empty($p['google_calendar_enabled'])   ? 'true'  : 'false';
     $googleCalApiKey    = addslashes($p['google_calendar_api_key'] ?? '');
     $googleCalId        = addslashes($p['google_calendar_id']      ?? '');
-    $ocrApiKey          = addslashes($p['ocr_api_key']  ?? '');
-    $emailEnabled       = !empty($p['email_enabled'])   ? 'true'  : 'false';
-    $emailSmtpHost      = addslashes($p['email_smtp_host']  ?? '');
-    $emailSmtpPort      = (int)($p['email_smtp_port']       ?? 587);
-    $emailSmtpUser      = addslashes($p['email_smtp_user']  ?? '');
-    $emailSmtpPass      = addslashes($p['email_smtp_pass']  ?? '');
-    $emailFrom          = addslashes($p['email_from']       ?? '');
-    $emailFromName      = addslashes($p['email_from_name']  ?? 'Musikverein Verwaltung');
+    $ocrApiKey          = addslashes($p['ocr_api_key']            ?? '');
+    $emailEnabled       = !empty($p['email_enabled'])             ? 'true'  : 'false';
+    $emailSmtpHost      = addslashes($p['email_smtp_host']        ?? '');
+    $emailSmtpPort      = (int)($p['email_smtp_port']             ?? 587);
+    $emailSmtpUser      = addslashes($p['email_smtp_user']        ?? '');
+    $emailSmtpPass      = addslashes($p['email_smtp_pass']        ?? '');
+    $emailFrom          = addslashes($p['email_from']             ?? '');
+    $emailFromName      = addslashes($p['email_from_name']        ?? 'Musikverein');
 
     $lines = array(
         "<?php",
         "/**",
-        " * SYNCOPA - Musikvereinsverwaltung",
-        " * Konfigurationsdatei – automatisch erstellt am: {$ts}",
-        " * Copyright (c) 2026 by Johann Danner",
+        " * SYNCOPA – Konfigurationsdatei",
+        " * Automatisch erstellt am: {$ts}",
+        " * Enthält nur umgebungsspezifische Einstellungen (DB, URLs, API-Keys).",
+        " * Diese Datei wird bei Updates NICHT überschrieben.",
         " */",
         "",
-        "// Fuer Produktion: error_reporting(0); ini_set('display_errors', 0);",
-        "//error_reporting(E_ALL);",
-        "//ini_set('display_errors', 1);",
-        "",
         "// ============================================================================",
-        "// DATENBANK-KONFIGURATION",
+        "// DATENBANK",
         "// ============================================================================",
         "define('DB_HOST',    '{$host}');",
         "define('DB_NAME',    '{$dbname}');",
@@ -453,22 +464,20 @@ function writeConfig($p) {
         "define('DB_CHARSET', 'utf8mb4');",
         "",
         "// ============================================================================",
-        "// ANWENDUNGS-KONFIGURATION",
+        "// ANWENDUNGS-URL & VERSION",
         "// ============================================================================",
-        "define('APP_NAME',    '{$appName}');",
-        "define('APP_VERSION', '2.2.2');",
+        "define('APP_VERSION', '2.3.0');",
         "define('BASE_URL',    '{$baseUrl}');",
-        "define('BASE_PATH',   __DIR__);",
         "",
-        "define('SESSION_LIFETIME', 3600);",
-        "",
-        "define('UPLOAD_DIR',    BASE_PATH . DIRECTORY_SEPARATOR . 'uploads');",
-        "define('NOTEN_DIR',     UPLOAD_DIR . DIRECTORY_SEPARATOR . 'noten');",
-        "define('FOTOS_DIR',     UPLOAD_DIR . DIRECTORY_SEPARATOR . 'fotos');",
-        "define('DOKUMENTE_DIR', UPLOAD_DIR . DIRECTORY_SEPARATOR . 'dokumente');",
-        "define('MAX_UPLOAD_SIZE', 10485760);",
-        "",
-        "date_default_timezone_set('Europe/Vienna');",
+        "// ============================================================================",
+        "// GOOGLE OAUTH LOGIN (optional – auf false setzen zum Deaktivieren)",
+        "// Anleitung: https://console.cloud.google.com/apis/credentials",
+        "// Redirect URI: {$baseUrl}/login_google_callback.php",
+        "// ============================================================================",
+        "define('GOOGLE_OAUTH_ENABLED',  {$googleOauthEnabled});",
+        "define('GOOGLE_CLIENT_ID',      '{$googleClientId}');",
+        "define('GOOGLE_CLIENT_SECRET',  '{$googleClientSecret}');",
+        "define('GOOGLE_REDIRECT_URI',   BASE_URL . '/login_google_callback.php');",
         "",
         "// ============================================================================",
         "// GOOGLE CALENDAR API (optional)",
@@ -478,63 +487,26 @@ function writeConfig($p) {
         "define('GOOGLE_CALENDAR_ID',      '{$googleCalId}');",
         "",
         "// ============================================================================",
-        "// GOOGLE OAUTH LOGIN (optional)",
-        "// ============================================================================",
-        "// Erstelle Client-ID unter: https://console.cloud.google.com/apis/credentials",
-        "// Redirect URI: {$baseUrl}/login_google_callback.php",
-        "define('GOOGLE_OAUTH_ENABLED',  {$googleOauthEnabled});",
-        "define('GOOGLE_CLIENT_ID',      '{$googleClientId}');",
-        "define('GOOGLE_CLIENT_SECRET',  '{$googleClientSecret}');",
-        "define('GOOGLE_REDIRECT_URI',   BASE_URL . '/login_google_callback.php');",
-        "",
-        "// ============================================================================",
-        "// OCR SPACE API – https://ocr.space/ocrapi (fuer PDF-Splittung erforderlich)",
+        "// OCR.SPACE API (optional)",
+        "// Kostenloser Key: https://ocr.space/ocrapi",
         "// ============================================================================",
         "define('OCR_SPACE_API_KEY', '{$ocrApiKey}');",
         "",
         "// ============================================================================",
-        "// E-MAIL-KONFIGURATION (optional)",
+        "// E-MAIL / SMTP (optional)",
         "// ============================================================================",
-        "define('EMAIL_ENABLED',   {$emailEnabled});",
-        "define('EMAIL_SMTP_HOST', '{$emailSmtpHost}');",
-        "define('EMAIL_SMTP_PORT', {$emailSmtpPort});",
-        "define('EMAIL_SMTP_USER', '{$emailSmtpUser}');",
-        "define('EMAIL_SMTP_PASS', '{$emailSmtpPass}');",
-        "define('EMAIL_FROM',      '{$emailFrom}');",
-        "define('EMAIL_FROM_NAME', '{$emailFromName}');",
+        "define('EMAIL_ENABLED',    {$emailEnabled});",
+        "define('EMAIL_SMTP_HOST',  '{$emailSmtpHost}');",
+        "define('EMAIL_SMTP_PORT',  {$emailSmtpPort});",
+        "define('EMAIL_SMTP_USER',  '{$emailSmtpUser}');",
+        "define('EMAIL_SMTP_PASS',  '{$emailSmtpPass}');",
+        "define('EMAIL_FROM',       '{$emailFrom}');",
+        "define('EMAIL_FROM_NAME',  '{$emailFromName}');",
         "",
         "// ============================================================================",
-        "// DATUMSFORMAT-KONSTANTEN",
+        "// App-Konfiguration laden (nicht editieren)",
         "// ============================================================================",
-        "define('DATE_FORMAT_FULL',      'full');",
-        "define('DATE_FORMAT_LONG',      'long');",
-        "define('DATE_FORMAT_MEDIUM',    'medium');",
-        "define('DATE_FORMAT_MONTH',     'month');",
-        "define('DATE_FORMAT_MONTHYEAR', 'monthyear');",
-        "",
-        "function format_date_german(\$date, \$format = DATE_FORMAT_FULL) {",
-        "    if (is_string(\$date))  \$date = new DateTime(\$date);",
-        "    elseif (is_int(\$date)) \$date = (new DateTime())->setTimestamp(\$date);",
-        "    \$f = new IntlDateFormatter('de_DE', IntlDateFormatter::FULL, IntlDateFormatter::NONE);",
-        "    switch (\$format) {",
-        "        case DATE_FORMAT_FULL:      \$f->setPattern('EEEE, dd. MMMM yyyy'); break;",
-        "        case DATE_FORMAT_LONG:      \$f->setPattern('dd. MMMM yyyy'); break;",
-        "        case DATE_FORMAT_MEDIUM:    \$f->setPattern('dd.MM.yyyy'); break;",
-        "        case DATE_FORMAT_MONTH:     \$f->setPattern('MMMM'); break;",
-        "        case DATE_FORMAT_MONTHYEAR: \$f->setPattern('MMMM yyyy'); break;",
-        "        default:                    \$f->setPattern(\$format);",
-        "    }",
-        "    return \$f->format(\$date);",
-        "}",
-        "",
-        "spl_autoload_register(function (\$class) {",
-        "    \$file = __DIR__ . DIRECTORY_SEPARATOR . 'classes' . DIRECTORY_SEPARATOR",
-        "           . str_replace('\\\\', DIRECTORY_SEPARATOR, \$class) . '.php';",
-        "    if (file_exists(\$file)) require_once \$file;",
-        "});",
-        "",
-        "\$_dirs = [UPLOAD_DIR, NOTEN_DIR, FOTOS_DIR, DOKUMENTE_DIR];",
-        "foreach (\$_dirs as \$_d) { if (!file_exists(\$_d)) @mkdir(\$_d, 0755, true); }",
+        "require_once __DIR__ . '/config.app.php';",
     );
 
     if (file_put_contents(__DIR__ . '/config.php', implode("\n", $lines)) === false) {
