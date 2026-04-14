@@ -17,9 +17,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $user = $db->fetchOne("SELECT * FROM benutzer WHERE benutzername = ? AND aktiv = 1", [$benutzername]);
         
         if ($user && password_verify($passwort, $user['passwort_hash'])) {
-            Session::set('user_id', $user['id']);
-            Session::set('username', $user['benutzername']);
-            Session::set('rolle', $user['rolle']);
+            // Alle Rollen des Benutzers laden
+            $userRollen = $db->fetchAll(
+                "SELECT r.id, r.name, r.ist_admin
+                 FROM benutzer_rollen br
+                 JOIN rollen r ON br.rolle_id = r.id
+                 WHERE br.benutzer_id = ? AND r.aktiv = 1",
+                [$user['id']]
+            );
+            $rollenIds = array_column($userRollen, 'id');
+            $istAdmin  = !empty(array_filter($userRollen, fn($r) => $r['ist_admin']));
+
+            Session::set('user_id',   $user['id']);
+            Session::set('username',  $user['benutzername']);
+            Session::set('rolle',     $user['rolle']);      // primäre Rolle (Rückwärtskompatibilität)
+            Session::set('rollen_ids', $rollenIds);
+            Session::set('ist_admin',  $istAdmin);
             $db->execute("UPDATE benutzer SET letzter_login = NOW() WHERE id = ?", [$user['id']]);
             $db->execute("INSERT INTO aktivitaetslog (benutzer_id, aktion, beschreibung, ip_adresse) VALUES (?, ?, ?, ?)",
                 [$user['id'], 'login', 'Login', $_SERVER['REMOTE_ADDR']]);

@@ -231,14 +231,17 @@ include 'includes/header.php';
     
     <!-- System-Informationen -->
     <div class="card mb-3">
-        <div class="card-header">
+        <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">System-Informationen</h5>
+            <a href="update.php" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-cloud-download"></i> System-Update
+            </a>
         </div>
         <div class="card-body">
             <dl class="row">
                 <dt class="col-sm-3">PHP Version:</dt>
                 <dd class="col-sm-9"><?php echo PHP_VERSION; ?></dd>
-                
+
                 <dt class="col-sm-3">MySQL Version:</dt>
                 <dd class="col-sm-9">
                     <?php
@@ -246,10 +249,15 @@ include 'includes/header.php';
                     echo htmlspecialchars($version['version']);
                     ?>
                 </dd>
-                
+
                 <dt class="col-sm-3">Anwendungs-Version:</dt>
-                <dd class="col-sm-9"><?php echo APP_VERSION; ?></dd>
-                
+                <dd class="col-sm-9">
+                    <?php echo APP_VERSION; ?>
+                    <a href="update.php" class="ms-2 badge bg-primary text-decoration-none">
+                        <i class="bi bi-cloud-download"></i> Update prüfen
+                    </a>
+                </dd>
+
                 <dt class="col-sm-3">Upload-Verzeichnis:</dt>
                 <dd class="col-sm-9">
                     <?php echo UPLOAD_DIR; ?>

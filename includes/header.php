@@ -13,7 +13,17 @@ $pages = [
     'instrumente' => ['instrumente', 'instrument_detail', 'instrument_bearbeiten'],
     'uniformen' => ['uniformen', 'uniform_detail', 'uniform_bearbeiten', 'uniform_mitglied', 'uniform_kleidungsstuecke', 'uniform_kategorien'],
     'finanzen' => ['finanzen', 'transaktion_bearbeiten', 'beitraege_verwalten'],
-    'admin' => ['benutzer', 'benutzer_bearbeiten', 'rollen', 'rolle_bearbeiten', 'einstellungen', 'berechtigungen_bearbeiten']
+    'admin' => ['benutzer', 'benutzer_bearbeiten', 'rollen', 'rolle_bearbeiten', 'einstellungen', 'berechtigungen_bearbeiten'],
+    'fest'  => [
+        'feste', 'fest_bearbeiten', 'fest_detail',
+        'fest_stationen', 'fest_station_bearbeiten',
+        'fest_mitarbeiter', 'fest_mitarbeiter_bearbeiten',
+        'fest_dienstplan', 'fest_dienstplan_bearbeiten',
+        'fest_einkauefe', 'fest_einkauf_bearbeiten',
+        'fest_vertraege', 'fest_vertrag_bearbeiten',
+        'fest_todos', 'fest_todo_bearbeiten',
+        'fest_kopieren'
+    ]
 ];
 
 function isActive($page, $pages, $current) {
@@ -394,6 +404,7 @@ function isActive($page, $pages, $current) {
             .main-content { padding: 0; }
             body { background: #fff; }
         }
+    .tooltip-wide .tooltip-inner { max-width: 450px; text-align: left; white-space: pre-wrap; }
     </style>
 </head>
 <body>
@@ -470,7 +481,18 @@ function isActive($page, $pages, $current) {
                 </ul>
             </div>
             <?php endif; ?>
-            
+
+            <?php if (Session::checkPermission('fest', 'lesen')): ?>
+            <div class="nav-group">
+                <div class="nav-label">Festverwaltung</div>
+                <ul class="nav flex-column">
+                    <li><a class="nav-link <?php echo isActive('fest', $pages, $currentPage); ?>" href="feste.php">
+                        <i class="bi bi-stars"></i> Feste
+                    </a></li>
+                </ul>
+            </div>
+            <?php endif; ?>
+
             <?php if (Session::getRole() === 'admin'): ?>
             <div class="nav-group">
                 <div class="nav-label">System</div>
@@ -504,12 +526,33 @@ function isActive($page, $pages, $current) {
     
     <header class="topbar">
         <button class="topbar-toggle" id="sidebarToggle"><i class="bi bi-list"></i></button>
-        
+
         <div class="topbar-right">
             <button class="theme-toggle" id="themeToggle" title="Design wechseln">
                 <i class="bi bi-moon"></i>
             </button>
-            
+
+            <?php if (Session::checkPermission('fest', 'lesen')):
+                $todoObj   = new FestTodo();
+                $benutzerId = Session::getRole() === 'admin' ? null : Session::getUserId();
+                $todoCounts = $todoObj->getOffeneCount($benutzerId);
+            ?>
+            <div class="dropdown">
+                <a href="fest_todos_alle.php" class="theme-toggle position-relative text-decoration-none" title="Todos">
+                    <i class="bi bi-check2-square"></i>
+                    <?php if ($todoCounts['ueberfaellig'] > 0): ?>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:9px;padding:2px 5px;">
+                        <?php echo $todoCounts['ueberfaellig']; ?>
+                    </span>
+                    <?php elseif ($todoCounts['offen'] > 0): ?>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning" style="font-size:9px;padding:2px 5px;">
+                        <?php echo $todoCounts['offen']; ?>
+                    </span>
+                    <?php endif; ?>
+                </a>
+            </div>
+            <?php endif; ?>
+
             <div class="topbar-user">
                 <div class="topbar-avatar"><?php echo strtoupper(substr(Session::getUsername(), 0, 1)); ?></div>
                 <div class="topbar-info d-none d-sm-block">

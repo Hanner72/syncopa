@@ -28,14 +28,15 @@ if (!$rolle) {
 
 // Module definieren
 $module = [
-    'mitglieder' => 'Mitglieder',
+    'mitglieder'    => 'Mitglieder',
     'ausrueckungen' => 'Ausrückungen',
-    'noten' => 'Noten',
-    'instrumente' => 'Instrumente',
-    'uniformen' => 'Uniformen',
-    'finanzen' => 'Finanzen',
-    'benutzer' => 'Benutzer',
-    'einstellungen' => 'Einstellungen'
+    'noten'         => 'Noten',
+    'instrumente'   => 'Instrumente',
+    'uniformen'     => 'Uniformen',
+    'finanzen'      => 'Finanzen',
+    'fest'          => 'Festverwaltung',
+    'benutzer'      => 'Benutzer',
+    'einstellungen' => 'Einstellungen',
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

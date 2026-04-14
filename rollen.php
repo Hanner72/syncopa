@@ -22,7 +22,7 @@ if (isset($_GET['delete']) && $_GET['delete'] > 0) {
         Session::setFlashMessage('danger', 'Admin-Rolle kann nicht gelöscht werden');
     } else {
         // Prüfen ob noch Benutzer diese Rolle haben
-        $benutzer_count = $db->fetchOne("SELECT COUNT(*) as anzahl FROM benutzer WHERE rolle_id = ?", [$rolle_id]);
+        $benutzer_count = $db->fetchOne("SELECT COUNT(*) as anzahl FROM benutzer_rollen WHERE rolle_id = ?", [$rolle_id]);
         if ($benutzer_count['anzahl'] > 0) {
             Session::setFlashMessage('danger', 'Rolle wird noch von ' . $benutzer_count['anzahl'] . ' Benutzer(n) verwendet');
         } else {
@@ -38,7 +38,7 @@ if (isset($_GET['delete']) && $_GET['delete'] > 0) {
     exit;
 }
 
-$rollen = $db->fetchAll("SELECT * FROM rollen ORDER BY sortierung, name");
+$rollen = $db->fetchAll("SELECT * FROM rollen ORDER BY sortierung, name, id");
 
 include 'includes/header.php';
 ?>
@@ -52,15 +52,17 @@ include 'includes/header.php';
 
 <div class="alert alert-info">
     <i class="bi bi-info-circle"></i>
-    <strong>Hinweis:</strong> Rollen definieren, welche Benutzer welche Berechtungen haben. 
-    Jedem Benutzer kann genau eine Rolle zugewiesen werden.
+    <strong>Hinweis:</strong> Rollen definieren, welche Benutzer welche Berechtigungen haben.
+    Jedem Benutzer können mehrere Rollen zugewiesen werden — Berechtigungen werden kombiniert.
 </div>
 
 <div class="card">
     <div class="card-body">
-        <table class="table table-hover" id="rollenTable">
+        <div class="text-muted small mb-2"><i class="bi bi-grip-vertical"></i> Zeilen ziehen zum Umsortieren – Reihenfolge wird automatisch gespeichert.</div>
+        <table class="table table-hover mb-0" id="rollenTable">
             <thead>
                 <tr>
+                    <th style="width:32px"></th>
                     <th>Name</th>
                     <th>Beschreibung</th>
                     <th>Typ</th>
@@ -69,13 +71,15 @@ include 'includes/header.php';
                     <th class="text-end">Aktionen</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="rollen-tbody">
                 <?php foreach ($rollen as $rolle): ?>
                 <?php
-                // Benutzer-Anzahl für diese Rolle
-                $benutzer_count = $db->fetchOne("SELECT COUNT(*) as anzahl FROM benutzer WHERE rolle_id = ?", [$rolle['id']]);
+                $benutzer_count = $db->fetchOne("SELECT COUNT(*) as anzahl FROM benutzer_rollen WHERE rolle_id = ?", [$rolle['id']]);
                 ?>
-                <tr>
+                <tr data-id="<?php echo $rolle['id']; ?>">
+                    <td class="drag-handle text-muted" style="cursor:grab;user-select:none;vertical-align:middle">
+                        <i class="bi bi-grip-vertical"></i>
+                    </td>
                     <td>
                         <span class="badge bg-<?php echo htmlspecialchars($rolle['farbe']); ?> me-2">
                             <?php echo htmlspecialchars($rolle['name']); ?>
@@ -100,16 +104,16 @@ include 'includes/header.php';
                         <?php endif; ?>
                     </td>
                     <td class="text-end">
-                        <a href="berechtigungen_bearbeiten.php?rolle_id=<?php echo $rolle['id']; ?>" 
+                        <a href="berechtigungen_bearbeiten.php?rolle_id=<?php echo $rolle['id']; ?>"
                            class="btn btn-sm btn-warning" title="Berechtigungen">
                             <i class="bi bi-key"></i>
                         </a>
-                        <a href="rolle_bearbeiten.php?id=<?php echo $rolle['id']; ?>" 
+                        <a href="rolle_bearbeiten.php?id=<?php echo $rolle['id']; ?>"
                            class="btn btn-sm btn-primary" title="Bearbeiten">
                             <i class="bi bi-pencil"></i>
                         </a>
                         <?php if (!$rolle['ist_admin'] && $benutzer_count['anzahl'] == 0): ?>
-                        <a href="?delete=<?php echo $rolle['id']; ?>" 
+                        <a href="?delete=<?php echo $rolle['id']; ?>"
                            class="btn btn-sm btn-danger" title="Löschen"
                            onclick="return confirm('Rolle wirklich löschen?')">
                             <i class="bi bi-trash"></i>
@@ -120,6 +124,7 @@ include 'includes/header.php';
                 <?php endforeach; ?>
             </tbody>
         </table>
+        <div id="sort-status" class="text-muted small mt-2" style="min-height:20px"></div>
     </div>
 </div>
 
@@ -194,13 +199,35 @@ include 'includes/header.php';
 
 <?php include 'includes/footer.php'; ?>
 
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
-$(document).ready(function() {
-    $('#rollenTable').DataTable({
-        order: [[0, 'asc']],
-        language: {
-            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/de-DE.json'
-        }
-    });
+var sortStatus = document.getElementById('sort-status');
+
+Sortable.create(document.getElementById('rollen-tbody'), {
+    handle: '.drag-handle',
+    animation: 150,
+    ghostClass: 'table-active',
+    onEnd: function() {
+        var rows = document.querySelectorAll('#rollen-tbody tr[data-id]');
+        var order = Array.from(rows).map(function(tr, idx) {
+            return { id: parseInt(tr.dataset.id), pos: idx };
+        });
+        sortStatus.innerHTML = '<i class="bi bi-arrow-repeat"></i> Speichern…';
+        fetch('api/rollen_sortierung.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order: order })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            sortStatus.innerHTML = data.success
+                ? '<i class="bi bi-check-circle text-success"></i> Reihenfolge gespeichert'
+                : '<i class="bi bi-exclamation-circle text-danger"></i> Fehler beim Speichern';
+            setTimeout(function() { sortStatus.innerHTML = ''; }, 2000);
+        })
+        .catch(function() {
+            sortStatus.innerHTML = '<i class="bi bi-exclamation-circle text-danger"></i> Verbindungsfehler';
+        });
+    }
 });
 </script>

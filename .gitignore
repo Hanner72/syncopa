@@ -1,1 +1,8 @@
 .vscode
+
+# Umgebungskonfiguration – nicht ins Repository
+config.php
+config.php.update_backup
+
+# Uploads – Benutzerdaten
+uploads/
