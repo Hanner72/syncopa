@@ -110,7 +110,9 @@ function copyDir(string $src, string $dst, array $skipFiles, array &$log): void 
             if (!is_dir($dstPath)) mkdir($dstPath, 0755, true);
             copyDir($srcPath, $dstPath, $skipFiles, $log);
         } else {
-            copy($srcPath, $dstPath);
+            if (!copy($srcPath, $dstPath)) {
+                $log[] = "✗ Fehler beim Kopieren: {$item}";
+            }
         }
     }
 }
@@ -264,6 +266,12 @@ if ($action === 'update') {
             file_put_contents($configPath, $cleaned);
             $log[] = '✓ APP_VERSION aus config.php entfernt (wird jetzt über config.app.php verwaltet)';
         }
+    }
+
+    // OPcache leeren falls aktiv
+    if (function_exists('opcache_reset')) {
+        opcache_reset();
+        $log[] = '✓ OPcache geleert';
     }
 
     $log[] = '✓ Update abgeschlossen';
