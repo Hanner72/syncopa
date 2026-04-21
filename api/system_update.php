@@ -299,7 +299,7 @@ if ($action === 'update') {
         $log[] = '✗ WARNUNG: config.app.php nicht gefunden!';
     }
 
-    // Verifikation: config.php auf verbleibende APP_VERSION prüfen
+    // Verifikation: config.php prüfen
     $configPhpPath = $appRoot . DIRECTORY_SEPARATOR . 'config.php';
     if (file_exists($configPhpPath)) {
         $configContent = file_get_contents($configPhpPath);
@@ -308,6 +308,15 @@ if ($action === 'update') {
             $log[] = '⚠ config.php definiert noch APP_VERSION = ' . ($cm[1] ?? '?') . ' (überschreibt config.app.php!)';
         } else {
             $log[] = '✓ config.php: kein APP_VERSION (korrekt)';
+        }
+        // Prüfen ob config.app.php geladen wird
+        if (strpos($configContent, 'config.app.php') === false) {
+            $log[] = '⚠ config.php lädt config.app.php NICHT – füge require_once hinzu…';
+            $configContent = rtrim($configContent) . "\n\nrequire_once __DIR__ . '/config.app.php';\n";
+            file_put_contents($configPhpPath, $configContent);
+            $log[] = '✓ config.php: require_once config.app.php hinzugefügt';
+        } else {
+            $log[] = '✓ config.php lädt config.app.php (korrekt)';
         }
     }
 
