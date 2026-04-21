@@ -1,6 +1,6 @@
 # <img src="../assets/logo_full.png" alt="Syncopa" style="max-width:75px"> – Musikvereinsverwaltung
 
-> **Version 2.3.7** · Benutzerhandbuch
+> **Version 2.3.8** · Benutzerhandbuch
 
 Willkommen zur offiziellen Dokumentation von **Syncopa** – der Verwaltungssoftware für Musikvereine.
 
