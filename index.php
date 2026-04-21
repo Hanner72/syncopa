@@ -5,6 +5,8 @@ require_once 'includes.php';
 
 Session::requireLogin();
 
+setlocale(LC_TIME, 'de_AT.utf8', 'de_AT', 'German_Austria');
+
 $db = Database::getInstance();
 $mitglied = new Mitglied();
 $ausrueckung = new Ausrueckung();
@@ -23,8 +25,8 @@ $sql = "SELECT vorname, nachname, geburtsdatum,
         DAY(geburtsdatum) as tag, MONTH(geburtsdatum) as monat
         FROM mitglieder 
         WHERE status = 'aktiv' 
-        AND MONTH(geburtsdatum) = MONTH(CURDATE())
-        ORDER BY DAY(geburtsdatum)";
+        AND MONTH(geburtsdatum) BETWEEN MONTH(CURDATE()) AND MONTH(CURDATE()) + 1
+        ORDER BY MONTH(geburtsdatum), DAY(geburtsdatum)";
 $geburtstage = $db->fetchAll($sql);
 
 // Neue Benutzer mit Rolle "user" (nur für Admin und Obmann)
@@ -43,6 +45,17 @@ $registerData = array_column($mitgliederStats['register'] ?? [], 'anzahl');
 $monatsnamen = ['', 'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 
                 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 $aktuellerMonat = $monatsnamen[date('n')];
+
+// Datumformatter für österreichische Monatsnamen (Langform: Jänner, Februar...)
+$fmtLang = new IntlDateFormatter(
+    'de_AT',
+    IntlDateFormatter::NONE,
+    IntlDateFormatter::NONE,
+    'Europe/Vienna',
+    IntlDateFormatter::GREGORIAN,
+    'd. MMMM' // ergibt 8. Jänner
+);
+
 
 include 'includes/header.php';
 ?>
@@ -167,10 +180,14 @@ include 'includes/header.php';
 <div class="row">
     <!-- Nächste Ausrückungen -->
     <div class="col-lg-6">
-        <div class="card">
+        <div class="card border-success">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-calendar-event me-2"></i>Nächste Termine</span>
-                <a href="kalender.php" class="btn btn-sm btn-primary">Kalender</a>
+                <span><i class="bi bi-calendar-event me-2"></i>Nächste Ausrückungen
+                    <?php
+                    if (Session::getRole() === 'user'){
+                        echo '<br><span class="text-muted" style="font-size: 11px;"> (Erst ganz sichtbar wenn dein Konto freigeschaltet ist.)</span>';
+                    } ?></span>
+                <a href="ausrueckungen.php" class="btn btn-sm btn-outline-success">Ausrückungen</a>
             </div>
             <div class="card-body">
                 <?php if (empty($naechsteAusrueckungen)): ?>
@@ -180,11 +197,25 @@ include 'includes/header.php';
                         <?php foreach ($naechsteAusrueckungen as $termin): ?>
                         <div class="list-group-item d-flex justify-content-between align-items-start">
                             <div>
-                                <strong style="font-size: 13px;"><?php echo htmlspecialchars($termin['titel']); ?></strong>
+                                <?php
+                                    if (Session::getRole() === 'user'){ ?>
+                                        <strong style="font-size: 13px;"><?php echo substr(htmlspecialchars($termin['titel']),0,5) . 'xxxxx'; ?></strong>
+                                    <?php }else{ ?>
+                                        <strong style="font-size: 13px;"><?php echo htmlspecialchars($termin['titel']); ?></strong>
+                                    <?php }
+                                ?>
+                                <!-- <strong style="font-size: 13px;"><?php echo htmlspecialchars($termin['titel']); ?></strong> -->
                                 <div class="text-muted" style="font-size: 11px;">
                                     <i class="bi bi-clock"></i> <?php echo date('d.m.Y H:i', strtotime($termin['start_datum'])); ?>
                                     <?php if ($termin['ort']): ?>
-                                    · <i class="bi bi-geo-alt"></i> <?php echo htmlspecialchars($termin['ort']); ?>
+                                    · <i class="bi bi-geo-alt"></i> 
+                                    <?php
+                                        if (Session::getRole() === 'user'){
+                                            echo substr(htmlspecialchars($termin['ort']),0,1) . 'xxxxx'; 
+                                        }else{
+                                            echo htmlspecialchars($termin['ort']); 
+                                        }
+                                    ?>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -200,21 +231,37 @@ include 'includes/header.php';
         </div>
         
         <?php if (!empty($geburtstage)): ?>
-        <div class="card">
+        <div class="card border-info">
             <div class="card-header">
-                <i class="bi bi-gift me-2"></i>Geburtstage im <?php echo $aktuellerMonat; ?>
+                <i class="bi bi-gift me-2"></i>nächste Geburtstage <!-- im <?php echo $aktuellerMonat; ?> -->
+                <?php
+                if (Session::getRole() === 'user'){
+                    echo '<br><span class="text-muted" style="font-size: 11px;"> (nur Initialen sichtbar, Namen sind erst sichtbar wenn dein Konto freigeschaltet ist.)</span>';
+                } ?>
             </div>
             <div class="card-body">
                 <div class="list-group list-group-flush">
                     <?php foreach ($geburtstage as $geburtstag): ?>
-                    <div class="list-group-item" style="font-size: 12px;">
-                        <i class="bi bi-balloon text-danger me-1"></i>
-                        <strong><?php echo htmlspecialchars($geburtstag['vorname'] . ' ' . $geburtstag['nachname']); ?></strong>
-                        – <?php echo $geburtstag['tag']; ?>. <?php echo $aktuellerMonat; ?>
-                        <span class="text-muted">
-                            (<?php echo date('Y') - date('Y', strtotime($geburtstag['geburtsdatum'])); ?> Jahre)
-                        </span>
-                    </div>
+                        <div class="list-group-item" style="font-size: 12px;">
+                            <i class="bi bi-balloon text-danger me-1"></i>
+                            <?php
+                                // Name
+                                // Nur anzeigen wenn Benutzerrole > User, ansonsten nur Initialen + "xxx"
+                                if (Session::getRole() === 'user'){
+                                    $name = htmlspecialchars(substr($geburtstag['vorname'],0,1) . 'xxx ' . substr($geburtstag['nachname'], 0, 1) . 'XXX');
+                                }else{
+                                    $name = htmlspecialchars($geburtstag['vorname'] . ' ' . strtoupper($geburtstag['nachname']));
+                                }
+                                /* $name = htmlspecialchars($geburtstag['vorname'] . ' ' . strtoupper($geburtstag['nachname'])); */
+                                // Datum richtig formatiert
+                                $datum = new DateTime($geburtstag['geburtsdatum']);
+                                $geburtstagFormatiert = $fmtLang->format($datum); // zB: 8. Jänner
+                                // Alter berechnen
+                                $heute = new DateTime();
+                                $alter = $heute->diff($datum)->y;
+                            ?>
+                            <strong><?= $name ?></strong> – <?= $geburtstagFormatiert ?> <span class="text-muted"> (<?= $alter ?> Jahre) </span>
+                        </div>
                     <?php endforeach; ?>
                 </div>
             </div>
@@ -224,7 +271,7 @@ include 'includes/header.php';
     
     <!-- Registerverteilung & Wartungen -->
     <div class="col-lg-6">
-        <div class="card">
+        <div class="card border-warning">
             <div class="card-header">
                 <i class="bi bi-pie-chart me-2"></i>Registerverteilung
             </div>
@@ -263,7 +310,7 @@ include 'includes/header.php';
         <?php endif; ?>
         
         <?php if (Session::checkPermission('ausrueckungen', 'schreiben')): ?>
-        <div class="card">
+        <div class="card border-danger">
             <div class="card-header">
                 <i class="bi bi-lightning me-2"></i>Schnellaktionen
             </div>

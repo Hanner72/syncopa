@@ -11,27 +11,35 @@ if (Session::getRole() !== 'admin') {
 
 $db = Database::getInstance();
 
-// Alle Benutzer mit ihren Rollen laden
-$benutzer = $db->fetchAll("
-    SELECT b.*, r.name as rolle_name, r.farbe as rolle_farbe, r.beschreibung as rolle_beschreibung
-    FROM benutzer b
-    LEFT JOIN rollen r ON b.rolle_id = r.id
-    ORDER BY b.benutzername
+// Alle Benutzer laden
+$benutzer = $db->fetchAll("SELECT * FROM benutzer ORDER BY benutzername");
+
+// Alle Rollen je Benutzer laden (Pivot)
+$alleBenutzerRollen = $db->fetchAll("
+    SELECT br.benutzer_id, r.id as rolle_id, r.name, r.farbe, r.ist_admin
+    FROM benutzer_rollen br
+    JOIN rollen r ON br.rolle_id = r.id
+    ORDER BY r.sortierung, r.name
 ");
+$benutzerRollenMap = [];
+foreach ($alleBenutzerRollen as $br) {
+    $benutzerRollenMap[$br['benutzer_id']][] = $br;
+}
 
 // Alle Rollen für die Berechtigungstabelle laden
 $rollen = $db->fetchAll("SELECT * FROM rollen WHERE aktiv = 1 ORDER BY sortierung, name");
 
 // Module definieren
 $module = [
-    'mitglieder' => 'Mitglieder',
-    'ausrueckungen' => 'Ausrückungen', 
-    'noten' => 'Noten',
-    'instrumente' => 'Instrumente',
-    'uniformen' => 'Uniformen',
-    'finanzen' => 'Finanzen',
-    'benutzer' => 'Benutzer',
-    'einstellungen' => 'Einstellungen'
+    'mitglieder'    => 'Mitglieder',
+    'ausrueckungen' => 'Ausrückungen',
+    'noten'         => 'Noten',
+    'instrumente'   => 'Instrumente',
+    'uniformen'     => 'Uniformen',
+    'finanzen'      => 'Finanzen',
+    'fest'          => 'Festverwaltung',
+    'benutzer'      => 'Benutzer',
+    'einstellungen' => 'Einstellungen',
 ];
 
 // Berechtigungen pro Rolle laden
@@ -73,10 +81,14 @@ include 'includes/header.php';
                     <td><strong><?php echo htmlspecialchars($user['benutzername']); ?></strong></td>
                     <td><?php echo htmlspecialchars($user['email']); ?></td>
                     <td>
-                        <?php if ($user['rolle_name']): ?>
-                        <span class="badge bg-<?php echo htmlspecialchars($user['rolle_farbe'] ?? 'secondary'); ?>">
-                            <?php echo htmlspecialchars(ucfirst($user['rolle_name'])); ?>
-                        </span>
+                        <?php $userRollen = $benutzerRollenMap[$user['id']] ?? []; ?>
+                        <?php if (!empty($userRollen)): ?>
+                            <?php foreach ($userRollen as $ur): ?>
+                            <span class="badge bg-<?php echo htmlspecialchars($ur['farbe'] ?? 'secondary'); ?> me-1">
+                                <?php if ($ur['ist_admin']): ?><i class="bi bi-shield-fill"></i> <?php endif; ?>
+                                <?php echo htmlspecialchars(ucfirst($ur['name'])); ?>
+                            </span>
+                            <?php endforeach; ?>
                         <?php else: ?>
                         <span class="badge bg-secondary">Keine Rolle</span>
                         <?php endif; ?>

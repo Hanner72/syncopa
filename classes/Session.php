@@ -52,7 +52,20 @@ class Session {
     public static function getRole() {
         return self::get('rolle', 'mitglied');
     }
-    
+
+    /** Gibt true zurück wenn der Benutzer Admin-Rechte hat (mind. eine Admin-Rolle) */
+    public static function isAdmin(): bool {
+        // Neue Session: ist_admin gesetzt
+        if (self::has('ist_admin')) return (bool)self::get('ist_admin', false);
+        // Fallback für alte Sessions (vor Mehrfachrollen-Update)
+        return self::get('rolle') === 'admin';
+    }
+
+    /** Alle Rollen-IDs des eingeloggten Benutzers */
+    public static function getRollenIds(): array {
+        return self::get('rollen_ids', []);
+    }
+
     public static function requireLogin() {
         if (!self::isLoggedIn()) {
             header('Location: login.php');
@@ -73,16 +86,37 @@ class Session {
         return null;
     }
     
-    public static function checkPermission($modul, $aktion = 'lesen') {
-        $rolle = self::getRole();
-        
+    public static function checkPermission($modul, $aktion = 'lesen'): bool {
+        // Admins haben immer alle Rechte
+        if (self::isAdmin()) return true;
+
+        $rollenIds = self::getRollenIds();
+
+        // Fallback für alte Sessions: rolle_id aus benutzer-Tabelle direkt abfragen
+        if (empty($rollenIds) && self::isLoggedIn()) {
+            $db = Database::getInstance();
+            $rows = $db->fetchAll(
+                "SELECT rolle_id FROM benutzer_rollen WHERE benutzer_id = ?",
+                [self::getUserId()]
+            );
+            $rollenIds = array_column($rows, 'rolle_id');
+        }
+
+        if (empty($rollenIds)) return false;
+
         $db = Database::getInstance();
-        $sql = "SELECT {$aktion} FROM berechtigungen WHERE rolle = ? AND modul = ?";
-        $result = $db->fetchOne($sql, [$rolle, $modul]);
-        
-        return $result && $result[$aktion] == 1;
+        $placeholders = implode(',', array_fill(0, count($rollenIds), '?'));
+        // Prüft ob IRGENDEINE der zugewiesenen Rollen das Recht hat
+        $sql = "SELECT MAX(b.`{$aktion}`) as hat_recht
+                FROM berechtigungen b
+                JOIN rollen r ON r.name = b.rolle
+                WHERE r.id IN ({$placeholders}) AND b.modul = ?";
+        $params = array_merge(array_values($rollenIds), [$modul]);
+        $result = $db->fetchOne($sql, $params);
+
+        return $result && $result['hat_recht'] == 1;
     }
-    
+
     public static function requirePermission($modul, $aktion = 'lesen') {
         if (!self::checkPermission($modul, $aktion)) {
             self::setFlashMessage('danger', 'Keine Berechtigung für diese Aktion!');

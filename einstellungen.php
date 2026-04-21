@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         // Checkboxen (die nicht in POST sind wenn nicht angeklickt)
-        $checkboxen = ['beitrag_aktiv', 'beitrag_passiv', 'beitrag_ehrenmitglied', 'beitrag_ausgetreten'];
+        $checkboxen = ['beitrag_aktiv', 'beitrag_passiv', 'beitrag_ehrenmitglied', 'beitrag_ausgetreten', 'telemetry_enabled'];
         foreach ($checkboxen as $checkbox) {
             $wert = isset($_POST[$checkbox]) ? '1' : '0';
             $db->execute(
@@ -229,16 +229,39 @@ include 'includes/header.php';
         </div>
     </div>
     
-    <!-- System-Informationen -->
+    <!-- Telemetrie -->
     <div class="card mb-3">
         <div class="card-header">
+            <h5 class="mb-0">Nutzungsstatistik</h5>
+        </div>
+        <div class="card-body">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="telemetry_enabled" name="telemetry_enabled"
+                       value="1" <?php echo ($settings['telemetry_enabled'] ?? '0') === '1' ? 'checked' : ''; ?>>
+                <label class="form-check-label" for="telemetry_enabled">
+                    Anonyme Nutzungsstatistik senden
+                </label>
+            </div>
+            <div class="text-muted small mt-1">
+                Sendet einmal täglich die Versionsnummer und den Vereinsnamen anonym an den Syncopa-Server.
+                Keine personenbezogenen Daten. Kann jederzeit deaktiviert werden.
+            </div>
+        </div>
+    </div>
+
+    <!-- System-Informationen -->
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">System-Informationen</h5>
+            <a href="update.php" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-cloud-download"></i> System-Update
+            </a>
         </div>
         <div class="card-body">
             <dl class="row">
                 <dt class="col-sm-3">PHP Version:</dt>
                 <dd class="col-sm-9"><?php echo PHP_VERSION; ?></dd>
-                
+
                 <dt class="col-sm-3">MySQL Version:</dt>
                 <dd class="col-sm-9">
                     <?php
@@ -246,10 +269,15 @@ include 'includes/header.php';
                     echo htmlspecialchars($version['version']);
                     ?>
                 </dd>
-                
+
                 <dt class="col-sm-3">Anwendungs-Version:</dt>
-                <dd class="col-sm-9"><?php echo APP_VERSION; ?></dd>
-                
+                <dd class="col-sm-9">
+                    <?php echo APP_VERSION; ?>
+                    <a href="update.php" class="ms-2 badge bg-primary text-decoration-none">
+                        <i class="bi bi-cloud-download"></i> Update prüfen
+                    </a>
+                </dd>
+
                 <dt class="col-sm-3">Upload-Verzeichnis:</dt>
                 <dd class="col-sm-9">
                     <?php echo UPLOAD_DIR; ?>

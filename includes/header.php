@@ -4,6 +4,40 @@ require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes.php';
 Session::start();
 
+// Telemetry-Ping (einmal pro Tag, nur wenn eingeloggt und aktiviert)
+(function() {
+    if (!Session::isLoggedIn()) return;
+    $lastPing = $_SESSION['_telemetry_ping_ts'] ?? 0;
+    if (time() - $lastPing < 86400) return;
+    $_SESSION['_telemetry_ping_ts'] = time();
+    try {
+        $db = Database::getInstance();
+        $rows = $db->fetchAll(
+            "SELECT schluessel, wert FROM einstellungen WHERE schluessel IN ('telemetry_enabled','installation_id','verein_name')"
+        );
+        $cfg = array_column($rows, 'wert', 'schluessel');
+        if (($cfg['telemetry_enabled'] ?? '0') !== '1') return;
+        if (empty($cfg['installation_id'])) return;
+        $payload = json_encode([
+            'id'      => $cfg['installation_id'],
+            'version' => defined('APP_VERSION') ? APP_VERSION : '?',
+            'verein'  => $cfg['verein_name'] ?? '',
+        ]);
+        $url = 'https://syncopa.dannerbam.eu/telemetry/ping.php';
+        if (function_exists('curl_init')) {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => $payload, CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+                CURLOPT_TIMEOUT => 3, CURLOPT_SSL_VERIFYPEER => true]);
+            @curl_exec($ch); curl_close($ch);
+        } elseif (ini_get('allow_url_fopen')) {
+            @file_get_contents($url, false, stream_context_create(['http' => [
+                'method' => 'POST', 'header' => "Content-Type: application/json\r\n",
+                'content' => $payload, 'timeout' => 3]]));
+        }
+    } catch (\Throwable $e) {}
+})();
+
 $currentPage = basename($_SERVER['PHP_SELF'], '.php');
 
 $pages = [
@@ -13,7 +47,17 @@ $pages = [
     'instrumente' => ['instrumente', 'instrument_detail', 'instrument_bearbeiten'],
     'uniformen' => ['uniformen', 'uniform_detail', 'uniform_bearbeiten', 'uniform_mitglied', 'uniform_kleidungsstuecke', 'uniform_kategorien'],
     'finanzen' => ['finanzen', 'transaktion_bearbeiten', 'beitraege_verwalten'],
-    'admin' => ['benutzer', 'benutzer_bearbeiten', 'rollen', 'rolle_bearbeiten', 'einstellungen', 'berechtigungen_bearbeiten']
+    'admin' => ['benutzer', 'benutzer_bearbeiten', 'rollen', 'rolle_bearbeiten', 'einstellungen', 'berechtigungen_bearbeiten'],
+    'fest'  => [
+        'feste', 'fest_bearbeiten', 'fest_detail',
+        'fest_stationen', 'fest_station_bearbeiten',
+        'fest_mitarbeiter', 'fest_mitarbeiter_bearbeiten',
+        'fest_dienstplan', 'fest_dienstplan_bearbeiten',
+        'fest_einkauefe', 'fest_einkauf_bearbeiten',
+        'fest_vertraege', 'fest_vertrag_bearbeiten',
+        'fest_todos', 'fest_todo_bearbeiten',
+        'fest_kopieren'
+    ]
 ];
 
 function isActive($page, $pages, $current) {
@@ -27,7 +71,7 @@ function isActive($page, $pages, $current) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title><?php echo APP_NAME; ?></title>
-    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="icon" type="image/png" href="assets/favicon.png">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -105,16 +149,20 @@ function isActive($page, $pages, $current) {
         .sidebar-header {
             height: var(--topbar-h);
             padding: 0 12px;
-            display: flex; align-items: center;
+            display: flex; align-items: center; justify-content: center;
+            position: relative;
             border-bottom: 1px solid rgba(255,255,255,0.08);
         }
-        .sidebar-logo { width: 26px; height: 26px; border-radius: 5px; margin-right: 10px; }
+        .sidebar-logo { width: 70px; height: auto; }
         .sidebar-brand { font-size: 15px; font-weight: 600; color: #fff; }
         .sidebar-close {
             display: none; margin-left: auto;
+            /* position: absolute; right: 8px; */
             background: none; border: none;
             color: #708090; font-size: 18px; padding: 4px; cursor: pointer;
+            line-height: 1;
         }
+        .sidebar-close:hover { color: #fff; }
         .sidebar-nav { flex: 1; padding: 8px; overflow-y: auto; }
         .sidebar-nav::-webkit-scrollbar { width: 3px; }
         .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
@@ -148,7 +196,7 @@ function isActive($page, $pages, $current) {
             transition: left var(--transition);
         }
         .topbar-toggle {
-            display: none; background: none; border: none;
+            display: block; background: none; border: none;
             font-size: 20px; color: var(--text-primary);
             padding: 4px; border-radius: var(--radius); cursor: pointer;
         }
@@ -349,6 +397,11 @@ function isActive($page, $pages, $current) {
             backdrop-filter: blur(2px);
         }
         
+        /* SIDEBAR COLLAPSED (Desktop) */
+        body.sidebar-collapsed .sidebar { transform: translateX(-100%); }
+        body.sidebar-collapsed .topbar { left: 0; }
+        body.sidebar-collapsed .main-wrapper { margin-left: 0; }
+        
         /* CHART CONTAINER */
         .chart-container { position: relative; min-height: 200px; }
         
@@ -358,9 +411,7 @@ function isActive($page, $pages, $current) {
             .sidebar { transform: translateX(-100%); }
             .sidebar.show { transform: translateX(0); }
             .sidebar-overlay.show { display: block; }
-            .sidebar-close { display: block; }
             .topbar { left: 0; }
-            .topbar-toggle { display: block; }
             .main-wrapper { margin-left: 0; }
             .topbar-user .topbar-info { display: none; }
         }
@@ -387,6 +438,7 @@ function isActive($page, $pages, $current) {
             .main-content { padding: 0; }
             body { background: #fff; }
         }
+    .tooltip-wide .tooltip-inner { max-width: 450px; text-align: left; white-space: pre-wrap; }
     </style>
 </head>
 <body>
@@ -395,8 +447,8 @@ function isActive($page, $pages, $current) {
     
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <img src="assets/logo.svg" alt="" class="sidebar-logo">
-            <span class="sidebar-brand"><?php echo APP_NAME; ?></span>
+            <img src="assets/logo_full_white.png" alt="" class="sidebar-logo">
+            <!-- <span class="sidebar-brand"><?php echo APP_NAME; ?></span> -->
             <button class="sidebar-close" id="sidebarClose"><i class="bi bi-x-lg"></i></button>
         </div>
         
@@ -463,7 +515,18 @@ function isActive($page, $pages, $current) {
                 </ul>
             </div>
             <?php endif; ?>
-            
+
+            <?php if (Session::checkPermission('fest', 'lesen')): ?>
+            <div class="nav-group">
+                <div class="nav-label">Festverwaltung</div>
+                <ul class="nav flex-column">
+                    <li><a class="nav-link <?php echo isActive('fest', $pages, $currentPage); ?>" href="feste.php">
+                        <i class="bi bi-stars"></i> Feste
+                    </a></li>
+                </ul>
+            </div>
+            <?php endif; ?>
+
             <?php if (Session::getRole() === 'admin'): ?>
             <div class="nav-group">
                 <div class="nav-label">System</div>
@@ -483,17 +546,94 @@ function isActive($page, $pages, $current) {
                 </ul>
             </div>
             <?php endif; ?>
+            
+            <div class="nav-group">
+                <div class="nav-label">Hilfe</div>
+                <ul class="nav flex-column">
+                    <li><a class="nav-link" href="/docs">
+                        <i class="bi bi-person-gear"></i> Dokumentation
+                    </a></li>
+                </ul>
+            </div>
         </nav>
     </aside>
     
     <header class="topbar">
         <button class="topbar-toggle" id="sidebarToggle"><i class="bi bi-list"></i></button>
-        
+
         <div class="topbar-right">
-            <button class="theme-toggle" id="themeToggle" title="Design wechseln">
+            <button class="theme-toggle" id="themeToggle" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Design wechseln">
                 <i class="bi bi-moon"></i>
             </button>
-            
+
+            <?php if (Session::isAdmin()):
+                // Update-Check: max. einmal pro Stunde in der Session cachen
+                $updateAvailable = false;
+                $cacheKey = '_update_check';
+                $cacheTs  = '_update_check_ts';
+                $ttl      = 3600; // 1 Stunde
+                $needsCheck = !Session::has($cacheKey) || (time() - (int)Session::get($cacheTs, 0)) > $ttl;
+                if ($needsCheck) {
+                    $rawUrl = "https://raw.githubusercontent.com/Hanner72/syncopa/main/docs/changelog.md";
+                    $body = false;
+                    if (function_exists('curl_init')) {
+                        $ch = curl_init($rawUrl);
+                        curl_setopt_array($ch, [
+                            CURLOPT_RETURNTRANSFER => true,
+                            CURLOPT_TIMEOUT        => 5,
+                            CURLOPT_USERAGENT      => 'syncopa-updater/1.0',
+                            CURLOPT_SSL_VERIFYPEER => true,
+                            CURLOPT_FOLLOWLOCATION => true,
+                        ]);
+                        $body = curl_exec($ch);
+                        $ok   = curl_getinfo($ch, CURLINFO_HTTP_CODE) === 200;
+                        curl_close($ch);
+                        if (!$ok) $body = false;
+                    } elseif (ini_get('allow_url_fopen')) {
+                        $ctx  = stream_context_create(['http' => ['timeout' => 5, 'user_agent' => 'syncopa-updater/1.0']]);
+                        $body = @file_get_contents($rawUrl, false, $ctx);
+                    }
+                    if ($body) {
+                        preg_match('/##\s*\[([0-9]+\.[0-9]+\.[0-9]+)\]/', $body, $m);
+                        $remoteVersion = $m[1] ?? null;
+                        $updateAvailable = $remoteVersion && version_compare(APP_VERSION, $remoteVersion, '<');
+                        Session::set($cacheKey, $updateAvailable);
+                        Session::set($cacheTs,  time());
+                    }
+                    // Bei Fehler nicht cachen → nächste Seite neu versuchen
+                } else {
+                    $updateAvailable = (bool)Session::get($cacheKey, false);
+                }
+            ?>
+            <?php if ($updateAvailable): ?>
+            <a href="update.php" class="theme-toggle position-relative text-decoration-none" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Update verfügbar!">
+                <i class="bi bi-arrow-up-circle text-warning"></i>
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning" style="font-size:9px;padding:2px 5px;">!</span>
+            </a>
+            <?php endif; ?>
+            <?php endif; ?>
+
+            <?php if (Session::checkPermission('fest', 'lesen')):
+                $todoObj   = new FestTodo();
+                $benutzerId = Session::isAdmin() ? null : Session::getUserId();
+                $todoCounts = $todoObj->getOffeneCount($benutzerId);
+            ?>
+            <div class="dropdown">
+                <a href="fest_todos_alle.php" class="theme-toggle position-relative text-decoration-none" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Todos">
+                    <i class="bi bi-check2-square"></i>
+                    <?php if ($todoCounts['ueberfaellig'] > 0): ?>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:9px;padding:2px 5px;">
+                        <?php echo $todoCounts['ueberfaellig']; ?>
+                    </span>
+                    <?php elseif ($todoCounts['offen'] > 0): ?>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning" style="font-size:9px;padding:2px 5px;">
+                        <?php echo $todoCounts['offen']; ?>
+                    </span>
+                    <?php endif; ?>
+                </a>
+            </div>
+            <?php endif; ?>
+
             <div class="topbar-user">
                 <div class="topbar-avatar"><?php echo strtoupper(substr(Session::getUsername(), 0, 1)); ?></div>
                 <div class="topbar-info d-none d-sm-block">
@@ -502,13 +642,57 @@ function isActive($page, $pages, $current) {
                 </div>
             </div>
             
-            <a href="logout.php" class="topbar-logout" title="Abmelden">
+            <a href="logout.php" class="topbar-logout" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Abmelden">
                 <i class="bi bi-box-arrow-right"></i>
             </a>
         </div>
     </header>
+    <script>
+    (function() {
+        var sidebar = document.getElementById('sidebar');
+        var overlay = document.getElementById('sidebarOverlay');
+        var toggleBtn = document.getElementById('sidebarToggle');
+        var closeBtn = document.getElementById('sidebarClose');
+        var body = document.body;
+        var isMobile = function() { return window.innerWidth < 992; };
+
+        function openSidebar() {
+            if (isMobile()) {
+                sidebar.classList.add('show');
+                overlay.classList.add('show');
+            } else {
+                body.classList.remove('sidebar-collapsed');
+            }
+        }
+        function closeSidebar() {
+            if (isMobile()) {
+                sidebar.classList.remove('show');
+                overlay.classList.remove('show');
+            } else {
+                body.classList.add('sidebar-collapsed');
+            }
+        }
+
+        if (toggleBtn) toggleBtn.addEventListener('click', function() {
+            if (isMobile()) {
+                sidebar.classList.contains('show') ? closeSidebar() : openSidebar();
+            } else {
+                body.classList.contains('sidebar-collapsed') ? openSidebar() : closeSidebar();
+            }
+        });
+        if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
+        if (overlay) overlay.addEventListener('click', closeSidebar);
+    })();
+    </script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+            new bootstrap.Tooltip(el);
+        });
+    });
+    </script>
     <?php endif; ?>
-    
+
     <div class="main-wrapper">
         <main class="main-content">
             <?php if ($flash = Session::getFlashMessage()): ?>

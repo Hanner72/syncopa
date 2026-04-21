@@ -17,9 +17,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $user = $db->fetchOne("SELECT * FROM benutzer WHERE benutzername = ? AND aktiv = 1", [$benutzername]);
         
         if ($user && password_verify($passwort, $user['passwort_hash'])) {
-            Session::set('user_id', $user['id']);
-            Session::set('username', $user['benutzername']);
-            Session::set('rolle', $user['rolle']);
+            // Alle Rollen des Benutzers laden
+            $userRollen = $db->fetchAll(
+                "SELECT r.id, r.name, r.ist_admin
+                 FROM benutzer_rollen br
+                 JOIN rollen r ON br.rolle_id = r.id
+                 WHERE br.benutzer_id = ? AND r.aktiv = 1",
+                [$user['id']]
+            );
+            $rollenIds = array_column($userRollen, 'id');
+            $istAdmin  = !empty(array_filter($userRollen, fn($r) => $r['ist_admin']));
+
+            Session::set('user_id',   $user['id']);
+            Session::set('username',  $user['benutzername']);
+            Session::set('rolle',     $user['rolle']);      // primäre Rolle (Rückwärtskompatibilität)
+            Session::set('rollen_ids', $rollenIds);
+            Session::set('ist_admin',  $istAdmin);
             $db->execute("UPDATE benutzer SET letzter_login = NOW() WHERE id = ?", [$user['id']]);
             $db->execute("INSERT INTO aktivitaetslog (benutzer_id, aktion, beschreibung, ip_adresse) VALUES (?, ?, ?, ?)",
                 [$user['id'], 'login', 'Login', $_SERVER['REMOTE_ADDR']]);
@@ -34,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - <?php echo APP_NAME; ?></title>
-    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="icon" type="image/png" href="assets/favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
@@ -45,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:12px}
         .card{max-width:340px;width:100%;background:var(--card);border-radius:10px;box-shadow:0 20px 40px rgba(0,0,0,.3);border:none}
         .card-header{padding:20px 16px 12px;text-align:center;border:none;background:none}
-        .logo{width:48px;height:48px;margin-bottom:10px}
+        .logo{width:180px;height:auto;margin-bottom:8px}
         h1{font-size:16px;font-weight:600;color:var(--text);margin:0}
         .sub{font-size:11px;color:var(--muted)}
         .card-body{padding:0 16px 20px}
@@ -70,8 +83,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     <div class="card">
         <div class="card-header">
-            <img src="assets/logo.svg" alt="" class="logo">
-            <h1><?php echo APP_NAME; ?></h1>
+            <img src="assets/logo_full.png" alt="Syncopa" class="logo">
+            
             <p class="sub">Musikvereinsverwaltung</p>
         </div>
         <div class="card-body">
