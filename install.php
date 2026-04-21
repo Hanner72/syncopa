@@ -165,6 +165,12 @@ function runInstallation($p) {
         $adminId = (int)$pdo->lastInsertId();
         $pdo->prepare("INSERT IGNORE INTO `benutzer_rollen` (`benutzer_id`, `rolle_id`) VALUES (?, 1)")->execute(array($adminId));
 
+        // Installations-ID generieren & Telemetry speichern
+        $installId = bin2hex(random_bytes(16));
+        $telemetryEnabled = !empty($p['telemetry_enabled']) ? '1' : '0';
+        $pdo->prepare("UPDATE `einstellungen` SET `wert`=? WHERE `schluessel`='installation_id'")->execute(array($installId));
+        $pdo->prepare("UPDATE `einstellungen` SET `wert`=? WHERE `schluessel`='telemetry_enabled'")->execute(array($telemetryEnabled));
+
         if (!empty($p['beispieldaten']) && $p['beispieldaten'] === '1') {
             insertSampleData($pdo);
         }
@@ -295,7 +301,9 @@ function insertBaseData($pdo) {
         (42,'nummernkreis_noten_prefix','Ny','Nummernkreis Noten – Präfix',NOW()),
         (43,'nummernkreis_noten_stellen','3','Nummernkreis Noten – Stellen',NOW()),
         (44,'nummernkreis_instrumente_prefix','Iy','Nummernkreis Instrumente – Präfix',NOW()),
-        (45,'nummernkreis_instrumente_stellen','3','Nummernkreis Instrumente – Stellen',NOW())");
+        (45,'nummernkreis_instrumente_stellen','3','Nummernkreis Instrumente – Stellen',NOW()),
+        (46,'installation_id','','Eindeutige Installations-ID',NOW()),
+        (47,'telemetry_enabled','0','Anonyme Nutzungsstatistik senden',NOW())");
 }
 
 // ── Beispieldaten ─────────────────────────────────────────────
@@ -834,6 +842,21 @@ $stepNames = array('Willkommen', 'Datenbank', 'Anwendung', 'Integrationen', 'Ins
                 <label class="form-label">OCR Space API Key</label>
                 <input type="text" name="ocr_api_key" class="form-control" value="<?= val('ocr_api_key',$post) ?>" placeholder="K12345...">
                 <div class="form-text">Kostenlosen Key: <a href="https://ocr.space/ocrapi" target="_blank">ocr.space/ocrapi</a> → „Get API Key FREE"</div>
+            </div>
+        </div>
+
+        <p class="section-divider">Nutzungsstatistik</p>
+        <div class="row g-3">
+            <div class="col-12">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" name="telemetry_enabled" id="telemetryEnabled" value="1" <?= !empty($post['telemetry_enabled']) ? 'checked' : 'checked' ?>>
+                    <label class="form-check-label fw-semibold" for="telemetryEnabled">Anonyme Nutzungsstatistik senden (empfohlen)</label>
+                </div>
+                <div class="form-text mt-1">
+                    Hilft dem Entwickler, die App zu verbessern. Es werden ausschließlich übertragen:
+                    eine zufällige Installations-ID, die Versionsnummer und der Vereinsname.
+                    Kein Tracking von Personen oder Inhalten. Kann jederzeit in den Einstellungen deaktiviert werden.
+                </div>
             </div>
         </div>
 

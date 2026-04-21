@@ -1,12 +1,25 @@
 <?php
 // api/system_update.php – Version prüfen & Update via GitHub ZIP
+ob_start();
+ini_set('display_errors', 0);
+
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        ob_clean();
+        if (!headers_sent()) header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => 'PHP-Fehler: ' . $error['message']]);
+    }
+});
+
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes.php';
 
+ob_clean();
 header('Content-Type: application/json');
 Session::requireLogin();
 
-if (Session::getRole() !== 'admin') {
+if (!Session::isAdmin()) {
     echo json_encode(['success' => false, 'error' => 'Keine Berechtigung']);
     exit;
 }
@@ -24,23 +37,50 @@ $skipFiles = [
 ];
 
 /**
- * HTTP GET via cURL mit GitHub-kompatiblen Headern.
+ * HTTP GET – cURL mit Fallback auf file_get_contents.
  */
 function httpGet(string $url): array {
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_TIMEOUT        => 60,
-        CURLOPT_USERAGENT      => 'syncopa-updater/1.0',
-        CURLOPT_SSL_VERIFYPEER => true,
-        CURLOPT_HTTPHEADER     => ['Accept: application/vnd.github.v3+json'],
-    ]);
-    $body    = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $err     = curl_error($ch);
-    curl_close($ch);
-    return ['body' => $body, 'code' => $httpCode, 'error' => $err];
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_TIMEOUT        => 60,
+            CURLOPT_USERAGENT      => 'syncopa-updater/1.0',
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_HTTPHEADER     => ['Accept: application/vnd.github.v3+json'],
+        ]);
+        $body     = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err      = curl_error($ch);
+        curl_close($ch);
+        return ['body' => $body, 'code' => $httpCode, 'error' => $err];
+    }
+
+    if (!ini_get('allow_url_fopen')) {
+        return ['body' => false, 'code' => 0, 'error' => 'Weder cURL noch allow_url_fopen verfügbar'];
+    }
+
+    $ctx  = stream_context_create(['http' => [
+        'timeout'     => 60,
+        'user_agent'  => 'syncopa-updater/1.0',
+        'follow_location' => 1,
+        'header'      => "Accept: application/vnd.github.v3+json\r\n",
+    ]]);
+    $body = @file_get_contents($url, false, $ctx);
+    if ($body === false) {
+        return ['body' => false, 'code' => 0, 'error' => 'file_get_contents fehlgeschlagen'];
+    }
+    // HTTP-Statuscode aus den Response-Headern lesen
+    $code = 200;
+    if (isset($http_response_header)) {
+        foreach ($http_response_header as $h) {
+            if (preg_match('#HTTP/\S+\s+(\d+)#', $h, $m)) {
+                $code = (int)$m[1];
+            }
+        }
+    }
+    return ['body' => $body, 'code' => $code, 'error' => ''];
 }
 
 /**
@@ -89,8 +129,25 @@ function rmRecursive(string $path): void {
     rmdir($path);
 }
 
+// ─── Servervoraussetzungen prüfen ────────────────────────────────────────────
+function canReachInternet(): bool {
+    return function_exists('curl_init') || ini_get('allow_url_fopen');
+}
+
 // ─── CHECK ────────────────────────────────────────────────────────────────────
 if ($action === 'check') {
+    if (!canReachInternet()) {
+        echo json_encode([
+            'success'      => true,
+            'localVersion' => APP_VERSION,
+            'remoteVersion'=> null,
+            'upToDate'     => true,
+            'serverError'  => 'Dieser Server unterstützt keine ausgehenden HTTP-Verbindungen (kein cURL, kein allow_url_fopen). Automatische Updates sind nicht verfügbar – bitte Dateien manuell per FTP aktualisieren.',
+            'newChanges'   => [],
+        ]);
+        exit;
+    }
+
     $localVersion = APP_VERSION;
 
     // Remote Changelog holen
@@ -214,6 +271,11 @@ if ($action === 'update') {
     }
 
     $log[] = '✓ Update abgeschlossen';
+
+    // Session-Cache für Update-Check zurücksetzen
+    if (session_status() !== PHP_SESSION_NONE) {
+        unset($_SESSION['_update_check'], $_SESSION['_update_check_ts']);
+    }
 
     echo json_encode([
         'success'    => true,

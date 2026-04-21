@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.5]
+
+### Geändert
+
+- Installationsscript Update
+  - auch ohne CURL lauffähig
+
 ## [2.3.4]
 
 ### Geändert
