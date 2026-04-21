@@ -268,11 +268,22 @@ if ($action === 'update') {
         }
     }
 
-    // OPcache leeren falls aktiv
+    // PHP-Caches leeren falls aktiv
     if (function_exists('opcache_reset')) {
         opcache_reset();
         $log[] = '✓ OPcache geleert';
     }
+    if (function_exists('apcu_clear_cache')) {
+        apcu_clear_cache();
+        $log[] = '✓ APCu-Cache geleert';
+    }
+    if (function_exists('apc_clear_cache')) {
+        apc_clear_cache('opcode');
+        apc_clear_cache('user');
+        $log[] = '✓ APC-Cache geleert';
+    }
+    clearstatcache(true);
+    $log[] = '✓ Stat-Cache geleert';
 
     // Verifikation: APP_VERSION in config.app.php prüfen
     $verifyPath = $appRoot . DIRECTORY_SEPARATOR . 'config.app.php';
