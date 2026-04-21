@@ -255,18 +255,14 @@ if ($action === 'update') {
     rmRecursive($tmpDir);
     $log[] = '✓ Temporäre Dateien bereinigt';
 
-    // 6. APP_VERSION in config.php aktualisieren
-    if ($newVersion) {
-        $configPath = $appRoot . DIRECTORY_SEPARATOR . 'config.php';
-        if (file_exists($configPath)) {
-            $cfg = file_get_contents($configPath);
-            $cfg = preg_replace(
-                "/define\('APP_VERSION',\s*'[^']+'\)/",
-                "define('APP_VERSION', '{$newVersion}')",
-                $cfg
-            );
-            file_put_contents($configPath, $cfg);
-            $log[] = "✓ APP_VERSION auf {$newVersion} gesetzt";
+    // 6. APP_VERSION aus config.php entfernen (wird jetzt in config.app.php verwaltet)
+    $configPath = $appRoot . DIRECTORY_SEPARATOR . 'config.php';
+    if (file_exists($configPath)) {
+        $cfg = file_get_contents($configPath);
+        $cleaned = preg_replace("/^[^\n]*define\('APP_VERSION',[^\n]*\n?/m", '', $cfg);
+        if ($cleaned !== $cfg) {
+            file_put_contents($configPath, $cleaned);
+            $log[] = '✓ APP_VERSION aus config.php entfernt (wird jetzt über config.app.php verwaltet)';
         }
     }
 
