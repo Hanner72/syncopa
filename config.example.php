@@ -15,10 +15,9 @@ define('DB_PASS',    '');
 define('DB_CHARSET', 'utf8mb4');
 
 // ============================================================================
-// ANWENDUNGS-URL & VERSION
+// ANWENDUNGS-URL
 // ============================================================================
-define('APP_VERSION', '2.3.6');
-define('BASE_URL',    'https://deine-domain.at'); // Ohne abschließenden Slash
+define('BASE_URL', 'https://deine-domain.at'); // Ohne abschließenden Slash
 
 // ============================================================================
 // GOOGLE OAUTH LOGIN (optional – auf false setzen zum Deaktivieren)

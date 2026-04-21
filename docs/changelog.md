@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.3.7]
+
+- erneutes Updatescript update ;-)
+
 ## [2.3.6]
 
 - kleine Updates
