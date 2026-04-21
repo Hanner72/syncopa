@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.3.9]
+
+- größere Updatescript Änderungen
+
 ## [2.3.8]
 
 - erneutes Updatescript update
