@@ -288,6 +288,18 @@ if ($action === 'update') {
         $log[] = '✗ WARNUNG: config.app.php nicht gefunden!';
     }
 
+    // Verifikation: config.php auf verbleibende APP_VERSION prüfen
+    $configPhpPath = $appRoot . DIRECTORY_SEPARATOR . 'config.php';
+    if (file_exists($configPhpPath)) {
+        $configContent = file_get_contents($configPhpPath);
+        if (strpos($configContent, 'APP_VERSION') !== false) {
+            preg_match("/define\('APP_VERSION',\s*'([^']+)'\)/", $configContent, $cm);
+            $log[] = '⚠ config.php definiert noch APP_VERSION = ' . ($cm[1] ?? '?') . ' (überschreibt config.app.php!)';
+        } else {
+            $log[] = '✓ config.php: kein APP_VERSION (korrekt)';
+        }
+    }
+
     $log[] = '✓ Update abgeschlossen';
 
     // Session-Cache für Update-Check zurücksetzen
