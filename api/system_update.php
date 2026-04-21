@@ -274,6 +274,20 @@ if ($action === 'update') {
         $log[] = '✓ OPcache geleert';
     }
 
+    // Verifikation: APP_VERSION in config.app.php prüfen
+    $verifyPath = $appRoot . DIRECTORY_SEPARATOR . 'config.app.php';
+    if (file_exists($verifyPath)) {
+        $verifyContent = file_get_contents($verifyPath);
+        if (strpos($verifyContent, 'APP_VERSION') !== false) {
+            preg_match("/define\('APP_VERSION',\s*'([^']+)'\)/", $verifyContent, $vm);
+            $log[] = '✓ config.app.php: APP_VERSION = ' . ($vm[1] ?? '(gefunden, kein Wert geparst)');
+        } else {
+            $log[] = '✗ WARNUNG: config.app.php enthält kein APP_VERSION!';
+        }
+    } else {
+        $log[] = '✗ WARNUNG: config.app.php nicht gefunden!';
+    }
+
     $log[] = '✓ Update abgeschlossen';
 
     // Session-Cache für Update-Check zurücksetzen
