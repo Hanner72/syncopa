@@ -30,7 +30,22 @@ echo "[version_sync] Version erkannt: {$vVersion}\n";
 
 $updated = [];
 
-// ── 2. config.php ─────────────────────────────────────────────────────────────
+// ── 2. config.app.php ─────────────────────────────────────────────────────────
+$configAppPath = $root . '/config.app.php';
+if (file_exists($configAppPath)) {
+    $content = file_get_contents($configAppPath);
+    $new = preg_replace(
+        "/define\('APP_VERSION',\s*'[^']+'\)/",
+        "define('APP_VERSION', '{$version}')",
+        $content
+    );
+    if ($new !== $content) {
+        file_put_contents($configAppPath, $new);
+        $updated[] = 'config.app.php';
+    }
+}
+
+// ── 3. config.php (legacy – entfernt APP_VERSION falls noch vorhanden) ────────
 $configPath = $root . '/config.php';
 if (file_exists($configPath)) {
     $content = file_get_contents($configPath);
@@ -45,7 +60,7 @@ if (file_exists($configPath)) {
     }
 }
 
-// ── 3. config.example.php ────────────────────────────────────────────────────
+// ── 4. config.example.php ────────────────────────────────────────────────────
 $examplePath = $root . '/config.example.php';
 if (file_exists($examplePath)) {
     $content = file_get_contents($examplePath);
@@ -60,7 +75,7 @@ if (file_exists($examplePath)) {
     }
 }
 
-// ── 4. CHANGELOG.md (root) – Kopie von docs/changelog.md ────────────────────
+// ── 5. CHANGELOG.md (root) – Kopie von docs/changelog.md ────────────────────
 $rootChangelog = $root . '/CHANGELOG.md';
 $currentRoot = file_exists($rootChangelog) ? file_get_contents($rootChangelog) : '';
 if ($currentRoot !== $changelogContent) {
@@ -68,7 +83,7 @@ if ($currentRoot !== $changelogContent) {
     $updated[] = 'CHANGELOG.md';
 }
 
-// ── 5. docs/README.md – "Version X.Y.Z" aktualisieren ───────────────────────
+// ── 6. docs/README.md – "Version X.Y.Z" aktualisieren ───────────────────────
 $readmePath = $root . '/docs/README.md';
 if (file_exists($readmePath)) {
     $content = file_get_contents($readmePath);
@@ -83,7 +98,7 @@ if (file_exists($readmePath)) {
     }
 }
 
-// ── 6. docs/_navbar.md – "vX.Y.Z (aktuell)" aktualisieren ───────────────────
+// ── 7. docs/_navbar.md – "vX.Y.Z (aktuell)" aktualisieren ───────────────────
 $navbarPath = $root . '/docs/_navbar.md';
 if (file_exists($navbarPath)) {
     $content = file_get_contents($navbarPath);
