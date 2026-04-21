@@ -4,7 +4,7 @@ require_once 'config.php';
 require_once 'includes.php';
 
 Session::requireLogin();
-if (Session::getRole() !== 'admin') {
+if (!Session::isAdmin()) {
     Session::setFlashMessage('danger', 'Nur Administratoren haben Zugriff');
     header('Location: index.php');
     exit;
@@ -127,6 +127,16 @@ function checkVersion() {
             if (!data.success) {
                 document.getElementById('check-error').textContent = 'Fehler: ' + (data.error || 'Unbekannt');
                 document.getElementById('check-error').style.display = '';
+                return;
+            }
+
+            if (data.serverError) {
+                document.getElementById('check-error').innerHTML =
+                    '<i class="bi bi-exclamation-triangle-fill"></i> <strong>Automatische Updates nicht verfügbar</strong><br>' + data.serverError;
+                document.getElementById('check-error').className = 'alert alert-warning';
+                document.getElementById('check-error').style.display = '';
+                document.getElementById('status-badge').innerHTML =
+                    '<span class="badge bg-secondary"><i class="bi bi-slash-circle"></i> Nicht verfügbar</span>';
                 return;
             }
 

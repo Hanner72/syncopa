@@ -538,25 +538,35 @@ function isActive($page, $pages, $current) {
                 $cacheKey = '_update_check';
                 $cacheTs  = '_update_check_ts';
                 $ttl      = 3600; // 1 Stunde
-                if (!Session::has($cacheKey) || (time() - (int)Session::get($cacheTs, 0)) > $ttl) {
-                    $ch = curl_init("https://raw.githubusercontent.com/Hanner72/syncopa/main/docs/changelog.md");
-                    curl_setopt_array($ch, [
-                        CURLOPT_RETURNTRANSFER => true,
-                        CURLOPT_TIMEOUT        => 5,
-                        CURLOPT_USERAGENT      => 'syncopa-updater/1.0',
-                        CURLOPT_SSL_VERIFYPEER => true,
-                        CURLOPT_FOLLOWLOCATION => true,
-                    ]);
-                    $body = curl_exec($ch);
-                    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                    curl_close($ch);
-                    if ($code === 200 && $body) {
+                $needsCheck = !Session::has($cacheKey) || (time() - (int)Session::get($cacheTs, 0)) > $ttl;
+                if ($needsCheck) {
+                    $rawUrl = "https://raw.githubusercontent.com/Hanner72/syncopa/main/docs/changelog.md";
+                    $body = false;
+                    if (function_exists('curl_init')) {
+                        $ch = curl_init($rawUrl);
+                        curl_setopt_array($ch, [
+                            CURLOPT_RETURNTRANSFER => true,
+                            CURLOPT_TIMEOUT        => 5,
+                            CURLOPT_USERAGENT      => 'syncopa-updater/1.0',
+                            CURLOPT_SSL_VERIFYPEER => true,
+                            CURLOPT_FOLLOWLOCATION => true,
+                        ]);
+                        $body = curl_exec($ch);
+                        $ok   = curl_getinfo($ch, CURLINFO_HTTP_CODE) === 200;
+                        curl_close($ch);
+                        if (!$ok) $body = false;
+                    } elseif (ini_get('allow_url_fopen')) {
+                        $ctx  = stream_context_create(['http' => ['timeout' => 5, 'user_agent' => 'syncopa-updater/1.0']]);
+                        $body = @file_get_contents($rawUrl, false, $ctx);
+                    }
+                    if ($body) {
                         preg_match('/##\s*\[([0-9]+\.[0-9]+\.[0-9]+)\]/', $body, $m);
                         $remoteVersion = $m[1] ?? null;
                         $updateAvailable = $remoteVersion && version_compare(APP_VERSION, $remoteVersion, '<');
+                        Session::set($cacheKey, $updateAvailable);
+                        Session::set($cacheTs,  time());
                     }
-                    Session::set($cacheKey, $updateAvailable);
-                    Session::set($cacheTs,  time());
+                    // Bei Fehler nicht cachen → nächste Seite neu versuchen
                 } else {
                     $updateAvailable = (bool)Session::get($cacheKey, false);
                 }

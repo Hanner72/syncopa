@@ -8,3 +8,4 @@ config.php.update_backup
 uploads/
 
 ENTWICKLUNG.md
+telemetry/data/pings.json
