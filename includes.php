@@ -26,6 +26,19 @@ require_once __DIR__ . '/classes/Nummernkreis.php';
     // Bestehende Benutzer migrieren (einmalig): rolle_id → benutzer_rollen
     $db->execute("INSERT IGNORE INTO benutzer_rollen (benutzer_id, rolle_id)
         SELECT id, rolle_id FROM benutzer WHERE rolle_id IS NOT NULL");
+
+    // Migration: Telemetry-Einstellungen für bestehende Installationen
+    $existing = $db->fetchOne("SELECT COUNT(*) as cnt FROM einstellungen WHERE schluessel = 'installation_id'");
+    if ((int)($existing['cnt'] ?? 0) === 0) {
+        $db->execute(
+            "INSERT IGNORE INTO einstellungen (schluessel, wert, beschreibung, aktualisiert_am) VALUES (?, ?, ?, NOW())",
+            ['installation_id', bin2hex(random_bytes(16)), 'Eindeutige Installations-ID']
+        );
+    }
+    $db->execute(
+        "INSERT IGNORE INTO einstellungen (schluessel, wert, beschreibung, aktualisiert_am) VALUES (?, ?, ?, NOW())",
+        ['telemetry_enabled', '1', 'Anonyme Nutzungsstatistik senden']
+    );
 })();
 
 // Telemetry-Ping (einmal pro Tag, nur wenn eingeloggt und aktiviert)
