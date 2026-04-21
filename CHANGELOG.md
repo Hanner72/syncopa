@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.3.8]
+
+- erneutes Updatescript update
+  - leider waren noch immer Fehler drin :-(
+
 ## [2.3.7]
 
 - erneutes Updatescript update ;-)
