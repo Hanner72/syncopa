@@ -40,12 +40,14 @@
         // Load saved theme
         const savedTheme = localStorage.getItem('theme') || 'light';
         html.setAttribute('data-theme', savedTheme);
+        html.setAttribute('data-bs-theme', savedTheme); // aktiviert Bootstraps eigene Dark-Mode-Farben (-subtle/-emphasis Utilities)
         updateThemeIcon(savedTheme);
-        
+
         themeToggle?.addEventListener('click', function() {
             const current = html.getAttribute('data-theme');
             const next = current === 'light' ? 'dark' : 'light';
             html.setAttribute('data-theme', next);
+            html.setAttribute('data-bs-theme', next);
             localStorage.setItem('theme', next);
             updateThemeIcon(next);
         });

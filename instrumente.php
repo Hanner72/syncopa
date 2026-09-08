@@ -105,9 +105,9 @@ include 'includes/header.php';
                         <span class="badge bg-success">Verfügbar</span>
                         <?php endif; ?>
                     </td>
-                    <th>
-                        <?php echo htmlspecialchars($instr['notizen']); ?>
-                    </th>
+                    <td>
+                        <?php echo htmlspecialchars($instr['notizen'] ?? ''); ?>
+                    </td>
                     <td class="text-end">
                         <a href="instrument_detail.php?id=<?php echo $instr['id']; ?>" class="btn btn-sm btn-info" title="Details">
                             <i class="bi bi-eye"></i>
