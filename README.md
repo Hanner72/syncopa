@@ -1,6 +1,6 @@
 # 🎵 SYNCOPA - Musikvereinsverwaltung
 
-[![Version](https://img.shields.io/badge/Version-2.1.0-blue.svg)](https://github.com/yourname/syncopa)
+[![Version](https://img.shields.io/badge/Version-2.3.2-blue.svg)](https://github.com/Hanner72/syncopa)
 [![PHP](https://img.shields.io/badge/PHP-8.0+-purple.svg)](https://php.net)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Made in Austria](https://img.shields.io/badge/Made%20in-Austria-red.svg)]()
@@ -11,91 +11,96 @@ Eine moderne, umfassende Webapplikation zur Verwaltung von Musikvereinen. Entwic
 
 ---
 
-## ✨ Features
+## DEMO
 
-### Kernfunktionen
+https://syncopa.dannerbam.eu/
 
-- **👥 Mitgliederverwaltung** - Stammdaten, Instrumente, Register, Status
-- **🎺 Instrumenteninventar** - Verleih, Wartung, Versicherungswerte
-- **🎼 Notenarchiv** - PDF-Upload, Schwierigkeitsgrade, Archivnummern
-- **📅 Kalender & Ausrückungen** - Termine, Anwesenheit, iCal-Export
-- **💰 Finanzen** - Kassenbuch, Mitgliedsbeiträge, Berichte
-- **👔 Uniformverwaltung** - Trachten, Größen, Ausgabe/Rückgabe
-- **🔐 Benutzerverwaltung** - Rollen, Berechtigungen, Google OAuth
+Admin Login
 
-### Highlights
-
-- 🌓 **Dark/Light Mode** - Automatisch oder manuell umschaltbar
-- 📱 **Responsive Design** - Optimiert für Desktop, Tablet & Smartphone
-- 🔔 **Dashboard** - Geburtstage, anstehende Termine, Statistiken
-- 📊 **Charts** - Visualisierung von Mitglieder- und Finanzstatistiken
-- 📤 **iCal-Export** - Kalender-Abo für Google Calendar, Outlook, etc.
+- Benutzer: admin
+- Passwort: admin123
 
 ---
 
-## 🚀 Schnellstart
+## 📋 Inhaltsverzeichnis
 
-### Voraussetzungen
+1. [Funktionsübersicht](#funktionsübersicht)
+2. [Systemvoraussetzungen](#systemvoraussetzungen)
+3. [Installation](#installation)
+4. [Benutzerrollen](#benutzerrollen)
+5. [System-Update](#system-update)
+6. [Projektstruktur](#projektstruktur)
+7. [Sicherheit](#sicherheit)
+8. [Changelog](#changelog)
 
-- PHP 8.0+ mit Extensions: `pdo_mysql`, `mbstring`, `json`, `fileinfo`
-- MySQL 8.0+ oder MariaDB 10.4+
-- Apache 2.4+ mit `mod_rewrite` oder Nginx
+---
 
-### Installation
+## 🎯 Funktionsübersicht
 
-```bash
-# 1. Repository klonen
-git clone https://github.com/yourname/syncopa.git
-cd syncopa
+| Modul | Beschreibung |
+|-------|--------------|
+| **Mitglieder** | Vollständige Stammdatenverwaltung mit Instrumentenzuordnung |
+| **Instrumente** | Inventarverwaltung, Verleih und Wartungshistorie |
+| **Noten** | Digitaler Notenkatalog mit Archivnummern und PDF-Upload |
+| **Ausrückungen** | Termine, Anwesenheit und Programmplanung |
+| **Kalender** | Interaktiver Kalender mit iCal-Export |
+| **Finanzen** | Einnahmen, Ausgaben und Mitgliedsbeiträge |
+| **Uniformen** | Trachtenverwaltung und Ausgabehistorie |
+| **Festverwaltung** | Stationen, Dienstplan, Einkäufe, Verträge, Abrechnung |
+| **Benutzerverwaltung** | Mehrfachrollen, Berechtigungen, Google OAuth |
 
-# 2. Datenbank erstellen
-mysql -u root -p -e "CREATE DATABASE syncopa CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+---
 
-# 3. Schema importieren
-mysql -u root -p syncopa < database.sql
+## ✨ Features
 
-# 4. Konfiguration anpassen
-cp config.example.php config.php
-nano config.php
+- 👥 **Mitgliederverwaltung** – Stammdaten, Instrumente, Register, Status
+- 🎺 **Instrumenteninventar** – Verleih, Wartung, Versicherungswerte
+- 🎼 **Notenarchiv** – PDF-Upload, Schwierigkeitsgrade, Archivnummern
+- 📅 **Kalender & Ausrückungen** – Termine, Anwesenheit, iCal-Export
+- 💰 **Finanzen** – Kassenbuch, Mitgliedsbeiträge, Berichte
+- 👔 **Uniformverwaltung** – Trachten, Größen, Ausgabe/Rückgabe
+- 🎪 **Festverwaltung** – vollständiges Modul zur Vereinsfest-Organisation
+- 🔐 **Mehrfachrollen** – ein Benutzer kann mehrere Rollen gleichzeitig haben
+- 🔄 **Automatische Updates** – direkt im Admin-Bereich via GitHub
+- 🌓 **Dark/Light Mode** – automatisch oder manuell umschaltbar
+- 📱 **Responsive Design** – optimiert für Desktop, Tablet & Smartphone
 
-# 5. Verzeichnisrechte setzen
-chmod -R 755 uploads/
-```
+---
+
+## 🚀 Installation
+
+### Systemvoraussetzungen
+
+| Komponente | Mindestanforderung |
+|---|---|
+| PHP | 8.0 oder höher |
+| MySQL / MariaDB | 5.7 / 10.3 oder höher |
+| Webserver | Apache (mod_rewrite) oder Nginx |
+| PHP-Extensions | `pdo_mysql`, `intl`, `zip`, `gd`, `curl` |
+
+### Schritte
+
+1. ZIP aus den [Releases](https://github.com/Hanner72/syncopa/releases) herunterladen
+2. Dateien auf den Server hochladen und entpacken
+3. Datenbank anlegen
+4. Installationsscript aufrufen: `https://deinserver.at/syncopa/install.php`
+5. Installationsassistenten durchlaufen (DB-Daten, Vereinsdaten, Admin-Account)
 
 ### Erster Login
 
 | | |
 |---|---|
-| **URL** | `http://localhost/syncopa/` |
-| **Benutzer** | `admin` |
-| **Passwort** | `admin123` |
+| **URL** | `https://deinserver.at/syncopa/` |
+| **Benutzer** | gewählter Admin-Benutzername |
+| **Passwort** | gewähltes Admin-Passwort |
 
-⚠️ **Wichtig:** Passwort nach dem ersten Login sofort ändern!
+> ⚠️ Passwort nach dem ersten Login sofort ändern!
 
 ---
 
-## 📖 Dokumentation
+## 📖 Benutzerrollen
 
-### Konfiguration (config.php)
-
-```php
-// Datenbank
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'syncopa');
-define('DB_USER', 'syncopa_user');
-define('DB_PASS', 'sicheres_passwort');
-
-// Anwendung
-define('APP_NAME', 'Syncopa');
-define('BASE_URL', 'https://example.com/syncopa');
-
-// Optional: Google OAuth
-define('GOOGLE_OAUTH_ENABLED', true);
-define('GOOGLE_CLIENT_ID', 'your-client-id.apps.googleusercontent.com');
-define('GOOGLE_CLIENT_SECRET', 'your-client-secret');
-```
-
-### Benutzerrollen
+Syncopa verwendet ein **Mehrfachrollen-System** – ein Benutzer kann gleichzeitig mehrere Rollen haben und erhält die kombinierten Berechtigungen aller zugewiesenen Rollen.
 
 | Rolle | Beschreibung |
 |-------|--------------|
@@ -107,47 +112,57 @@ define('GOOGLE_CLIENT_SECRET', 'your-client-secret');
 | **Trachtenwart** | Uniformverwaltung |
 | **Mitglied** | Lesezugriff auf relevante Bereiche |
 
-### Projektstruktur
+> Rollen und Berechtigungen sind individuell konfigurierbar. Die Reihenfolge der Rollen ist per Drag & Drop änderbar.
+
+---
+
+## 🔄 System-Update
+
+Syncopa aktualisiert sich direkt aus dem Admin-Bereich heraus:
+
+**Einstellungen → System-Update → Update prüfen → Jetzt updaten**
+
+- Vergleicht die installierte Version mit der aktuellen Version auf GitHub
+- Lädt das Update als ZIP herunter und überspielt alle Dateien automatisch
+- `config.php` (Zugangsdaten) und `uploads/` werden dabei **nie** überschrieben
+
+---
+
+## 📁 Projektstruktur
 
 ```
 syncopa/
-├── api/                    # REST-API Endpunkte
-│   ├── kalender.php
-│   ├── kalender_termine.php
-│   └── noten_*.php
-├── assets/                 # Statische Dateien
-│   ├── logo.svg
-│   └── favicon.svg
-├── classes/                # PHP-Klassen (OOP)
+├── api/                    # API-Endpunkte
+│   ├── system_update.php   # Version prüfen & Update
+│   ├── rollen_sortierung.php
+│   └── ...
+├── assets/                 # Statische Dateien (Logo, Favicon)
+├── classes/                # PHP-Klassen
 │   ├── Database.php
-│   ├── Session.php
-│   ├── Mitglied.php
-│   ├── Instrument.php
-│   ├── Noten.php
-│   ├── Ausrueckung.php
-│   ├── KalenderTermin.php
-│   └── Uniform.php
-├── includes/               # Header, Footer
-├── uploads/                # Datei-Uploads
+│   ├── Session.php         # Mehrfachrollen-Support
+│   └── ...
+├── docs/                   # Dokumentation
+├── uploads/                # Datei-Uploads (nicht in git)
 │   ├── noten/
 │   ├── fotos/
-│   └── dokumente/
-├── config.php              # Konfiguration
-├── database.sql            # DB-Schema + Demodaten
-└── *.php                   # Seiten-Module
+│   ├── dokumente/
+│   └── fest_vertraege/
+├── config.php              # Umgebungsspezifisch (nicht in git)
+├── config.app.php          # App-Konstanten (wird per Update aktualisiert)
+├── config.example.php      # Vorlage für neue Installationen
+├── database.sql            # Datenbankschema
+└── install.php             # Installationsassistent
 ```
 
 ---
 
 ## 🛡️ Sicherheit
 
-### Empfohlene Maßnahmen
-
-1. **HTTPS aktivieren** - SSL-Zertifikat einrichten
-2. **Passwörter ändern** - Admin-Passwort sofort nach Installation ändern
-3. **Backups erstellen** - Regelmäßige Datenbank-Backups
-4. **PHP-Fehler verbergen** - In Produktion: `display_errors = Off`
-5. **Upload-Verzeichnis schützen**:
+1. **HTTPS aktivieren** – SSL-Zertifikat einrichten
+2. **Passwort ändern** – Admin-Passwort sofort nach Installation ändern
+3. **Backups erstellen** – regelmäßige Datenbank-Backups
+4. **PHP-Fehler verbergen** – in Produktion: `display_errors = Off`
+5. **Upload-Verzeichnis schützen:**
 
 ```apache
 # uploads/.htaccess
@@ -159,123 +174,21 @@ Options -Indexes
 
 ---
 
-## 📋 Changelog
-
-### Version 2.1.0 (Februar 2026)
-
-#### Neue Funktionen
-- ✨ **Stammdaten-Verwaltung** - Register und Instrumententypen können jetzt bearbeitet werden
-- ✨ **Löschfunktionen** - Kalendereinträge, Noten, Instrumente und Transaktionen können gelöscht werden
-- ✨ **Instrumentenanzeige** - Mitgliederliste zeigt Anzahl der gespielten Instrumente (Tooltip mit Details)
-- ✨ **Datum bei Instrumenten** - Beim Hinzufügen eines Instruments kann das "Spielt seit"-Datum gewählt werden
-
-#### Verbesserungen
-- 🔧 Admin-Benutzer haben jetzt automatisch alle Berechtigungen
-- 🔧 Lösch-Buttons in allen relevanten Listen hinzugefügt
-- 🔧 Kalender-Termine können jetzt bearbeitet und gelöscht werden
-- 🔧 Verbesserte Berechtigungsprüfung (Admin-Rolle wird berücksichtigt)
-
-#### Bugfixes
-- 🐛 Kalender: Bearbeiten-Button für Termine funktioniert jetzt
-- 🐛 Kalender: Löschen-Button wird jetzt korrekt angezeigt
-- 🐛 Dashboard: Charts werden korrekt initialisiert
-
----
-
-### Version 2.0.0 (Dezember 2025)
-
-#### Neue Funktionen
-- ✨ **Dark/Light Mode** - Theme-Umschaltung mit Persistierung
-- ✨ **Responsive Design** - Mobile-optimierte Oberfläche
-- ✨ **Google OAuth** - Login mit Google-Konto
-- ✨ **iCal-Export** - Kalender-Abonnement für externe Apps
-- ✨ **Dashboard** - Statistiken, Geburtstage, anstehende Termine
-- ✨ **Anwesenheitsverwaltung** - Zu-/Absagen für Ausrückungen
-- ✨ **Programmplanung** - Noten-Zuordnung zu Ausrückungen
-- ✨ **Wartungshistorie** - Instrumentenwartung mit Erinnerungen
-
-#### Verbesserungen
-- 🔧 Komplett überarbeitetes UI mit Bootstrap 5
-- 🔧 Neue Sidebar-Navigation
-- 🔧 DataTables für alle Listen
-- 🔧 Chart.js für Statistik-Visualisierung
-- 🔧 FullCalendar Integration
-
----
-
-### Version 1.0.0 (Oktober 2025)
-
-- 🎉 **Erste Veröffentlichung**
-- Mitgliederverwaltung
-- Instrumenteninventar
-- Notenarchiv
-- Einfacher Kalender
-- Benutzerverwaltung mit Rollen
-
----
-
-## 🗄️ Datenbank
-
-### Haupttabellen
-
-| Tabelle | Beschreibung |
-|---------|--------------|
-| `benutzer` | Benutzerkonten |
-| `rollen` | Benutzerrollen |
-| `berechtigungen` | Modul-Berechtigungen |
-| `mitglieder` | Mitgliederstammdaten |
-| `register` | Musikregister (Holz, Blech, etc.) |
-| `instrument_typen` | Instrumentenkategorien |
-| `instrumente` | Instrumenteninventar |
-| `mitglied_instrumente` | Gespielte Instrumente |
-| `noten` | Notenkatalog |
-| `ausrueckungen` | Termine und Events |
-| `kalender_termine` | Allgemeine Termine |
-| `anwesenheit` | Zu-/Absagen |
-| `finanzen` | Kassenbuch |
-| `beitraege` | Mitgliedsbeiträge |
-
-### ER-Diagramm (vereinfacht)
-
-```
-benutzer ──< mitglieder ──< mitglied_instrumente >── instrument_typen
-                │                                           │
-                ├──< anwesenheit >── ausrueckungen          │
-                │                         │                 │
-                ├──< beitraege            ├──< ausrueckung_noten >── noten
-                │                         │
-                └──< instrumente ─────────┘
-```
-
----
-
 ## 🔧 Troubleshooting
 
 | Problem | Lösung |
 |---------|--------|
 | **DB-Verbindung fehlgeschlagen** | Zugangsdaten in `config.php` prüfen |
-| **Keine Berechtigung** | Benutzerrolle und Berechtigungen prüfen |
-| **Upload fehlgeschlagen** | `chmod 755 uploads/` und PHP `upload_max_filesize` |
+| **Keine Berechtigung** | Benutzerrollen und Berechtigungen prüfen |
+| **Upload fehlgeschlagen** | `chmod 755 uploads/` und PHP `upload_max_filesize` prüfen |
+| **Update schlägt fehl** | cURL und ZipArchive PHP-Extension aktivieren |
 | **Kalender lädt nicht** | Browser-Console prüfen (F12), API testen |
-| **Charts fehlen** | Chart.js wird im Header geladen, Cache leeren |
 
 ---
 
-## 🤝 Contributing
+## 📋 Changelog
 
-Beiträge sind willkommen! Bitte erstelle einen Fork und einen Pull Request.
-
-1. Fork des Repositories
-2. Feature-Branch erstellen (`git checkout -b feature/NeuesFunktion`)
-3. Änderungen committen (`git commit -m 'Neue Funktion hinzugefügt'`)
-4. Branch pushen (`git push origin feature/NeuesFunktion`)
-5. Pull Request erstellen
-
----
-
-## 📄 Lizenz
-
-Dieses Projekt ist unter der MIT-Lizenz lizenziert. Siehe [LICENSE](LICENSE) für Details.
+Alle Änderungen: [CHANGELOG.md](./CHANGELOG.md)
 
 ---
 
@@ -285,16 +198,17 @@ Entwickelt mit:
 
 - [PHP 8](https://php.net)
 - [Bootstrap 5](https://getbootstrap.com)
+- [Bootstrap Icons](https://icons.getbootstrap.com)
 - [MySQL](https://mysql.com)
 - [FullCalendar](https://fullcalendar.io)
-- [DataTables](https://datatables.net)
+- [SortableJS](https://sortablejs.github.io/Sortable/)
 - [Chart.js](https://chartjs.org)
-- [Bootstrap Icons](https://icons.getbootstrap.com)
+- [FPDI / FPDF](https://www.setasign.com/products/fpdi/about/)
 
 ---
 
 <p align="center">
   <strong>🎵 SYNCOPA</strong><br>
-  Entwickelt für österreichische Musikvereine<br>
+  Entwickelt für deutschsprachige (DACH) Musikvereine<br>
   <sub>Made with ❤️ in Austria</sub>
 </p>

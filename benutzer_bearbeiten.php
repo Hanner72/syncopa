@@ -13,7 +13,7 @@ $db = Database::getInstance();
 $id = $_GET['id'] ?? null;
 $isEdit = !empty($id);
 
-// Alle aktiven Rollen für das Dropdown laden
+// Alle aktiven Rollen laden
 $rollen = $db->fetchAll("SELECT * FROM rollen WHERE aktiv = 1 ORDER BY sortierung, name");
 
 // Alle Mitglieder für die Verknüpfung laden
@@ -31,43 +31,59 @@ if ($isEdit) {
         header('Location: benutzer.php');
         exit;
     }
+    // Aktuelle Rollen des Benutzers laden
+    $benutzerRollenIds = array_column(
+        $db->fetchAll("SELECT rolle_id FROM benutzer_rollen WHERE benutzer_id = ?", [$id]),
+        'rolle_id'
+    );
 } else {
     $benutzer = [];
+    $benutzerRollenIds = [];
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $benutzername = $_POST['benutzername'];
-    $email = $_POST['email'];
-    $rolle_id = $_POST['rolle_id'];
-    $mitglied_id = !empty($_POST['mitglied_id']) ? $_POST['mitglied_id'] : null;
-    $aktiv = isset($_POST['aktiv']) ? 1 : 0;
+    $benutzername   = $_POST['benutzername'];
+    $email          = $_POST['email'];
+    $gewaehlteRollen = array_map('intval', $_POST['rollen'] ?? []);
+    $mitglied_id    = !empty($_POST['mitglied_id']) ? $_POST['mitglied_id'] : null;
+    $aktiv          = isset($_POST['aktiv']) ? 1 : 0;
     $neues_passwort = $_POST['passwort'] ?? '';
-    
+
     try {
-        // Rollenname für das ENUM-Feld holen
-        $rolleData = $db->fetchOne("SELECT name FROM rollen WHERE id = ?", [$rolle_id]);
-        $rolleName = $rolleData['name'] ?? 'mitglied';
-        
-        if ($isEdit) {
-            $sql = "UPDATE benutzer SET benutzername = ?, email = ?, rolle = ?, rolle_id = ?, mitglied_id = ?, aktiv = ? WHERE id = ?";
-            $params = [$benutzername, $email, $rolleName, $rolle_id, $mitglied_id, $aktiv, $id];
-            
-            if (!empty($neues_passwort)) {
-                $sql = "UPDATE benutzer SET benutzername = ?, email = ?, rolle = ?, rolle_id = ?, mitglied_id = ?, aktiv = ?, passwort_hash = ? WHERE id = ?";
-                $params = [$benutzername, $email, $rolleName, $rolle_id, $mitglied_id, $aktiv, password_hash($neues_passwort, PASSWORD_DEFAULT), $id];
-            }
-            
-            $db->execute($sql, $params);
-            Session::setFlashMessage('success', 'Benutzer aktualisiert');
-        } else {
-            if (empty($neues_passwort)) {
-                throw new Exception('Passwort ist erforderlich');
-            }
-            
-            $sql = "INSERT INTO benutzer (benutzername, email, passwort_hash, rolle, rolle_id, mitglied_id, aktiv) VALUES (?, ?, ?, ?, ?, ?, ?)";
-            $db->execute($sql, [$benutzername, $email, password_hash($neues_passwort, PASSWORD_DEFAULT), $rolleName, $rolle_id, $mitglied_id, $aktiv]);
-            Session::setFlashMessage('success', 'Benutzer erstellt');
+        if (empty($gewaehlteRollen)) {
+            throw new Exception('Mindestens eine Rolle muss ausgewählt werden.');
         }
+
+        // Primärrolle = erste ausgewählte Rolle
+        $primaerRolleId = $gewaehlteRollen[0];
+        $rolleData = $db->fetchOne("SELECT name FROM rollen WHERE id = ?", [$primaerRolleId]);
+        $rolleName = $rolleData['name'] ?? 'mitglied';
+
+        if ($isEdit) {
+            $sql = "UPDATE benutzer SET benutzername=?, email=?, rolle=?, rolle_id=?, mitglied_id=?, aktiv=? WHERE id=?";
+            $params = [$benutzername, $email, $rolleName, $primaerRolleId, $mitglied_id, $aktiv, $id];
+            if (!empty($neues_passwort)) {
+                $sql = "UPDATE benutzer SET benutzername=?, email=?, rolle=?, rolle_id=?, mitglied_id=?, aktiv=?, passwort_hash=? WHERE id=?";
+                $params = [$benutzername, $email, $rolleName, $primaerRolleId, $mitglied_id, $aktiv, password_hash($neues_passwort, PASSWORD_DEFAULT), $id];
+            }
+            $db->execute($sql, $params);
+            $benutzerId = (int)$id;
+        } else {
+            if (empty($neues_passwort)) throw new Exception('Passwort ist erforderlich');
+            $db->execute(
+                "INSERT INTO benutzer (benutzername, email, passwort_hash, rolle, rolle_id, mitglied_id, aktiv) VALUES (?,?,?,?,?,?,?)",
+                [$benutzername, $email, password_hash($neues_passwort, PASSWORD_DEFAULT), $rolleName, $primaerRolleId, $mitglied_id, $aktiv]
+            );
+            $benutzerId = $db->lastInsertId();
+        }
+
+        // Pivot-Tabelle neu schreiben
+        $db->execute("DELETE FROM benutzer_rollen WHERE benutzer_id = ?", [$benutzerId]);
+        foreach ($gewaehlteRollen as $rId) {
+            $db->execute("INSERT INTO benutzer_rollen (benutzer_id, rolle_id) VALUES (?,?)", [$benutzerId, $rId]);
+        }
+
+        Session::setFlashMessage('success', $isEdit ? 'Benutzer aktualisiert' : 'Benutzer erstellt');
         header('Location: benutzer.php');
         exit;
     } catch (Exception $e) {
@@ -115,19 +131,30 @@ include 'includes/header.php';
                 </div>
                 
                 <div class="col-md-6 mb-3">
-                    <label for="rolle_id" class="form-label">Rolle *</label>
-                    <select class="form-select" id="rolle_id" name="rolle_id" required>
-                        <option value="">-- Bitte wählen --</option>
+                    <label class="form-label">Rollen * <small class="text-muted">(mind. eine, erste = primär)</small></label>
+                    <div class="border rounded p-2" style="max-height:180px;overflow-y:auto">
                         <?php foreach ($rollen as $rolle): ?>
-                        <option value="<?php echo $rolle['id']; ?>" 
-                                <?php echo ($benutzer['rolle_id'] ?? '') == $rolle['id'] ? 'selected' : ''; ?>>
-                            <?php echo htmlspecialchars(ucfirst($rolle['name'])); ?>
-                            <?php if ($rolle['ist_admin']): ?>
-                            (Administrator)
-                            <?php endif; ?>
-                        </option>
+                        <?php $checked = in_array($rolle['id'], $benutzerRollenIds) ? 'checked' : ''; ?>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox"
+                                   name="rollen[]"
+                                   value="<?php echo $rolle['id']; ?>"
+                                   id="rolle_<?php echo $rolle['id']; ?>"
+                                   <?php echo $checked; ?>>
+                            <label class="form-check-label d-flex align-items-center gap-2" for="rolle_<?php echo $rolle['id']; ?>">
+                                <span class="badge bg-<?php echo htmlspecialchars($rolle['farbe'] ?? 'secondary'); ?>" style="font-size:10px">
+                                    <?php echo htmlspecialchars(ucfirst($rolle['name'])); ?>
+                                </span>
+                                <?php if ($rolle['ist_admin']): ?>
+                                <small class="text-danger"><i class="bi bi-shield-fill"></i> Admin</small>
+                                <?php endif; ?>
+                                <?php if (!empty($rolle['beschreibung'])): ?>
+                                <small class="text-muted"><?php echo htmlspecialchars($rolle['beschreibung']); ?></small>
+                                <?php endif; ?>
+                            </label>
+                        </div>
                         <?php endforeach; ?>
-                    </select>
+                    </div>
                     <small class="text-muted">
                         <a href="rollen.php" target="_blank">Rollen verwalten</a>
                     </small>

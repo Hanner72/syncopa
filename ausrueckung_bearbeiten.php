@@ -7,7 +7,20 @@ Session::requireLogin();
 
 $ausrueckungObj = new Ausrueckung();
 $notenObj = new Noten();
+$formationObj = new Formation();
 $db = Database::getInstance();
+
+// Verfügbare Formationen für Dropdown
+if (Session::isAdmin()) {
+    $alleFormationen = $formationObj->getAll(true);
+} else {
+    $fids = Session::getFormationIds();
+    $alleFormationen = [];
+    foreach ($fids as $fid) {
+        $f = $formationObj->getById($fid);
+        if ($f && $f['aktiv']) $alleFormationen[] = $f;
+    }
+}
 
 $id = $_GET['id'] ?? null;
 $isEdit = !empty($id);
@@ -28,19 +41,20 @@ if ($isEdit) {
 // Formular verarbeiten
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = [
-        'titel' => $_POST['titel'],
-        'beschreibung' => $_POST['beschreibung'] ?? null,
-        'typ' => $_POST['typ'],
-        'start_datum' => $_POST['start_datum'],
-        'ende_datum' => $_POST['ende_datum'] ?? null,
-        'ganztaegig' => isset($_POST['ganztaegig']) ? 1 : 0,
-        'ort' => $_POST['ort'] ?? null,
-        'adresse' => $_POST['adresse'] ?? null,
-        'treffpunkt' => $_POST['treffpunkt'] ?? null,
+        'formation_id'   => !empty($_POST['formation_id']) ? (int)$_POST['formation_id'] : null,
+        'titel'          => $_POST['titel'],
+        'beschreibung'   => $_POST['beschreibung'] ?? null,
+        'typ'            => $_POST['typ'],
+        'start_datum'    => $_POST['start_datum'],
+        'ende_datum'     => $_POST['ende_datum'] ?? null,
+        'ganztaegig'     => isset($_POST['ganztaegig']) ? 1 : 0,
+        'ort'            => $_POST['ort'] ?? null,
+        'adresse'        => $_POST['adresse'] ?? null,
+        'treffpunkt'     => $_POST['treffpunkt'] ?? null,
         'treffpunkt_zeit' => $_POST['treffpunkt_zeit'] ?? null,
-        'uniform' => isset($_POST['uniform']) ? 1 : 0,
-        'notizen' => $_POST['notizen'] ?? null,
-        'status' => $_POST['status'] ?? 'geplant'
+        'uniform'        => isset($_POST['uniform']) ? 1 : 0,
+        'notizen'        => $_POST['notizen'] ?? null,
+        'status'         => $_POST['status'] ?? 'geplant'
     ];
     
     try {
@@ -102,6 +116,27 @@ include 'includes/header.php';
                 </div>
             </div>
             
+            <?php if (!empty($alleFormationen)): ?>
+            <div class="mb-3">
+                <label for="formation_id" class="form-label">Formation</label>
+                <select class="form-select" id="formation_id" name="formation_id">
+                    <?php if (Session::isAdmin()): ?>
+                    <option value="">– Alle Formationen –</option>
+                    <?php endif; ?>
+                    <?php
+                    $selFormationId = $ausrueckung['formation_id'] ?? Session::getFormationId();
+                    foreach ($alleFormationen as $f):
+                    ?>
+                    <option value="<?php echo $f['id']; ?>"
+                        <?php echo $selFormationId == $f['id'] ? 'selected' : ''; ?>>
+                        <?php echo htmlspecialchars($f['name']); ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+                <div class="form-text">Nur Mitglieder dieser Formation werden zur Anwesenheit eingeladen.</div>
+            </div>
+            <?php endif; ?>
+
             <div class="row">
                 <!-- Start Datum/Zeit -->
                 <div class="col-md-6 mb-3">

@@ -11,34 +11,54 @@ class Ausrueckung {
     public function getAll($filter = []) {
         $where = [];
         $params = [];
-        
+
+        // Formations-Filter aus Session
+        $formFilter = Formation::getFilterCondition(Session::getFormationId(), 'a');
+        if ($formFilter['condition']) {
+            $where[]  = $formFilter['condition'];
+            $params   = array_merge($params, $formFilter['params']);
+        }
+
         if (!empty($filter['typ'])) {
-            $where[] = "typ = ?";
+            $where[] = "a.typ = ?";
             $params[] = $filter['typ'];
         }
-        
+
         if (!empty($filter['von_datum'])) {
-            $where[] = "start_datum >= ?";
+            $where[] = "a.start_datum >= ?";
             $params[] = $filter['von_datum'];
         }
-        
+
         if (!empty($filter['bis_datum'])) {
-            $where[] = "start_datum <= ?";
+            $where[] = "a.start_datum <= ?";
             $params[] = $filter['bis_datum'];
         }
-        
+
         if (!empty($filter['status'])) {
-            $where[] = "status = ?";
+            $where[] = "a.status = ?";
             $params[] = $filter['status'];
         }
-        
+
         $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
         
+        // Die Subqueries zählen pro Mitglied nur den neuesten Eintrag (MAX id)
         $sql = "SELECT a.*, b.benutzername as erstellt_von_name,
-                (SELECT COUNT(*) FROM anwesenheit WHERE ausrueckung_id = a.id AND status = 'zugesagt') as zugesagt,
-                (SELECT COUNT(*) FROM anwesenheit WHERE ausrueckung_id = a.id AND status = 'abgesagt') as abgesagt
+                f.name as formation_name, f.farbe as formation_farbe, f.kuerzel as formation_kuerzel,
+                (SELECT COUNT(*) FROM anwesenheit an
+                 WHERE an.ausrueckung_id = a.id AND an.status = 'zugesagt'
+                   AND an.id = (SELECT MAX(id) FROM anwesenheit WHERE ausrueckung_id = a.id AND mitglied_id = an.mitglied_id)
+                ) as zugesagt,
+                (SELECT COUNT(*) FROM anwesenheit an
+                 WHERE an.ausrueckung_id = a.id AND an.status = 'abgesagt'
+                   AND an.id = (SELECT MAX(id) FROM anwesenheit WHERE ausrueckung_id = a.id AND mitglied_id = an.mitglied_id)
+                ) as abgesagt,
+                (SELECT COUNT(*) FROM anwesenheit an
+                 WHERE an.ausrueckung_id = a.id AND an.status = 'ungewiss'
+                   AND an.id = (SELECT MAX(id) FROM anwesenheit WHERE ausrueckung_id = a.id AND mitglied_id = an.mitglied_id)
+                ) as ungewiss
                 FROM ausrueckungen a
                 LEFT JOIN benutzer b ON a.erstellt_von = b.id
+                LEFT JOIN formationen f ON a.formation_id = f.id
                 {$whereClause}
                 ORDER BY a.start_datum DESC";
         
@@ -54,14 +74,26 @@ class Ausrueckung {
     }
     
     public function getKalenderEvents($start, $end) {
-        $sql = "SELECT id, titel, start_datum, ende_datum, 
-                typ, status, ganztaegig, ort, beschreibung, treffpunkt, 
+        $params = [$start, $end];
+        $andFormation = '';
+        $formFilter = Formation::getFilterCondition(Session::getFormationId());
+        if ($formFilter['condition']) {
+            $andFormation = ' AND ' . $formFilter['condition'];
+            $params = array_merge([$formFilter['params'][0]], $params, array_slice($formFilter['params'], 1));
+            // Reorder: formation params must come before positional ? placeholders
+            // Simpler: append at end
+            $params = [$start, $end, $formFilter['params'][0]];
+            $andFormation = ' AND ' . $formFilter['condition'];
+        }
+
+        $sql = "SELECT id, titel, start_datum, ende_datum,
+                typ, status, ganztaegig, ort, beschreibung, treffpunkt,
                 treffpunkt_zeit, uniform, notizen, adresse
-                FROM ausrueckungen 
-                WHERE start_datum BETWEEN ? AND ?
+                FROM ausrueckungen
+                WHERE start_datum BETWEEN ? AND ?{$andFormation}
                 ORDER BY start_datum";
-        
-        $ausrueckungen = $this->db->fetchAll($sql, [$start, $end]);
+
+        $ausrueckungen = $this->db->fetchAll($sql, $params);
         
         // Formatiere für FullCalendar
         $events = [];
@@ -108,13 +140,16 @@ class Ausrueckung {
     }
     
     public function create($data) {
+        $formationId = $data['formation_id'] ?? Session::getFormationId();
+
         $sql = "INSERT INTO ausrueckungen (
-                    titel, beschreibung, typ, start_datum, ende_datum, ganztaegig,
+                    formation_id, titel, beschreibung, typ, start_datum, ende_datum, ganztaegig,
                     ort, adresse, treffpunkt, treffpunkt_zeit, uniform, notizen,
                     status, erstellt_von
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
         $params = [
+            $formationId,
             $data['titel'],
             $data['beschreibung'] ?? null,
             $data['typ'],
@@ -130,29 +165,33 @@ class Ausrueckung {
             $data['status'] ?? 'geplant',
             Session::getUserId()
         ];
-        
+
         $this->db->execute($sql, $params);
         $id = $this->db->lastInsertId();
-        
-        // Google Calendar Event erstellen
+
         if (GOOGLE_CALENDAR_ENABLED && !empty($data['google_sync'])) {
             $this->syncToGoogleCalendar($id);
         }
-        
-        // Automatisch alle aktiven Mitglieder hinzufügen
-        $this->addAllActiveMembers($id);
-        
+
+        $this->addAllActiveMembers($id, $formationId);
+
         return $id;
     }
     
     public function update($id, $data) {
-        $sql = "UPDATE ausrueckungen SET 
-                titel = ?, beschreibung = ?, typ = ?, start_datum = ?, ende_datum = ?, ganztaegig = ?,
+        $sql = "UPDATE ausrueckungen SET
+                formation_id = ?, titel = ?, beschreibung = ?, typ = ?, start_datum = ?, ende_datum = ?, ganztaegig = ?,
                 ort = ?, adresse = ?, treffpunkt = ?, treffpunkt_zeit = ?, uniform = ?, notizen = ?,
                 status = ?
                 WHERE id = ?";
-        
+
+        // formation_id: explizit aus $data, sonst aus Session, sonst unverändert lassen
+        $formationId = array_key_exists('formation_id', $data)
+            ? ($data['formation_id'] ?: null)
+            : Session::getFormationId();
+
         $params = [
+            $formationId,
             $data['titel'],
             $data['beschreibung'] ?? null,
             $data['typ'],
@@ -190,19 +229,54 @@ class Ausrueckung {
     }
     
     public function getAnwesenheit($ausrueckungId) {
+        // GROUP BY mitglied_id + MAX(id) stellt sicher, dass jedes Mitglied
+        // nur einmal erscheint (neuester Eintrag), auch wenn Duplikate in der DB sind
         $sql = "SELECT a.*, m.vorname, m.nachname, m.mitgliedsnummer
                 FROM anwesenheit a
                 JOIN mitglieder m ON a.mitglied_id = m.id
+                INNER JOIN (
+                    SELECT mitglied_id, MAX(id) as max_id
+                    FROM anwesenheit
+                    WHERE ausrueckung_id = ?
+                    GROUP BY mitglied_id
+                ) latest ON a.id = latest.max_id AND a.mitglied_id = latest.mitglied_id
                 WHERE a.ausrueckung_id = ?
                 ORDER BY m.nachname, m.vorname";
-        return $this->db->fetchAll($sql, [$ausrueckungId]);
+        return $this->db->fetchAll($sql, [$ausrueckungId, $ausrueckungId]);
     }
     
+    public function getAnwesenheitNachRegister($ausrueckungId) {
+        $sql = "SELECT r.id as register_id, r.name as register_name, r.sortierung,
+                COUNT(CASE WHEN an.status = 'zugesagt' THEN 1 END) as zugesagt,
+                COUNT(CASE WHEN an.status = 'abgesagt' THEN 1 END) as abgesagt,
+                COUNT(CASE WHEN an.status = 'ungewiss' THEN 1 END) as ungewiss,
+                COUNT(CASE WHEN an.status IN ('keine_antwort') OR an.status IS NULL THEN 1 END) as keine_antwort
+                FROM register r
+                LEFT JOIN mitglieder m ON m.register_id = r.id AND m.status = 'aktiv'
+                LEFT JOIN anwesenheit an ON an.mitglied_id = m.id AND an.ausrueckung_id = ?
+                GROUP BY r.id, r.name, r.sortierung
+                ORDER BY r.sortierung";
+        return $this->db->fetchAll($sql, [$ausrueckungId]);
+    }
+
     public function setAnwesenheit($ausrueckungId, $mitgliedId, $status, $grund = null) {
-        $sql = "INSERT INTO anwesenheit (ausrueckung_id, mitglied_id, status, grund, gemeldet_am)
-                VALUES (?, ?, ?, ?, NOW())
-                ON DUPLICATE KEY UPDATE status = ?, grund = ?, gemeldet_am = NOW()";
-        return $this->db->execute($sql, [$ausrueckungId, $mitgliedId, $status, $grund, $status, $grund]);
+        // Prüfen ob bereits ein Eintrag existiert
+        $existing = $this->db->fetchOne(
+            "SELECT id FROM anwesenheit WHERE ausrueckung_id = ? AND mitglied_id = ?",
+            [$ausrueckungId, $mitgliedId]
+        );
+
+        if ($existing) {
+            // Update des bestehenden Eintrags
+            $sql = "UPDATE anwesenheit SET status = ?, grund = ?, gemeldet_am = NOW()
+                    WHERE ausrueckung_id = ? AND mitglied_id = ?";
+            return $this->db->execute($sql, [$status, $grund, $ausrueckungId, $mitgliedId]);
+        } else {
+            // Neuen Eintrag erstellen
+            $sql = "INSERT INTO anwesenheit (ausrueckung_id, mitglied_id, status, grund, gemeldet_am)
+                    VALUES (?, ?, ?, ?, NOW())";
+            return $this->db->execute($sql, [$ausrueckungId, $mitgliedId, $status, $grund]);
+        }
     }
     
     public function getNoten($ausrueckungId) {
@@ -225,11 +299,18 @@ class Ausrueckung {
         return $this->db->execute($sql, [$id]);
     }
     
-    private function addAllActiveMembers($ausrueckungId) {
+    private function addAllActiveMembers($ausrueckungId, $formationId = null) {
+        if ($formationId) {
+            $sql = "INSERT INTO anwesenheit (ausrueckung_id, mitglied_id, status)
+                    SELECT ?, m.id, 'keine_antwort'
+                    FROM mitglieder m
+                    JOIN mitglied_formationen mf ON mf.mitglied_id = m.id
+                    WHERE m.status = 'aktiv' AND mf.formation_id = ?";
+            return $this->db->execute($sql, [$ausrueckungId, $formationId]);
+        }
         $sql = "INSERT INTO anwesenheit (ausrueckung_id, mitglied_id, status)
                 SELECT ?, id, 'keine_antwort'
-                FROM mitglieder
-                WHERE status = 'aktiv'";
+                FROM mitglieder WHERE status = 'aktiv'";
         return $this->db->execute($sql, [$ausrueckungId]);
     }
     
@@ -316,10 +397,18 @@ class Ausrueckung {
     }
     
     public function getUpcoming($limit = 5) {
-        $sql = "SELECT * FROM ausrueckungen 
-                WHERE start_datum >= CURDATE() AND status != 'abgesagt'
-                ORDER BY start_datum 
+        $params = [];
+        $andFormation = '';
+        $formFilter = Formation::getFilterCondition(Session::getFormationId());
+        if ($formFilter['condition']) {
+            $andFormation = ' AND ' . $formFilter['condition'];
+            $params = $formFilter['params'];
+        }
+        $params[] = $limit;
+        $sql = "SELECT * FROM ausrueckungen
+                WHERE start_datum >= CURDATE() AND status != 'abgesagt'{$andFormation}
+                ORDER BY start_datum
                 LIMIT ?";
-        return $this->db->fetchAll($sql, [$limit]);
+        return $this->db->fetchAll($sql, $params);
     }
 }

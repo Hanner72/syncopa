@@ -11,30 +11,42 @@ $db = Database::getInstance();
 $jahr = $_GET['jahr'] ?? date('Y');
 $typ = $_GET['typ'] ?? '';
 
+// Formations-Filter
+$formFilter = Formation::getFilterCondition(Session::getFormationId(), 'f');
+
 // Statistiken
-$einnahmen = $db->fetchOne("SELECT SUM(betrag) as total FROM finanzen WHERE typ = 'einnahme' AND YEAR(datum) = ?", [$jahr]);
-$ausgaben = $db->fetchOne("SELECT SUM(betrag) as total FROM finanzen WHERE typ = 'ausgabe' AND YEAR(datum) = ?", [$jahr]);
+$statParams = [$jahr];
+$statFormAnd = '';
+if ($formFilter['condition']) {
+    $statFormAnd = ' AND ' . $formFilter['condition'];
+    $statParams = array_merge($formFilter['params'], $statParams);
+}
+$einnahmen = $db->fetchOne("SELECT SUM(betrag) as total FROM finanzen f WHERE typ = 'einnahme' AND YEAR(datum) = ?{$statFormAnd}", array_merge([$jahr], $formFilter['params']));
+$ausgaben  = $db->fetchOne("SELECT SUM(betrag) as total FROM finanzen f WHERE typ = 'ausgabe'  AND YEAR(datum) = ?{$statFormAnd}", array_merge([$jahr], $formFilter['params']));
 $saldo = ($einnahmen['total'] ?? 0) - ($ausgaben['total'] ?? 0);
 
-// Mitgliedsbeiträge
+// Mitgliedsbeiträge (nicht formations-gefiltert – Beiträge gehören zum Gesamtverein)
 $beitraege = $db->fetchAll("
-    SELECT b.*, m.vorname, m.nachname, m.mitgliedsnummer 
+    SELECT b.*, m.vorname, m.nachname, m.mitgliedsnummer
     FROM beitraege b
     JOIN mitglieder m ON b.mitglied_id = m.id
     WHERE b.jahr = ?
     ORDER BY b.bezahlt, m.nachname
 ", [$jahr]);
 
-$beitraege_offen = count(array_filter($beitraege, fn($b) => !$b['bezahlt']));
-$beitraege_summe = array_sum(array_column($beitraege, 'betrag'));
+$beitraege_offen         = count(array_filter($beitraege, fn($b) => !$b['bezahlt']));
+$beitraege_summe         = array_sum(array_column($beitraege, 'betrag'));
 $beitraege_bezahlt_summe = array_sum(array_map(fn($b) => $b['bezahlt'] ? $b['betrag'] : 0, $beitraege));
 
 // Transaktionen
-$where = ["YEAR(datum) = ?"];
+$where  = ["YEAR(f.datum) = ?"];
 $params = [$jahr];
-
+if ($formFilter['condition']) {
+    $where  = array_merge([$formFilter['condition']], $where);
+    $params = array_merge($formFilter['params'], $params);
+}
 if ($typ) {
-    $where[] = "typ = ?";
+    $where[]  = "f.typ = ?";
     $params[] = $typ;
 }
 

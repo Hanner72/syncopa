@@ -11,17 +11,28 @@ class Mitglied {
     public function getAll($filter = []) {
         $where = [];
         $params = [];
-        
+        $joinFormation = '';
+
+        // Formations-Filter: nur Mitglieder dieser Formation anzeigen
+        $formationId = Session::getFormationId();
+        $registerNameSelect = 'r.name as register_name';
+        if ($formationId !== null) {
+            $joinFormation = "JOIN mitglied_formationen mf_filter ON mf_filter.mitglied_id = m.id AND mf_filter.formation_id = ?
+                              LEFT JOIN register r_form ON mf_filter.register_id = r_form.id";
+            $registerNameSelect = 'COALESCE(r_form.name, r.name) as register_name';
+            array_unshift($params, $formationId);
+        }
+
         if (!empty($filter['status'])) {
             $where[] = "m.status = ?";
             $params[] = $filter['status'];
         }
-        
+
         if (!empty($filter['register'])) {
             $where[] = "m.register_id = ?";
             $params[] = $filter['register'];
         }
-        
+
         if (!empty($filter['search'])) {
             $where[] = "(m.vorname LIKE ? OR m.nachname LIKE ? OR m.mitgliedsnummer LIKE ?)";
             $searchTerm = "%{$filter['search']}%";
@@ -29,18 +40,18 @@ class Mitglied {
             $params[] = $searchTerm;
             $params[] = $searchTerm;
         }
-        
+
         $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
         
-        // Instrumente als Subquery mitzählen und als Liste holen
-        $sql = "SELECT m.*, r.name as register_name,
+        $sql = "SELECT m.*, {$registerNameSelect},
                 (SELECT COUNT(*) FROM mitglied_instrumente mi WHERE mi.mitglied_id = m.id) as instrumente_anzahl,
                 (SELECT GROUP_CONCAT(it.name ORDER BY mi2.hauptinstrument DESC SEPARATOR ', ')
-                 FROM mitglied_instrumente mi2 
-                 JOIN instrument_typen it ON mi2.instrument_typ_id = it.id 
+                 FROM mitglied_instrumente mi2
+                 JOIN instrument_typen it ON mi2.instrument_typ_id = it.id
                  WHERE mi2.mitglied_id = m.id) as instrumente_liste
-                FROM mitglieder m 
-                LEFT JOIN register r ON m.register_id = r.id 
+                FROM mitglieder m
+                LEFT JOIN register r ON m.register_id = r.id
+                {$joinFormation}
                 {$whereClause}
                 ORDER BY m.nachname, m.vorname";
         
@@ -124,24 +135,31 @@ class Mitglied {
         return $this->db->execute($sql, [$id]);
     }
     
-    public function getInstrumente($mitgliedId) {
-        $sql = "SELECT mi.*, it.name as instrument_name, r.name as register_name
+    public function getInstrumente($mitgliedId, $formationId = null) {
+        $params = [$mitgliedId];
+        $whereFormation = '';
+        if ($formationId !== null) {
+            $whereFormation = "AND (mi.formation_id = ? OR mi.formation_id IS NULL)";
+            $params[] = $formationId;
+        }
+        $sql = "SELECT mi.*, it.name as instrument_name, r.name as register_name,
+                       f.name as formation_name, f.farbe as formation_farbe, f.kuerzel as formation_kuerzel
                 FROM mitglied_instrumente mi
                 JOIN instrument_typen it ON mi.instrument_typ_id = it.id
                 LEFT JOIN register r ON it.register_id = r.id
-                WHERE mi.mitglied_id = ?
+                LEFT JOIN formationen f ON mi.formation_id = f.id
+                WHERE mi.mitglied_id = ? {$whereFormation}
                 ORDER BY mi.hauptinstrument DESC, it.name";
-        return $this->db->fetchAll($sql, [$mitgliedId]);
+        return $this->db->fetchAll($sql, $params);
     }
-    
-    public function addInstrument($mitgliedId, $instrumentTypId, $hauptinstrument = false, $seitDatum = null) {
-        // Wenn kein Datum angegeben, heutiges Datum verwenden
+
+    public function addInstrument($mitgliedId, $instrumentTypId, $hauptinstrument = false, $seitDatum = null, $formationId = null) {
         if (empty($seitDatum)) {
             $seitDatum = date('Y-m-d');
         }
-        $sql = "INSERT INTO mitglied_instrumente (mitglied_id, instrument_typ_id, hauptinstrument, seit_datum)
-                VALUES (?, ?, ?, ?)";
-        return $this->db->execute($sql, [$mitgliedId, $instrumentTypId, $hauptinstrument, $seitDatum]);
+        $sql = "INSERT INTO mitglied_instrumente (mitglied_id, instrument_typ_id, hauptinstrument, seit_datum, formation_id)
+                VALUES (?, ?, ?, ?, ?)";
+        return $this->db->execute($sql, [$mitgliedId, $instrumentTypId, $hauptinstrument, $seitDatum, $formationId ?: null]);
     }
     
     public function removeInstrument($id) {
@@ -151,33 +169,47 @@ class Mitglied {
     
     public function getStatistik() {
         $stats = [];
-        
+        $formationId = Session::getFormationId();
+
+        // JOIN-Snippet für optionalen Formationsfilter
+        $joinF  = $formationId ? "JOIN mitglied_formationen mf_s ON mf_s.mitglied_id = m.id AND mf_s.formation_id = {$formationId}" : '';
+        $joinF2 = $formationId ? "JOIN mitglied_formationen mf_s ON mf_s.mitglied_id = m.id AND mf_s.formation_id = {$formationId}" : '';
+
         // Gesamtanzahl
-        $sql = "SELECT COUNT(*) as total FROM mitglieder WHERE status = 'aktiv'";
+        $sql = "SELECT COUNT(*) as total FROM mitglieder m {$joinF} WHERE m.status = 'aktiv'";
         $result = $this->db->fetchOne($sql);
         $stats['total'] = $result['total'];
-        
+
         // Nach Register
-        $sql = "SELECT r.name, COUNT(m.id) as anzahl 
-                FROM register r 
-                LEFT JOIN mitglieder m ON r.id = m.register_id AND m.status = 'aktiv'
-                GROUP BY r.id, r.name
-                ORDER BY r.sortierung";
+        if ($formationId) {
+            $sql = "SELECT r.name, COUNT(mf_s.mitglied_id) as anzahl
+                    FROM register r
+                    LEFT JOIN mitglieder m ON r.id = m.register_id AND m.status = 'aktiv'
+                    LEFT JOIN mitglied_formationen mf_s ON mf_s.mitglied_id = m.id AND mf_s.formation_id = {$formationId}
+                    GROUP BY r.id, r.name
+                    ORDER BY r.sortierung";
+        } else {
+            $sql = "SELECT r.name, COUNT(m.id) as anzahl
+                    FROM register r
+                    LEFT JOIN mitglieder m ON r.id = m.register_id AND m.status = 'aktiv'
+                    GROUP BY r.id, r.name
+                    ORDER BY r.sortierung";
+        }
         $stats['register'] = $this->db->fetchAll($sql);
-        
+
         // Nach Status
-        $sql = "SELECT status, COUNT(*) as anzahl 
-                FROM mitglieder 
-                GROUP BY status";
+        $sql = "SELECT m.status, COUNT(*) as anzahl
+                FROM mitglieder m {$joinF2}
+                GROUP BY m.status";
         $stats['status'] = $this->db->fetchAll($sql);
-        
+
         // Durchschnittsalter
-        $sql = "SELECT AVG(YEAR(CURDATE()) - YEAR(geburtsdatum)) as durchschnittsalter 
-                FROM mitglieder 
-                WHERE status = 'aktiv' AND geburtsdatum IS NOT NULL";
+        $sql = "SELECT AVG(YEAR(CURDATE()) - YEAR(m.geburtsdatum)) as durchschnittsalter
+                FROM mitglieder m {$joinF}
+                WHERE m.status = 'aktiv' AND m.geburtsdatum IS NOT NULL";
         $result = $this->db->fetchOne($sql);
         $stats['durchschnittsalter'] = round($result['durchschnittsalter'] ?? 0);
-        
+
         return $stats;
     }
     

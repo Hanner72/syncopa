@@ -27,6 +27,28 @@ if ($isEdit) {
 // Register laden
 $register = $db->fetchAll("SELECT * FROM register ORDER BY sortierung");
 
+// Formationsspezifisches Register
+$activeFormationId = Session::getFormationId();
+$activeFormation   = null;
+$formationRegister = null;
+if ($activeFormationId) {
+    try {
+        $activeFormation = (new Formation())->getById($activeFormationId);
+    } catch (\Throwable $e) {}
+    if ($isEdit) {
+        $mfRow = $db->fetchOne(
+            "SELECT register_id FROM mitglied_formationen WHERE mitglied_id = ? AND formation_id = ?",
+            [$id, $activeFormationId]
+        );
+        $formationRegister = $mfRow['register_id'] ?? null;
+    }
+}
+
+// Nummernkreis: nächste Mitgliedsnummer vorberechnen
+require_once __DIR__ . '/classes/Nummernkreis.php';
+$nkObj = new Nummernkreis();
+$naechsteMitgliedsnummer = $nkObj->naechsteNummer('mitglieder');
+
 // Formular verarbeiten
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = [
@@ -47,13 +69,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
     
     if (!$isEdit) {
-        $data['mitgliedsnummer'] = $_POST['mitgliedsnummer'] ?? null;
+        $data['mitgliedsnummer'] = trim($_POST['mitgliedsnummer'] ?? '');
+        // Leer → automatisch aus Nummernkreis
+        if ($data['mitgliedsnummer'] === '') {
+            $data['mitgliedsnummer'] = $nkObj->naechsteNummer('mitglieder');
+        }
         $data['eintritt_datum'] = $_POST['eintritt_datum'] ?? date('Y-m-d');
     }
     
     try {
         if ($isEdit) {
             $mitgliedObj->update($id, $data);
+            // Formationsspezifisches Register speichern
+            if ($activeFormationId) {
+                $formRegId = !empty($_POST['formation_register_id']) ? (int)$_POST['formation_register_id'] : null;
+                $db->execute(
+                    "UPDATE mitglied_formationen SET register_id = ? WHERE mitglied_id = ? AND formation_id = ?",
+                    [$formRegId, $id, $activeFormationId]
+                );
+            }
             Session::setFlashMessage('success', 'Mitglied erfolgreich aktualisiert');
         } else {
             $id = $mitgliedObj->create($data);
@@ -113,8 +147,8 @@ include 'includes/header.php';
                             <label for="mitgliedsnummer" class="form-label">Mitgliedsnummer</label>
                             <input type="text" class="form-control" id="mitgliedsnummer" name="mitgliedsnummer" 
                                    value="<?php echo htmlspecialchars($mitglied['mitgliedsnummer'] ?? ''); ?>"
-                                   placeholder="Automatisch">
-                            <small class="text-muted">Leer lassen für automatische Vergabe</small>
+                                   placeholder="<?php echo htmlspecialchars($naechsteMitgliedsnummer); ?>">
+                            <small class="text-muted">Leer lassen für automatische Vergabe (nächste: <strong><?php echo htmlspecialchars($naechsteMitgliedsnummer); ?></strong>)</small>
                         </div>
                         <?php endif; ?>
                         
@@ -219,17 +253,44 @@ include 'includes/header.php';
                     <?php endif; ?>
                     
                     <div class="mb-3">
-                        <label for="register_id" class="form-label">Register</label>
+                        <label for="register_id" class="form-label">
+                            Register
+                            <?php if ($activeFormation): ?>
+                            <small class="text-muted">(Standard / formationsübergreifend)</small>
+                            <?php endif; ?>
+                        </label>
                         <select class="form-select" id="register_id" name="register_id">
                             <option value="">Kein Register</option>
                             <?php foreach ($register as $reg): ?>
-                            <option value="<?php echo $reg['id']; ?>" 
+                            <option value="<?php echo $reg['id']; ?>"
                                     <?php echo ($mitglied['register_id'] ?? '') == $reg['id'] ? 'selected' : ''; ?>>
                                 <?php echo htmlspecialchars($reg['name']); ?>
                             </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
+
+                    <?php if ($activeFormation && $isEdit): ?>
+                    <div class="mb-3">
+                        <label for="formation_register_id" class="form-label">
+                            Register in
+                            <span class="badge ms-1" style="background-color:<?php echo htmlspecialchars($activeFormation['farbe']); ?>;color:#fff">
+                                <?php echo htmlspecialchars($activeFormation['kuerzel'] ?: $activeFormation['name']); ?>
+                            </span>
+                            <?php echo htmlspecialchars($activeFormation['name']); ?>
+                        </label>
+                        <select class="form-select" id="formation_register_id" name="formation_register_id">
+                            <option value="">– Standard verwenden –</option>
+                            <?php foreach ($register as $reg): ?>
+                            <option value="<?php echo $reg['id']; ?>"
+                                    <?php echo ($formationRegister ?? '') == $reg['id'] ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($reg['name']); ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="text-muted">Überschreibt das Standard-Register nur für diese Formation.</small>
+                    </div>
+                    <?php endif; ?>
                     
                     <div class="mb-3">
                         <label for="status" class="form-label">Status</label>
