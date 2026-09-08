@@ -20,15 +20,17 @@ Die Übersicht zeigt alle Ausrückungen mit:
 | Typ | Typ der Veranstaltung |
 | Ort | Veranstaltungsort |
 | Status | `geplant` · `bestätigt` · `abgesagt` |
-| Anwesenheit | Anzahl zugesagt / abgesagt / offen |
-| | `ja` · `vielleicht` · `nein` |
+| Formation | Zeigt (falls vergeben) das farbige Kürzel der zugehörigen Formation |
+| Anwesenheit | Anzahl zugesagt / ungewiss / abgesagt, direkt daneben eigene An-/Abmelde-Buttons |
 | Aktionen | Detail · Bearbeiten · Löschen |
 
 ### Filter
 
-- **Typen:** Filter nach den Typen der Ausrückung
-- **Zeitraum:** Vergangene / aktuelle / zukünftige Ausrückungen
+- **Typen:** Filter nach den Typen der Ausrückung (Probe, Konzert, Ausrückung, Fest, Wertung, Sonstiges)
+- **Zeitraum:** Von/Bis-Datum eingrenzen
 - **Status:** Nach Planungsstatus filtern
+
+> 💡 **Tipp:** Ist oben in der Kopfzeile eine Formation aktiv, werden hier automatisch nur die Ausrückungen **dieser Formation** angezeigt (plus formationsübergreifende Ausrückungen ohne Formationszuordnung). Mehr dazu: → [Formationen](formationen.md)
 
 ---
 
@@ -55,8 +57,22 @@ Die Übersicht zeigt alle Ausrückungen mit:
 | Ort | – | Veranstaltungsort |
 | Adresse | – | Detaillierte Adresse |
 | Status | ✅ | geplant / bestätigt / abgesagt |
+| Formation | – | Nur sichtbar, wenn Formationen angelegt sind. Legt fest, welche Mitglieder zur Anwesenheit eingeladen werden (siehe unten). Leer = für alle Formationen |
 | Beschreibung | – | Weitere Informationen |
 | Uniform | – | Kleiderordnung für diesen Termin |
+| Treffpunkt / Treffpunkt-Uhrzeit | – | Vorankunft für Aufbau etc. |
+| Notizen | – | Interne Anmerkungen, nicht öffentlich sichtbar |
+
+> 💡 **Tipp:** Ist oben in der Kopfzeile eine Formation aktiv, wird sie beim Anlegen automatisch als Formation der neuen Ausrückung vorausgewählt.
+
+### Automatische Anwesenheitsliste
+
+Beim **Speichern einer neuen Ausrückung** legt Syncopa automatisch für jedes betroffene Mitglied einen Anwesenheits-Eintrag mit Status „keine Antwort" an:
+
+- Ist der Ausrückung eine **Formation** zugeordnet, werden nur die **aktiven Mitglieder dieser Formation** eingetragen.
+- Ist **keine Formation** zugeordnet, werden **alle aktiven Mitglieder** des Vereins eingetragen.
+
+Dadurch muss niemand die Anmeldeliste manuell befüllen – jedes betroffene Mitglied kann sofort auf der Übersichtsseite zu- oder absagen.
 
 ---
 
@@ -130,10 +146,12 @@ Es kann zwischen 1. "Ausrückungen abonnieren" und 2. "Ausrückungen + Termine" 
 2. Klicke auf **Kalender hinzufügen → Aus dem Internet**
 3. Füge die iCal-URL ein → **OK**
 
+> ℹ️ **Hinweis:** Eine direkte Synchronisation mit **Google Calendar** (automatisches Anlegen/Ändern von Google-Kalender-Einträgen durch Syncopa selbst) ist im System als Option vorbereitet, aber standardmäßig deaktiviert und für den produktiven Einsatz noch nicht fertiggestellt. Für den Kalenderabgleich mit Google, Apple oder Outlook wird aktuell der iCal-Abo-Link oben verwendet – das funktioniert zuverlässig in alle Richtungen.
+
 ---
 
 ## Kalendervorschau
 
 **Datei:** `kalender_vorschau.php`
 
-Die Vorschau zeigt eine **öffentlich zugängliche** Ansicht des Kalenders (ohne Login), die z.B. auf der Vereinswebsite eingebettet werden kann.
+Die Vorschau zeigt eine Liste aller zukünftigen Ausrückungen, die im iCal-Export enthalten sind – praktisch, um vor dem Abonnieren zu prüfen, ob alle erwarteten Termine dabei sind.

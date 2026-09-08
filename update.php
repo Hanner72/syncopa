@@ -10,6 +10,60 @@ if (!Session::isAdmin()) {
     exit;
 }
 
+$changelogPath = BASE_PATH . '/docs/changelog.md';
+$changelogContent = file_exists($changelogPath) ? file_get_contents($changelogPath) : '';
+
+/**
+ * Minimaler Markdown-Renderer für das Changelog (Überschriften, verschachtelte Listen, **fett**, `code`).
+ */
+function renderChangelogMarkdown(string $md): string {
+    $inline = function(string $text): string {
+        $text = htmlspecialchars($text);
+        $text = preg_replace('/`([^`]+)`/', '<code>$1</code>', $text);
+        $text = preg_replace('/\*\*([^*]+)\*\*/', '<strong>$1</strong>', $text);
+        return $text;
+    };
+
+    $html = '';
+    $listStack = [];
+    $closeListsTo = function(int $level) use (&$listStack, &$html) {
+        while (count($listStack) > $level) {
+            $html .= '</ul>';
+            array_pop($listStack);
+        }
+    };
+
+    foreach (explode("\n", $md) as $line) {
+        if (trim($line) === '') continue;
+
+        if (preg_match('/^###\s+(.*)$/', $line, $m)) {
+            $closeListsTo(0);
+            $html .= '<div class="fw-semibold text-muted text-uppercase mt-2 mb-1" style="font-size:11px;letter-spacing:.5px">' . $inline($m[1]) . '</div>';
+        } elseif (preg_match('/^##\s+(.*)$/', $line, $m)) {
+            $closeListsTo(0);
+            $html .= '<div class="fw-bold mt-3 mb-1" style="font-size:14px">' . $inline($m[1]) . '</div>';
+        } elseif (preg_match('/^#\s+(.*)$/', $line, $m)) {
+            $closeListsTo(0);
+            $html .= '<div class="fw-bold mt-3 mb-1" style="font-size:16px">' . $inline($m[1]) . '</div>';
+        } elseif (preg_match('/^(\s*)[-*]\s+(.*)$/', $line, $m)) {
+            $level = intdiv(strlen($m[1]), 2);
+            while (count($listStack) <= $level) {
+                $html .= '<ul class="mb-1 ps-3">';
+                $listStack[] = $level;
+            }
+            $closeListsTo($level + 1);
+            // </li> bewusst weggelassen: HTML5 schließt es automatisch,
+            // dadurch landet ein verschachteltes <ul> korrekt innerhalb des Eltern-<li>
+            $html .= '<li>' . $inline($m[2]);
+        } else {
+            $closeListsTo(0);
+            $html .= '<div class="mb-1">' . $inline($line) . '</div>';
+        }
+    }
+    $closeListsTo(0);
+    return $html;
+}
+
 include 'includes/header.php';
 ?>
 
@@ -103,6 +157,25 @@ include 'includes/header.php';
         <pre id="update-log" class="m-0 p-3" style="background:#1e1e1e;color:#d4d4d4;font-size:13px;border-radius:0 0 .375rem .375rem;min-height:80px;white-space:pre-wrap"></pre>
     </div>
     <div id="update-result" class="card-footer" style="display:none"></div>
+</div>
+
+<!-- Vollständiges Changelog -->
+<div class="card mt-3">
+    <div class="card-header">
+        <button class="btn btn-link text-decoration-none p-0 w-100 text-start d-flex justify-content-between align-items-center" type="button" data-bs-toggle="collapse" data-bs-target="#changelogCollapse">
+            <span><i class="bi bi-journal-text me-2"></i>Vollständiges Changelog</span>
+            <i class="bi bi-chevron-down"></i>
+        </button>
+    </div>
+    <div class="collapse" id="changelogCollapse">
+        <div class="card-body" style="font-size:13px;line-height:1.6;max-height:500px;overflow-y:auto">
+            <?php
+            echo $changelogContent === ''
+                ? '<span class="text-muted">Changelog konnte nicht geladen werden.</span>'
+                : renderChangelogMarkdown($changelogContent);
+            ?>
+        </div>
+    </div>
 </div>
 
 <script>

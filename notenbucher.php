@@ -34,7 +34,7 @@ $notenbucher = $db->fetchAll("
     SELECT nb.*,
            COALESCE(CONCAT(m.vorname, ' ', m.nachname), b.benutzername) as ersteller_name,
            (SELECT COUNT(*) FROM notenbuch_noten WHERE notenbuch_id = nb.id) as anzahl_noten,
-           f.name as formation_name
+           f.name as formation_name, f.farbe as formation_farbe, f.kuerzel as formation_kuerzel
     FROM notenbucher nb
     JOIN benutzer b ON nb.benutzer_id = b.id
     LEFT JOIN mitglieder m ON (m.id = b.mitglied_id OR (b.mitglied_id IS NULL AND m.benutzer_id = b.id))
@@ -93,7 +93,9 @@ include 'includes/header.php';
                 <div class="mt-2 d-flex gap-1 flex-wrap">
                     <span class="badge bg-light text-dark border"><?= (int)$buch['anzahl_noten'] ?> Stück(e)</span>
                     <?php if ($buch['typ'] === 'geteilt' && $buch['formation_name']): ?>
-                    <span class="badge bg-light text-dark border"><i class="bi bi-people"></i> <?= htmlspecialchars($buch['formation_name']) ?></span>
+                    <span class="badge" style="background-color:<?= htmlspecialchars($buch['formation_farbe']) ?>;color:#fff">
+                        <i class="bi bi-people"></i> <?= htmlspecialchars($buch['formation_kuerzel'] ?: $buch['formation_name']) ?>
+                    </span>
                     <?php endif; ?>
                 </div>
             </div>
@@ -129,6 +131,11 @@ include 'includes/header.php';
                 <div class="mt-2 d-flex gap-1 flex-wrap">
                     <span class="badge bg-light text-dark border"><?= (int)$buch['anzahl_noten'] ?> Stück(e)</span>
                     <span class="badge bg-light text-dark border"><i class="bi bi-person"></i> <?= htmlspecialchars($buch['ersteller_name']) ?></span>
+                    <?php if ($buch['formation_name']): ?>
+                    <span class="badge" style="background-color:<?= htmlspecialchars($buch['formation_farbe']) ?>;color:#fff">
+                        <i class="bi bi-people"></i> <?= htmlspecialchars($buch['formation_kuerzel'] ?: $buch['formation_name']) ?>
+                    </span>
+                    <?php endif; ?>
                 </div>
             </div>
             <?php if (Session::checkPermission('noten', 'schreiben')): ?>

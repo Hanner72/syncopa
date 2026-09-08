@@ -128,7 +128,7 @@ include 'includes/header.php';
 <!-- Statistik-Karten -->
 <div class="row mb-4">
     <div class="col-6 col-md-3 mb-3">
-        <div class="card stat-card border-primary">
+        <div class="card stat-card border-primary h-100">
             <div class="card-body">
                 <div>
                     <h6>Aktive Mitglieder</h6>
@@ -142,7 +142,7 @@ include 'includes/header.php';
     </div>
 
     <div class="col-6 col-md-3 mb-3">
-        <div class="card stat-card border-success">
+        <div class="card stat-card border-success h-100">
             <div class="card-body">
                 <div>
                     <h6>Noten im Archiv</h6>
@@ -156,7 +156,7 @@ include 'includes/header.php';
     </div>
     
     <div class="col-6 col-md-3 mb-3">
-        <div class="card stat-card border-warning">
+        <div class="card stat-card border-warning h-100">
             <div class="card-body">
                 <div>
                     <h6>Instrumente</h6>
@@ -171,7 +171,7 @@ include 'includes/header.php';
     </div>
     
     <div class="col-6 col-md-3 mb-3">
-        <div class="card stat-card border-info">
+        <div class="card stat-card border-info h-100">
             <div class="card-body">
                 <div>
                     <h6>Instrumentenwert</h6>
@@ -251,7 +251,7 @@ include 'includes/header.php';
                 <div class="list-group list-group-flush">
                     <?php foreach ($geburtstage as $geburtstag): ?>
                         <div class="list-group-item" style="font-size: 12px;">
-                            <i class="bi bi-balloon text-danger me-1"></i>
+                            <i class="bi bi-cake2-fill text-danger me-1"></i>
                             <?php
                                 // Name
                                 // Nur anzeigen wenn Benutzerrole > User, ansonsten nur Initialen + "xxx"
@@ -264,11 +264,23 @@ include 'includes/header.php';
                                 // Datum richtig formatiert
                                 $datum = new DateTime($geburtstag['geburtsdatum']);
                                 $geburtstagFormatiert = $fmtLang->format($datum); // zB: 8. Jänner
-                                // Alter berechnen
+                                // Alter berechnen, das die Person am kommenden Geburtstag erreicht
                                 $heute = new DateTime();
-                                $alter = $heute->diff($datum)->y;
+                                $naechstesJahr = (int)$heute->format('Y');
+                                if ((int)$datum->format('md') < (int)$heute->format('md')) {
+                                    $naechstesJahr++;
+                                }
+                                $alter = $naechstesJahr - (int)$datum->format('Y');
+                                // Runde Geburtstage dezent hervorheben
+                                if ($alter > 0 && $alter % 10 === 0) {
+                                    $alterClass = 'badge bg-danger-subtle text-danger-emphasis fw-normal';
+                                } elseif ($alter > 0 && $alter % 5 === 0) {
+                                    $alterClass = 'badge bg-primary-subtle text-primary-emphasis fw-normal';
+                                } else {
+                                    $alterClass = 'text-muted';
+                                }
                             ?>
-                            <strong><?= $name ?></strong> – <?= $geburtstagFormatiert ?> <span class="text-muted"> (<?= $alter ?> Jahre) </span>
+                            <strong><?= $name ?></strong> – <?= $geburtstagFormatiert ?> <span class="<?= $alterClass ?>"> (wird <?= $alter ?> Jahre) </span>
                         </div>
                     <?php endforeach; ?>
                 </div>

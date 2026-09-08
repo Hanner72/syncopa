@@ -8,8 +8,11 @@ Für eine leichte Installation wurde ein komplettes Installationsscript implemen
 |---|---|
 | PHP | 7.4 oder höher |
 | MySQL / MariaDB | 5.7 / 10.3 oder höher |
-| Webserver | Apache (mod_rewrite) oder Nginx |
-| PHP-Extensions | `pdo_mysql`, `intl`, `zip`, `gd` |
+| Webserver | Apache oder Nginx (Syncopa nutzt normale `.php`-Adressen, `mod_rewrite` wird nicht benötigt) |
+| PHP-Extensions (Pflicht) | `pdo`, `pdo_mysql`, `intl`, `fileinfo` |
+| PHP-Extensions (empfohlen) | `curl` (Google-Login, automatisches System-Update), `zip` (automatisches System-Update) |
+
+Der Installationsassistent (`install.php`) prüft die Pflicht-Voraussetzungen automatisch und zeigt an, falls etwas fehlt.
 
 ---
 
@@ -33,14 +36,16 @@ oder in ein Unterverzeichnis (je nach Server):
 
 ## 2. Datenbank anlegen
 
-Erstelle eine neue MySQL-Datenbank und einen dedizierten Datenbankbenutzer per MQSQL Script oder ganz einfach in der Server Admin Oberfläche.
+Erstelle eine neue MySQL-Datenbank und einen dedizierten Datenbankbenutzer – entweder per SQL-Befehl oder ganz einfach in der Admin-Oberfläche deines Hosters (z.B. phpMyAdmin, Plesk, cPanel).
 
-Zugangsdaten zur Datenbank notieren, wird in Folge bei der Installation benötigt.
+Zugangsdaten (Datenbankname, Benutzername, Passwort, Host) unbedingt notieren – sie werden gleich bei der Installation benötigt.
 
-MySQL-Script:
+SQL-Befehl:
 ```sql
 CREATE DATABASE syncopa CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
+
+> 💡 **Tipp:** Der Installationsassistent kann die Datenbank auch selbst anlegen (`CREATE DATABASE IF NOT EXISTS`), sofern der angegebene Datenbankbenutzer dafür berechtigt ist. Reicht die Berechtigung nicht aus, einfach die Datenbank vorher wie oben manuell anlegen.
 
 ---
 
@@ -68,9 +73,9 @@ Hier einfach deine Zugangsdaten zur Datenbank eintragen und auf **Verbindung tes
 
 ### 3.3 Anwendungsdaten
 
-Hier die Vereinsdaten eintragen und den Adminbenutzer anlegen.
+Hier die Vereinsdaten (Vereinsname, Ort) eintragen und den ersten Admin-Benutzer anlegen (Benutzername, E-Mail, Passwort – mindestens 8 Zeichen).
 
-Dies kann später in den Einstellungen in der Applikation nochmal geändert werden.
+> 💡 Diese Zugangsdaten benötigst du gleich danach für den [ersten Login](erster-login.md). Die Vereinsdaten können später jederzeit in den [Einstellungen](einstellungen.md) angepasst werden.
 
 ![Dashboard Screenshot](screenshots/install3.png)
 
@@ -121,7 +126,7 @@ Nach der Installation gibt es zwei Konfigurationsdateien:
 
 ---
 
-### 4 Neuistallation
+### 4. Neuinstallation
 
 Bei nochmaligem Aufruf der install.php wird eine Meldung angezeigt dass SYNCOPA schon installiert ist. Wenn trotzdem neu installiert werden soll, muss einfach die Datei **install.lock** gelöscht werden.
 

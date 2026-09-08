@@ -9,6 +9,105 @@ $db          = Database::getInstance();
 $formationId = Session::getFormationId();
 $benutzerId  = Session::getUserId();
 
+$aktiveFormationName = $formationId
+    ? ($db->fetchOne("SELECT name FROM formationen WHERE id = ?", [$formationId])['name'] ?? null)
+    : null;
+
+/**
+ * Belegungs-Statistik für eine laufende Live-Session ermitteln.
+ * Ist eine Formation aktiv, werden ALLE aktiven Mitglieder dieser Formation
+ * berücksichtigt (nicht nur die gerade online Verbundenen).
+ */
+function probeLiveStats(Database $db, int $sessionId, int $notenId, ?int $formationId): array {
+    $spielerMap = [];
+    $total      = 0;
+
+    $spieler = $db->fetchAll(
+        "SELECT pss.stimme_id, pss.benutzer_id, m.id as mitglied_id,
+                COALESCE(CONCAT(m.vorname, ' ', m.nachname), b.benutzername) as anzeigename,
+                ROW_NUMBER() OVER (PARTITION BY pss.benutzer_id ORDER BY pss.joined_am DESC, pss.id DESC) as rn
+         FROM probe_session_spieler pss
+         JOIN benutzer b ON pss.benutzer_id = b.id
+         LEFT JOIN mitglieder m ON (m.id = b.mitglied_id OR (b.mitglied_id IS NULL AND m.benutzer_id = b.id))
+         WHERE pss.session_id = ?
+           AND (pss.last_seen IS NULL OR pss.last_seen >= NOW() - INTERVAL 20 SECOND)",
+        [$sessionId]
+    );
+    $viewers = $db->fetchAll(
+        "SELECT benutzer_id FROM probe_session_viewer WHERE noten_id = ?",
+        [$notenId]
+    );
+    $viewerSet = array_flip(array_column($viewers, 'benutzer_id'));
+
+    $connectedByMitglied = [];
+    foreach ($spieler as $s) {
+        if ((int)$s['rn'] !== 1) continue;
+        $total++;
+        $sid = $s['stimme_id'] ?? 0;
+        $spielerMap[$sid][] = [
+            'name'   => $s['anzeigename'],
+            'is_new' => isset($viewerSet[$s['benutzer_id']]),
+        ];
+        if ($s['mitglied_id']) {
+            $connectedByMitglied[$s['mitglied_id']] = [
+                'stimme_id' => $s['stimme_id'],
+                'is_new'    => isset($viewerSet[$s['benutzer_id']]),
+            ];
+        }
+    }
+
+    $mitStimme = 0;
+    $ohneStimme = 0;
+    $ohneStimmeListe = [];
+
+    if ($formationId) {
+        // Vollständiger Formations-Abgleich: alle aktiven Mitglieder der Formation,
+        // unabhängig davon, ob sie gerade online sind.
+        $mitglieder = $db->fetchAll(
+            "SELECT m.id as mitglied_id, m.vorname, m.nachname
+             FROM mitglied_formationen mf
+             JOIN mitglieder m ON mf.mitglied_id = m.id
+             WHERE mf.formation_id = ? AND m.status = 'aktiv'
+             ORDER BY m.nachname, m.vorname",
+            [$formationId]
+        );
+        foreach ($mitglieder as $mg) {
+            $conn = $connectedByMitglied[$mg['mitglied_id']] ?? null;
+            if ($conn && !empty($conn['stimme_id'])) {
+                $mitStimme++;
+                continue;
+            }
+            $ohneStimme++;
+            $ohneStimmeListe[] = [
+                'name'   => trim($mg['vorname'] . ' ' . $mg['nachname']),
+                'status' => $conn ? ($conn['is_new'] ? 'viewing' : 'connected') : 'offline',
+            ];
+        }
+    } else {
+        // Keine Formation gewählt: wie bisher nur die aktuell Verbundenen zählen
+        foreach ($spieler as $s) {
+            if ((int)$s['rn'] !== 1) continue;
+            if (!empty($s['stimme_id'])) {
+                $mitStimme++;
+            } else {
+                $ohneStimme++;
+                $ohneStimmeListe[] = [
+                    'name'   => $s['anzeigename'],
+                    'status' => isset($viewerSet[$s['benutzer_id']]) ? 'viewing' : 'connected',
+                ];
+            }
+        }
+    }
+
+    return [
+        'spielerMap'      => $spielerMap,
+        'total'           => $total,
+        'mitStimme'       => $mitStimme,
+        'ohneStimme'      => $ohneStimme,
+        'ohneStimmeListe' => $ohneStimmeListe,
+    ];
+}
+
 // Session starten
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['start_session'])) {
     $notenId = (int)($_POST['noten_id'] ?? 0);
@@ -40,38 +139,26 @@ if (isset($_SERVER['HTTP_X_REQUESTED_WITH'])) {
     $session = $db->fetchOne(
         "SELECT ps.id, ps.noten_id FROM probe_session ps WHERE ps.aktiv = 1 LIMIT 1"
     );
-    $spielerMap = [];
-    $total      = 0;
+    $spielerMap      = [];
+    $total           = 0;
+    $mitStimme       = 0;
+    $ohneStimme      = 0;
+    $ohneStimmeListe = [];
     if ($session) {
-        $spieler = $db->fetchAll(
-            "SELECT pss.stimme_id, pss.benutzer_id,
-                    COALESCE(CONCAT(m.vorname, ' ', m.nachname), b.benutzername) as anzeigename,
-                    ROW_NUMBER() OVER (PARTITION BY pss.benutzer_id ORDER BY pss.joined_am DESC) as rn
-             FROM probe_session_spieler pss
-             JOIN benutzer b ON pss.benutzer_id = b.id
-             LEFT JOIN mitglieder m ON (m.id = b.mitglied_id OR (b.mitglied_id IS NULL AND m.benutzer_id = b.id))
-             WHERE pss.session_id = ?
-               AND (pss.last_seen IS NULL OR pss.last_seen >= NOW() - INTERVAL 20 SECOND)",
-            [$session['id']]
-        );
-        // Wer hat das aktuelle Stück schon geladen?
-        $viewers = $db->fetchAll(
-            "SELECT benutzer_id FROM probe_session_viewer WHERE noten_id = ?",
-            [$session['noten_id']]
-        );
-        $viewerSet = array_flip(array_column($viewers, 'benutzer_id'));
-
-        foreach ($spieler as $s) {
-            if ((int)$s['rn'] !== 1) continue;
-            $total++;
-            $sid = $s['stimme_id'] ?? 0;
-            $spielerMap[$sid][] = [
-                'name'   => $s['anzeigename'],
-                'is_new' => isset($viewerSet[$s['benutzer_id']]),
-            ];
-        }
+        $stats           = probeLiveStats($db, (int)$session['id'], (int)$session['noten_id'], $formationId);
+        $spielerMap      = $stats['spielerMap'];
+        $total           = $stats['total'];
+        $mitStimme       = $stats['mitStimme'];
+        $ohneStimme      = $stats['ohneStimme'];
+        $ohneStimmeListe = $stats['ohneStimmeListe'];
     }
-    echo json_encode(['total' => $total, 'spieler_map' => $spielerMap]);
+    echo json_encode([
+        'total'             => $total,
+        'spieler_map'       => $spielerMap,
+        'mit_stimme'        => $mitStimme,
+        'ohne_stimme'       => $ohneStimme,
+        'ohne_stimme_liste' => $ohneStimmeListe,
+    ]);
     exit;
 }
 
@@ -84,38 +171,32 @@ $activeSession = $db->fetchOne(
 );
 
 // Stimmen der aktiven Session
-$stimmen    = [];
-$spielerMap = [];
+$stimmen         = [];
+$spielerMap      = [];
+$mitStimme       = 0;
+$ohneStimme      = 0;
+$ohneStimmeListe = [];
 if ($activeSession) {
     $stimmen = $db->fetchAll(
         "SELECT * FROM noten_stimmen WHERE noten_id = ? ORDER BY reihenfolge, name",
         [$activeSession['noten_id']]
     );
-    $spieler = $db->fetchAll(
-        "SELECT pss.stimme_id, pss.benutzer_id,
-                COALESCE(CONCAT(m.vorname, ' ', m.nachname), b.benutzername) as anzeigename,
-                ROW_NUMBER() OVER (PARTITION BY pss.benutzer_id ORDER BY pss.joined_am DESC) as rn
-         FROM probe_session_spieler pss
-         JOIN benutzer b ON pss.benutzer_id = b.id
-         LEFT JOIN mitglieder m ON (m.id = b.mitglied_id OR (b.mitglied_id IS NULL AND m.benutzer_id = b.id))
-         WHERE pss.session_id = ?
-           AND (pss.last_seen IS NULL OR pss.last_seen >= NOW() - INTERVAL 20 SECOND)",
-        [$activeSession['id']]
-    );
-    $viewers = $db->fetchAll(
-        "SELECT benutzer_id FROM probe_session_viewer WHERE noten_id = ?",
-        [$activeSession['noten_id']]
-    );
-    $viewerSet = array_flip(array_column($viewers, 'benutzer_id'));
+    $stats           = probeLiveStats($db, (int)$activeSession['id'], (int)$activeSession['noten_id'], $formationId);
+    $spielerMapRaw   = $stats['spielerMap'];
+    $mitStimme       = $stats['mitStimme'];
+    $ohneStimme      = $stats['ohneStimme'];
+    $ohneStimmeListe = $stats['ohneStimmeListe'];
 
-    foreach ($spieler as $s) {
-        if ((int)$s['rn'] !== 1) continue;
-        $sid = $s['stimme_id'] ?? 0;
-        $spielerMap[$sid][] = [
-            'name'   => htmlspecialchars($s['anzeigename']),
-            'is_new' => isset($viewerSet[$s['benutzer_id']]),
-        ];
+    // Für die Server-gerenderte Ausgabe HTML-escapen (JSON/JS-Refresh nutzt die rohen Werte)
+    foreach ($spielerMapRaw as $sid => $names) {
+        foreach ($names as $n) {
+            $spielerMap[$sid][] = ['name' => htmlspecialchars($n['name']), 'is_new' => $n['is_new']];
+        }
     }
+    $ohneStimmeListe = array_map(function ($n) {
+        $n['name'] = htmlspecialchars($n['name']);
+        return $n;
+    }, $ohneStimmeListe);
 }
 
 // Notenbücher für Filter laden
@@ -183,7 +264,22 @@ include 'includes/header.php';
 
 <!-- Stimmen-Raster -->
 <div class="card mb-4">
-    <div class="card-header">Stimmen-Belegung</div>
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span>
+            Stimmen-Belegung
+            <?php if ($aktiveFormationName): ?>
+            <small class="text-muted fw-normal">– <?= htmlspecialchars($aktiveFormationName) ?></small>
+            <?php endif; ?>
+        </span>
+        <span class="d-flex gap-2">
+            <span id="stat-mit-stimme" class="badge bg-success-subtle text-success-emphasis" title="Musiker mit zugewiesener Stimme">
+                <i class="bi bi-person-check-fill"></i> <?= $mitStimme ?> mit Stimme
+            </span>
+            <span id="stat-ohne-stimme" class="badge bg-secondary-subtle text-secondary-emphasis" title="Musiker ohne zugewiesene Stimme">
+                <i class="bi bi-person-dash-fill"></i> <?= $ohneStimme ?> ohne Stimme
+            </span>
+        </span>
+    </div>
     <div class="card-body">
         <?php if (empty($stimmen)): ?>
             <p class="text-muted mb-0">
@@ -215,15 +311,16 @@ include 'includes/header.php';
         </div>
         <?php endif; ?>
 
-        <?php $ohneStimme = $spielerMap[0] ?? []; ?>
-        <?php if ($ohneStimme): ?>
-        <div class="mt-3 p-2 rounded" style="background:var(--bg-body)">
-            <small class="text-muted">Ohne Stimme: </small>
-            <?php foreach ($ohneStimme as $n): ?>
-            <span class="badge <?= $n['is_new'] ? 'bg-success' : 'bg-secondary' ?>"><?= $n['name'] ?></span>
+        <?php
+        $statusBadge = ['viewing' => 'bg-success', 'connected' => 'bg-warning text-dark', 'offline' => 'bg-secondary'];
+        $statusTitle = ['viewing' => 'Online, sieht das Stück gerade', 'connected' => 'Online, aber (noch) nicht bei diesem Stück', 'offline' => 'Nicht mit der Live-Session verbunden'];
+        ?>
+        <div id="ohne-stimme-liste" class="mt-3 p-2 rounded d-flex flex-wrap align-items-center gap-2" style="background:var(--bg-body)<?= empty($ohneStimmeListe) ? ';display:none' : '' ?>">
+            <small class="text-muted">Ohne Stimme:</small>
+            <?php foreach ($ohneStimmeListe as $n): ?>
+            <span class="badge <?= $statusBadge[$n['status']] ?? 'bg-secondary' ?>" title="<?= $statusTitle[$n['status']] ?? '' ?>"><?= $n['name'] ?></span>
             <?php endforeach; ?>
         </div>
-        <?php endif; ?>
     </div>
 </div>
 <?php endif; ?>
@@ -310,6 +407,27 @@ include 'includes/header.php';
             .then(function(r) { return r.json(); })
             .then(function(d) {
                 document.getElementById('spieler-count').textContent = d.total + ' Musiker';
+                var statMit  = document.getElementById('stat-mit-stimme');
+                var statOhne = document.getElementById('stat-ohne-stimme');
+                if (statMit)  statMit.innerHTML  = '<i class="bi bi-person-check-fill"></i> ' + d.mit_stimme + ' mit Stimme';
+                if (statOhne) statOhne.innerHTML = '<i class="bi bi-person-dash-fill"></i> ' + d.ohne_stimme + ' ohne Stimme';
+
+                var ohneListe = document.getElementById('ohne-stimme-liste');
+                if (ohneListe) {
+                    var liste = d.ohne_stimme_liste || [];
+                    if (liste.length) {
+                        var badgeCls = { viewing: 'bg-success', connected: 'bg-warning text-dark', offline: 'bg-secondary' };
+                        var html = '<small class="text-muted">Ohne Stimme: </small>';
+                        liste.forEach(function(n) {
+                            html += '<span class="badge ' + (badgeCls[n.status] || 'bg-secondary') + '">' + n.name + '</span>';
+                        });
+                        ohneListe.innerHTML = html;
+                        ohneListe.style.display = '';
+                    } else {
+                        ohneListe.style.display = 'none';
+                    }
+                }
+
                 var grid = document.getElementById('stimmen-grid');
                 if (!grid) return;
                 stimmenData.forEach(function(st) {

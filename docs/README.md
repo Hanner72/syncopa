@@ -1,6 +1,6 @@
 # <img src="../assets/logo_full.png" alt="Syncopa" style="max-width:75px"> – Musikvereinsverwaltung
 
-> **Version 2.4.1** · Benutzerhandbuch
+> **Version 2.4.2** · Benutzerhandbuch
 
 Willkommen zur offiziellen Dokumentation von **Syncopa** – der Verwaltungssoftware für Musikvereine.
 
@@ -13,13 +13,16 @@ Syncopa vereint alle wichtigen Verwaltungsaufgaben eines Musikvereins in einer w
 | Modul | Beschreibung |
 |---|---|
 | 👥 **Mitglieder** | Stammdaten, Register, Mitgliedsnummern, Geburtstage |
+| 🏷️ **Formationen** | Mehrere Besetzungen/Gruppen pro Verein (z.B. Musikkapelle, Jugendkapelle, 7er-Partie) mit eigenem Formations-Switcher |
 | 🎺 **Ausrückungen** | Termine planen, An-/Abmeldungen verwalten, iCal-Export |
 | 📅 **Kalender** | Übersicht aller Termine, iCal-Export |
 | 💰 **Finanzen** | Einnahmen & Ausgaben, Mitgliedsbeiträge |
-| 🎼 **Noten** | Notenarchiv mit Kategorien |
+| 🎼 **Noten** | Notenarchiv mit mehreren PDFs pro Stück, automatische Stimmen-Erkennung & -Aufteilung |
+| 📚 **Notenbücher** | Private und geteilte Mappen aus mehreren Notenstücken |
+| 📡 **Live-Probe** | Notenstück live an alle Musiker übertragen, jeder sieht automatisch seine eigene Stimme, mit Notizfunktion |
 | 🎻 **Instrumente** | Inventar, Wartungsfristen, Zuordnung |
 | 👔 **Uniformen** | Bestand, Ausgabe und Rücknahme |
-| 🎪 **Festverwaltung** | Stationen, Dienstplan, Einkäufe, Verträge, Abrechnung |
+| 🎪 **Festverwaltung** | Stationen, Dienstplan, Einkäufe, Verträge, Todos, Abrechnung |
 | 🔐 **Benutzerverwaltung** | Rollen, Mehrfachrollen, Berechtigungen, Google-Login |
 
 ---
@@ -29,8 +32,10 @@ Syncopa vereint alle wichtigen Verwaltungsaufgaben eines Musikvereins in einer w
 1. **Installation** → [Einrichtung](einrichtung.md)
 2. **Ersten Admin anlegen** → [Erster Login](erster-login.md)
 3. **Mitglieder importieren** → [Mitglieder](mitglieder.md)
-4. **Erste Ausrückung erstellen** → [Ausrückungen](ausrueckungen.md)
-5. **Fest planen** → [Festverwaltung](festverwaltung.md)
+4. **Formationen anlegen** (falls mehrere Besetzungen verwaltet werden) → [Formationen](formationen.md)
+5. **Erste Ausrückung erstellen** → [Ausrückungen](ausrueckungen.md)
+6. **Noten hochladen & Stimmen aufteilen** → [Noten](noten.md)
+7. **Fest planen** → [Festverwaltung](festverwaltung.md)
 
 ---
 
