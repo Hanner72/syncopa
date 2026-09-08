@@ -524,13 +524,13 @@ include 'includes/header.php';
     padding: 30px 15px;
 }
 #fehlendeOverlay .overlay-dialog {
-    background: #fff;
+    background: var(--bg-card, #fff);
+    color: var(--text-primary, #212529);
     border-radius: 8px;
     max-width: 1100px;
     margin: 0 auto;
     box-shadow: 0 5px 30px rgba(0,0,0,.3);
 }
-[data-bs-theme="dark"] #fehlendeOverlay .overlay-dialog { background: #2b2d42; color: #eee; }
 </style>
 
 <div id="fehlendeOverlay">

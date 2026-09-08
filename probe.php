@@ -142,7 +142,7 @@ if ($activeStimme) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="de" data-theme="<?= htmlspecialchars($_COOKIE['theme'] ?? 'light') ?>">
+<html lang="de" data-theme="<?= htmlspecialchars($_COOKIE['theme'] ?? 'light') ?>" data-bs-theme="<?= htmlspecialchars($_COOKIE['theme'] ?? 'light') ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -559,7 +559,9 @@ const userData = {
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Dark Mode
-    document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
+    var _theme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', _theme);
+    document.documentElement.setAttribute('data-bs-theme', _theme);
 
     // iOS vh-Fix
     function setVH() { document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px'); }

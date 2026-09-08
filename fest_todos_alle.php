@@ -24,7 +24,7 @@ $statusLabels = [
     'abgebrochen' => ['label' => 'Abgebrochen','badge' => 'secondary'],
 ];
 $toggleIcon  = ['offen' => 'bi-circle', 'in_arbeit' => 'bi-circle-half', 'erledigt' => 'bi-check-circle-fill', 'abgebrochen' => 'bi-x-circle'];
-$toggleColor = ['offen' => '#adb5bd',   'in_arbeit' => '#0dcaf0',        'erledigt' => '#198754',              'abgebrochen' => '#adb5bd'];
+$toggleColor = ['offen' => 'var(--text-muted)', 'in_arbeit' => '#0dcaf0', 'erledigt' => '#198754', 'abgebrochen' => 'var(--text-muted)'];
 
 $heute = date('Y-m-d');
 include 'includes/header.php';
@@ -133,7 +133,7 @@ if (typeof $ !== 'undefined' && $.fn.DataTable) {
 
 var toggleNext  = { 'offen': 'in_arbeit', 'in_arbeit': 'erledigt', 'erledigt': 'offen', 'abgebrochen': 'offen' };
 var toggleIcon  = { 'offen': 'bi-circle', 'in_arbeit': 'bi-circle-half', 'erledigt': 'bi-check-circle-fill', 'abgebrochen': 'bi-x-circle' };
-var toggleColor = { 'offen': '#adb5bd',   'in_arbeit': '#0dcaf0',        'erledigt': '#198754',              'abgebrochen': '#adb5bd' };
+var toggleColor = { 'offen': 'var(--text-muted)', 'in_arbeit': '#0dcaf0', 'erledigt': '#198754', 'abgebrochen': 'var(--text-muted)' };
 var statusLabels = {
     'offen':       ['Offen',      'warning'],
     'in_arbeit':   ['In Arbeit',  'info'],
@@ -167,7 +167,7 @@ document.querySelectorAll('.btn-toggle-status').forEach(function(btn) {
             }
 
             btnEl.dataset.status = newStatus;
-            btnEl.style.color = toggleColor[newStatus] || '#adb5bd';
+            btnEl.style.color = toggleColor[newStatus] || 'var(--text-muted)';
             btnEl.querySelector('i').className = 'bi ' + (toggleIcon[newStatus] || 'bi-circle');
 
             var badge = row.querySelector('.badge-status');

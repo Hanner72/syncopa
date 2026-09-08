@@ -258,7 +258,7 @@ include 'includes/header.php';
                                   placeholder="Zusätzliche Informationen..."><?php echo htmlspecialchars($note['bemerkungen'] ?? ''); ?></textarea>
                     </div>
                 </div>
-                <div class="card-footer bg-white">
+                <div class="card-footer">
                     <div class="d-flex justify-content-between">
                         <a href="noten.php" class="btn btn-outline-secondary">
                             <i class="bi bi-x-lg"></i> Abbrechen
@@ -399,7 +399,7 @@ include 'includes/header.php';
                 <span class="badge bg-white text-primary">PDF → Stimmen</span>
             </div>
             <div class="card-body">
-                <p class="small text-muted mb-3">
+                <p class="small mb-3">
                     Lade ein Gesamt-PDF hoch (alle Stimmen in einer Datei). Das System erkennt
                     automatisch welche Seiten zu welcher Stimme gehören – anhand der Beschriftung
                     oben links/rechts – und erzeugt für jede Stimme eine eigene Datei.<br>
@@ -451,30 +451,31 @@ include 'includes/header.php';
 
 <style>
 .upload-zone {
-    border: 2px dashed #dee2e6;
+    border: 2px dashed var(--border);
     border-radius: 0.5rem;
     padding: 2rem;
     text-align: center;
     cursor: pointer;
     transition: all 0.3s ease;
-    background-color: #fafafa;
+    background-color: var(--bg-input);
+    color: var(--text-primary);
     position: relative;
 }
 
 .upload-zone:hover {
-    border-color: #0d6efd;
-    background-color: #f0f7ff;
+    border-color: var(--c-primary);
+    background-color: var(--bg-body);
 }
 
 .upload-zone.drag-over {
-    border-color: #0d6efd;
-    background-color: #e7f1ff;
+    border-color: var(--c-primary);
+    background-color: var(--bg-body);
     transform: scale(1.02);
 }
 
 .upload-zone i.bi-cloud-arrow-up {
     font-size: 3rem;
-    color: #6c757d;
+    color: var(--text-muted);
     display: block;
     margin-bottom: 0.5rem;
 }
@@ -484,26 +485,27 @@ include 'includes/header.php';
 }
 
 .list-group-item:hover {
-    background-color: #f8f9fa;
+    background-color: var(--bg-body);
 }
 
 .upload-zone-split {
-    border-color: #0d6efd;
-    background-color: #f0f7ff;
+    border-color: var(--c-primary);
+    background-color: var(--bg-input);
+    color: var(--text-primary);
     padding: 1.5rem;
 }
 
 .upload-zone-split i {
     font-size: 2.5rem;
-    color: #0d6efd;
+    color: var(--c-primary);
     display: block;
     margin-bottom: 0.5rem;
 }
 
 .upload-zone-split:hover,
 .upload-zone-split.drag-over {
-    border-color: #0a58ca;
-    background-color: #ddeeff;
+    border-color: var(--c-primary-light);
+    background-color: var(--bg-body);
     transform: scale(1.01);
 }
 

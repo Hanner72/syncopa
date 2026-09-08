@@ -22,6 +22,7 @@ Session::start();
             'id'      => $cfg['installation_id'],
             'version' => defined('APP_VERSION') ? APP_VERSION : '?',
             'verein'  => $cfg['verein_name'] ?? '',
+            'url'     => defined('BASE_URL') ? BASE_URL : '',
         ]);
         $url = 'https://syncopa.dannerbam.eu/telemetry/ping.php';
         if (function_exists('curl_init')) {
@@ -68,7 +69,7 @@ function isActive($page, $pages, $current) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="de" data-theme="light">
+<html lang="de" data-theme="light" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
@@ -133,6 +134,21 @@ function isActive($page, $pages, $current) {
             --sidebar-text: #8090a0;
             --sidebar-hover: rgba(255,255,255,0.05);
             --sidebar-active: rgba(255,255,255,0.10);
+
+            /* FullCalendar (index.global.min.css) verwendet eigene Variablen, standardmäßig helles Theme */
+            --fc-page-bg-color: var(--bg-card);
+            --fc-border-color: var(--border);
+            --fc-neutral-bg-color: var(--bg-body);
+            --fc-neutral-text-color: var(--text-secondary);
+            --fc-today-bg-color: rgba(68, 113, 163, 0.18);
+            --fc-button-bg-color: var(--c-primary);
+            --fc-button-border-color: var(--c-primary);
+            --fc-button-hover-bg-color: var(--c-primary-light);
+            --fc-button-hover-border-color: var(--c-primary-light);
+            --fc-button-active-bg-color: var(--c-primary-light);
+            --fc-button-active-border-color: var(--c-primary-light);
+            --fc-list-event-hover-bg-color: var(--bg-body);
+            --fc-more-link-bg-color: var(--bg-body);
         }
         
         * { font-family: 'Inter', system-ui, sans-serif; -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
@@ -280,12 +296,25 @@ function isActive($page, $pages, $current) {
         
         /* CARDS - Modern mit linkem Akzentrand */
         .card {
+            /* Bootstrap setzt hier selbst color:var(--bs-body-color) (unthemed) – überschreibt sonst
+               die geerbte Theme-Farbe für allen Text ohne eigene color-Regel (Listen, Absätze, ...) */
+            color: var(--text-primary);
             background: var(--bg-card);
             border: none;
             border-radius: var(--radius-lg);
             box-shadow: var(--shadow-sm);
             margin-bottom: 16px;
             border-left: 3px solid var(--border);
+        }
+        /* bg-light/bg-white erzwingen (per !important) eine immer helle Fläche – Text muss dann
+           immer dunkel bleiben, unabhängig vom Theme (z.B. kleine Badges/Chips, die bewusst hell bleiben) */
+        .bg-light, .bg-white { color: #212529 !important; }
+        /* Größere Flächen (Karten, Trennbalken, Code-Blöcke) mit bg-light/bg-white sollen sich im
+           Dark Mode wie der Rest der Oberfläche verhalten (dunkel), statt als heller Fremdkörper
+           stehen zu bleiben. Kleine Badges/Chips (.badge) bleiben bewusst ausgenommen. */
+        [data-theme="dark"] .bg-light:not(.badge), [data-theme="dark"] .bg-white:not(.badge) {
+            background: var(--bg-card) !important;
+            color: var(--text-primary) !important;
         }
         .card-header {
             background: transparent;
@@ -369,7 +398,11 @@ function isActive($page, $pages, $current) {
             background: var(--bg-input);
             color: var(--text-primary);
         }
+        .form-select option { background: var(--bg-input); color: var(--text-primary); }
+        .form-control::placeholder { color: var(--text-muted); opacity: 1; }
         .form-label { font-size: 12px; font-weight: 500; margin-bottom: 4px; color: var(--text-secondary); }
+        .form-check-input { background-color: var(--bg-input); border-color: var(--border); }
+        .form-check-input:checked { background-color: var(--c-primary); border-color: var(--c-primary); }
         .input-group-text {
             font-size: 13px; padding: 8px 12px;
             background: var(--bg-body); border-color: var(--border);
@@ -377,7 +410,11 @@ function isActive($page, $pages, $current) {
         }
         
         /* TABLES */
-        .table { font-size: 13px; color: var(--text-primary); margin-bottom: 0; }
+        .table { font-size: 13px; color: var(--text-primary); background: var(--bg-card); margin-bottom: 0; }
+        /* "color: inherit" reicht nicht: Zeilen mit Bootstrap-Varianten wie .table-danger/.table-warning
+           setzen --bs-table-color selbst fest (z.B. #000) – das würde sich sonst in die Zelle vererben.
+           Deshalb hier direkt unsere Theme-Farbe erzwingen statt zu vererben. */
+        .table > :not(caption) > * > * { background: transparent; color: var(--text-primary); }
         .table thead th {
             font-size: 11px; font-weight: 600;
             text-transform: uppercase; letter-spacing: 0.3px;
@@ -395,24 +432,50 @@ function isActive($page, $pages, $current) {
         .alert-danger { background: #fde8e8; color: #8a3a3a; }
         .alert-success { background: #e8f5ed; color: #3a6b4a; }
         .alert-info { background: #e8f0f8; color: #3a5a7a; }
-        
+        [data-theme="dark"] .alert-warning   { background: rgba(209,154,62,0.15); color: #e0b563; }
+        [data-theme="dark"] .alert-danger    { background: rgba(244,67,54,0.15); color: #f18b84; }
+        [data-theme="dark"] .alert-success   { background: rgba(91,138,114,0.18); color: #8fc3a6; }
+        [data-theme="dark"] .alert-info      { background: rgba(119,186,215,0.15); color: #9ed3ea; }
+        [data-theme="dark"] .alert-secondary { background: var(--bg-input); color: var(--text-secondary); border: 1px solid var(--border); }
+
+        /* MODAL */
+        .modal-content { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); }
+        .modal-header, .modal-footer { border-color: var(--border-light); }
+        [data-theme="dark"] .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
+
+        /* ACCORDION */
+        .accordion-item { background: var(--bg-card); border-color: var(--border); color: var(--text-primary); }
+        .accordion-button { background: var(--bg-card); color: var(--text-primary); }
+        .accordion-button:not(.collapsed) { background: var(--bg-body); color: var(--c-primary); box-shadow: inset 0 -1px 0 var(--border); }
+        [data-theme="dark"] .accordion-button::after { filter: invert(1) grayscale(100%) brightness(1.8); }
+
         /* BADGES */
         .badge { font-size: 10px; font-weight: 500; padding: 3px 8px; border-radius: 3px; }
         
         /* LIST GROUPS */
-        .list-group-item { border-color: var(--border-light); padding: 12px 0; background: transparent; }
+        .list-group-item { border-color: var(--border-light); padding: 12px 0; background: transparent; color: var(--text-primary); }
         .list-group-flush .list-group-item:first-child { padding-top: 0; }
+        .text-muted { color: var(--text-muted) !important; }
         
         /* DATATABLES */
         .dataTables_wrapper .dataTables_length,
         .dataTables_wrapper .dataTables_filter,
         .dataTables_wrapper .dataTables_info,
-        .dataTables_wrapper .dataTables_paginate { font-size: 12px; }
+        .dataTables_wrapper .dataTables_paginate { font-size: 12px; color: var(--text-primary) !important; }
         .dataTables_wrapper .dataTables_length select,
         .dataTables_wrapper .dataTables_filter input { font-size: 12px; padding: 4px 8px; }
-        .page-link { font-size: 12px; padding: 4px 10px; color: var(--text-secondary); }
-        .page-item.active .page-link { background: var(--c-primary); border-color: var(--c-primary); }
-        
+        .page-link { font-size: 12px; padding: 4px 10px; color: var(--text-secondary); background: var(--bg-card); border-color: var(--border); }
+        .page-link:hover { background: var(--bg-body); color: var(--text-primary); border-color: var(--border); }
+        .page-item.active .page-link { background: var(--c-primary); border-color: var(--c-primary); color: #fff; }
+        .page-item.disabled .page-link { background: var(--bg-card); color: var(--text-muted); border-color: var(--border); opacity: 0.6; }
+
+        /* FULLCALENDAR */
+        .fc, .fc .fc-toolbar-title, .fc-daygrid-day-number, .fc-col-header-cell-cushion,
+        .fc-list-day-text, .fc-list-day-side-text, .fc-list-event-title, .fc-list-event-time {
+            color: var(--text-primary);
+        }
+        .fc .fc-button:not(.fc-button-active):not(:hover) { color: var(--fc-button-text-color); }
+
         /* PAGE HEADER */
         .page-header {
             display: flex; flex-wrap: wrap;

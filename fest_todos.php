@@ -141,7 +141,7 @@ include 'includes/header.php';
                         <!-- AJAX Status-Toggle -->
                         <?php
                             $toggleIcon  = ['offen' => 'bi-circle',            'in_arbeit' => 'bi-circle-half',       'erledigt' => 'bi-check-circle-fill'];
-                            $toggleColor = ['offen' => '#adb5bd',              'in_arbeit' => '#0dcaf0',              'erledigt' => '#198754'];
+                            $toggleColor = ['offen' => 'var(--text-muted)',    'in_arbeit' => '#0dcaf0',              'erledigt' => '#198754'];
                             $toggleTitle = ['offen' => 'Klick: In Arbeit',     'in_arbeit' => 'Klick: Erledigt',      'erledigt' => 'Klick: Zurücksetzen'];
                             $s = $t['status']; if (!isset($toggleIcon[$s])) $s = 'offen';
                         ?>
@@ -210,7 +210,7 @@ document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
 // AJAX Status-Toggle (3-Stufen: offen → in_arbeit → erledigt → offen)
 var toggleNext  = { 'offen': 'in_arbeit', 'in_arbeit': 'erledigt', 'erledigt': 'offen' };
 var toggleIcon  = { 'offen': 'bi-circle', 'in_arbeit': 'bi-circle-half', 'erledigt': 'bi-check-circle-fill' };
-var toggleColor = { 'offen': '#adb5bd',   'in_arbeit': '#0dcaf0',        'erledigt': '#198754' };
+var toggleColor = { 'offen': 'var(--text-muted)', 'in_arbeit': '#0dcaf0', 'erledigt': '#198754' };
 var toggleTitle = { 'offen': 'Klick: In Arbeit', 'in_arbeit': 'Klick: Erledigt', 'erledigt': 'Klick: Zuruecksetzen' };
 var statusLabels = {
     'offen':       ['Offen',      'warning'],

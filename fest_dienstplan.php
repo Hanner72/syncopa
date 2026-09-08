@@ -175,10 +175,10 @@ include 'includes/header.php';
         <div style="display:flex">
 
             <!-- ── Linke Spalte (fix) ───────────────────────────────────── -->
-            <div id="dp-labels" style="width:<?= $LABEL_W ?>px;flex-shrink:0;border-right:2px solid #dee2e6;z-index:5">
+            <div id="dp-labels" style="width:<?= $LABEL_W ?>px;flex-shrink:0;border-right:2px solid var(--border);z-index:5">
 
                 <!-- Zeitkopf-Spacer -->
-                <div style="height:<?= $HEAD_H ?>px;background:#fff;border-bottom:2px solid #dee2e6"></div>
+                <div style="height:<?= $HEAD_H ?>px;background:var(--bg-card);border-bottom:2px solid var(--border)"></div>
 
                 <?php foreach ($stationen as $s):
                     $stId       = $s['id'];
@@ -219,18 +219,18 @@ include 'includes/header.php';
                      data-ma-id="<?= $ma['id'] ?>"
                      style="height:<?= $ROW_H ?>px;
                             padding:4px 6px 4px 4px;
-                            border-bottom:1px solid #dee2e6;
-                            background:#fff;
+                            border-bottom:1px solid var(--border);
+                            background:var(--bg-card);
                             display:flex;align-items:center;gap:4px;
                             border-left:3px solid <?= $color ?>55;
                             cursor:grab">
-                    <i class="bi bi-grip-vertical" style="font-size:14px;color:#adb5bd;flex-shrink:0"></i>
+                    <i class="bi bi-grip-vertical" style="font-size:14px;color:var(--text-muted);flex-shrink:0"></i>
                     <div style="overflow:hidden">
                         <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
                             <?= htmlspecialchars($ma['vollname']) ?>
                         </div>
                         <?php if ($ma['funktion']): ?>
-                        <div style="font-size:10px;color:#6c757d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                        <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
                             <?= htmlspecialchars($ma['funktion']) ?>
                         </div>
                         <?php endif; ?>
@@ -241,11 +241,11 @@ include 'includes/header.php';
                 <div class="dp-label-dropzone"
                      data-station-id="<?= $stId ?>"
                      style="height:<?= $ROW_H ?>px;
-                            border-bottom:1px solid #dee2e6;
+                            border-bottom:1px solid var(--border);
                             border-left:3px solid <?= $color ?>55;
                             display:flex;align-items:center;justify-content:center;
-                            background:#fafafa">
-                    <span style="font-size:11px;color:#adb5bd">
+                            background:var(--bg-body)">
+                    <span style="font-size:11px;color:var(--text-muted)">
                         <i class="bi bi-plus-circle"></i> Einplanen
                     </span>
                 </div>
@@ -258,7 +258,7 @@ include 'includes/header.php';
                 <div id="dp-inner" style="min-width:<?= $gridW ?>px">
 
                     <!-- Zeitkopf -->
-                    <div style="height:<?= $HEAD_H ?>px;position:relative;border-bottom:2px solid #dee2e6;background:#fff">
+                    <div style="height:<?= $HEAD_H ?>px;position:relative;border-bottom:2px solid var(--border);background:var(--bg-card)">
                         <?php for ($i = 0; $i <= $slotCount; $i++):
                             $m = $startMin + $i * 30;
                             $isHour = ($m % 60 === 0);
@@ -266,16 +266,16 @@ include 'includes/header.php';
                         <?php if ($isHour): ?>
                         <div class="dp-time-label" data-slot-idx="<?= $i ?>"
                              style="position:absolute;left:<?= $i * $SLOT_W ?>px;top:0;height:100%;
-                                    border-left:2px solid #ced4da;padding:8px 4px 0;
-                                    font-size:11px;font-weight:700;color:#495057;
+                                    border-left:2px solid var(--border);padding:8px 4px 0;
+                                    font-size:11px;font-weight:700;color:var(--text-primary);
                                     white-space:nowrap;box-sizing:border-box">
                             <?= dpMinToTime($m) ?>
                         </div>
                         <?php else: ?>
                         <div class="dp-time-label" data-slot-idx="<?= $i ?>"
                              style="position:absolute;left:<?= $i * $SLOT_W ?>px;top:18px;
-                                    border-left:1px dashed #dee2e6;height:50%;
-                                    font-size:9px;color:#adb5bd;padding:0 3px;box-sizing:border-box">:30</div>
+                                    border-left:1px dashed var(--border-light);height:50%;
+                                    font-size:9px;color:var(--text-muted);padding:0 3px;box-sizing:border-box">:30</div>
                         <?php endif; ?>
                         <?php endfor; ?>
                     </div>
@@ -318,8 +318,8 @@ include 'includes/header.php';
                          data-ma-id="<?= $ma['id'] ?>"
                          data-ma-name="<?= htmlspecialchars($ma['vollname'], ENT_QUOTES) ?>"
                          style="height:<?= $ROW_H ?>px;position:relative;
-                                border-bottom:1px solid #dee2e6;
-                                background-color:#fff;
+                                border-bottom:1px solid var(--border);
+                                background-color:var(--bg-card);
                                 cursor:<?= $canWrite ? 'crosshair' : 'default' ?>">
 
                         <!-- Öffnungszeit-Hintergrund -->
@@ -404,13 +404,13 @@ include 'includes/header.php';
                          data-station-name="<?= htmlspecialchars($s['name'], ENT_QUOTES) ?>"
                          data-station-color="<?= $color ?>"
                          style="height:<?= $ROW_H ?>px;position:relative;
-                                border-bottom:1px solid #dee2e6;
-                                background:#fafafa;
+                                border-bottom:1px solid var(--border);
+                                background:var(--bg-body);
                                 display:flex;align-items:center;justify-content:center;
                                 border:2px dashed transparent;
                                 box-sizing:border-box;
                                 transition:border-color 0.15s,background 0.15s">
-                        <span class="dp-dropzone-hint" style="font-size:11px;color:#adb5bd;pointer-events:none">
+                        <span class="dp-dropzone-hint" style="font-size:11px;color:var(--text-muted);pointer-events:none">
                             <i class="bi bi-plus-circle"></i> Mitarbeiter aus Bank hierher ziehen
                         </span>
                         <!-- Drop-Ghost -->
@@ -457,9 +457,9 @@ foreach ($gridData as $stId => $maSchichten) {
                  style="border-radius:8px;padding:7px 12px;font-size:12px;
                         user-select:none;cursor:grab;min-width:110px;
                         <?php if ($eingeplant): ?>
-                        background:#e8f5e9;border:2px solid #4caf50;color:#2e7d32;
+                        background:rgba(91,138,114,0.18);border:2px solid #5b8a72;color:#8fc3a6;
                         <?php else: ?>
-                        background:#fff;border:2px solid #dee2e6;color:#212529;
+                        background:var(--bg-input);border:2px solid var(--border);color:var(--text-primary);
                         <?php endif; ?>">
                 <div class="bench-name" style="font-weight:700">
                     <?= htmlspecialchars($ma['vollname']) ?>
@@ -546,9 +546,9 @@ foreach ($gridData as $stId => $maSchichten) {
 .dp-bgrid-tl {
     background-image: repeating-linear-gradient(90deg,
         transparent 0px, transparent calc(var(--dp-sw)/2 - 1px),
-        #f1f3f5 calc(var(--dp-sw)/2 - 1px), #f1f3f5 calc(var(--dp-sw)/2),
+        var(--border-light) calc(var(--dp-sw)/2 - 1px), var(--border-light) calc(var(--dp-sw)/2),
         transparent calc(var(--dp-sw)/2), transparent calc(var(--dp-sw) - 1px),
-        #dee2e6 calc(var(--dp-sw) - 1px), #dee2e6 var(--dp-sw));
+        var(--border) calc(var(--dp-sw) - 1px), var(--border) var(--dp-sw));
 }
 
 .dp-shift              { transition: box-shadow 0.1s; }
@@ -859,9 +859,9 @@ function updateBenchCard(maId, eingeplant) {
     var nameDiv   = card.querySelector('.bench-name');
     var checkIcon = card.querySelector('.bench-check');
     if (eingeplant) {
-        card.style.background = '#e8f5e9';
-        card.style.border     = '2px solid #4caf50';
-        card.style.color      = '#2e7d32';
+        card.style.background = 'rgba(91,138,114,0.18)';
+        card.style.border     = '2px solid #5b8a72';
+        card.style.color      = '#8fc3a6';
         if (!checkIcon && nameDiv) {
             var ic = document.createElement('i');
             ic.className = 'bi bi-check-circle-fill text-success ms-1 bench-check';
@@ -869,9 +869,9 @@ function updateBenchCard(maId, eingeplant) {
             nameDiv.appendChild(ic);
         }
     } else {
-        card.style.background = '#fff';
-        card.style.border     = '2px solid #dee2e6';
-        card.style.color      = '#212529';
+        card.style.background = 'var(--bg-input)';
+        card.style.border     = '2px solid var(--border)';
+        card.style.color      = 'var(--text-primary)';
         if (checkIcon) checkIcon.remove();
     }
 }
@@ -920,8 +920,8 @@ function createTimelineRow(stId, maId, color, stName, ma) {
     tl.dataset.stationColor = color;
     tl.dataset.maId         = maId;
     tl.dataset.maName       = ma.vollname;
-    tl.style.cssText = 'height:'+ROW_H+'px;position:relative;border-bottom:1px solid #dee2e6;'
-        + 'background-color:#fff;cursor:crosshair';
+    tl.style.cssText = 'height:'+ROW_H+'px;position:relative;border-bottom:1px solid var(--border);'
+        + 'background-color:var(--bg-card);cursor:crosshair';
     // Ghost
     var ghost = document.createElement('div');
     ghost.className = 'dp-ghost';
@@ -939,12 +939,12 @@ function createLabelRow(stId, maId, color, ma) {
     lr.draggable = true;
     lr.dataset.stationId = stId;
     lr.dataset.maId      = maId;
-    lr.style.cssText = 'height:'+ROW_H+'px;padding:4px 6px 4px 4px;border-bottom:1px solid #dee2e6;'
-        + 'background:#fff;display:flex;align-items:center;gap:4px;'
+    lr.style.cssText = 'height:'+ROW_H+'px;padding:4px 6px 4px 4px;border-bottom:1px solid var(--border);'
+        + 'background:var(--bg-card);display:flex;align-items:center;gap:4px;'
         + 'border-left:3px solid '+color+'55;cursor:grab';
     var grip = document.createElement('i');
     grip.className = 'bi bi-grip-vertical';
-    grip.style.cssText = 'font-size:14px;color:#adb5bd;flex-shrink:0';
+    grip.style.cssText = 'font-size:14px;color:var(--text-muted);flex-shrink:0';
     lr.appendChild(grip);
     var inner = document.createElement('div');
     inner.style.cssText = 'overflow:hidden';
@@ -955,7 +955,7 @@ function createLabelRow(stId, maId, color, ma) {
     inner.appendChild(nameDiv);
     if (ma.funktion) {
         var fnDiv = document.createElement('div');
-        fnDiv.style.cssText = 'font-size:10px;color:#6c757d;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+        fnDiv.style.cssText = 'font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
         fnDiv.textContent = ma.funktion;
         inner.appendChild(fnDiv);
     }
@@ -1005,7 +1005,7 @@ document.querySelectorAll('.dp-bench').forEach(function(card) {
         document.querySelectorAll('.dp-dropzone.dp-over').forEach(function(dz) {
             dz.classList.remove('dp-over');
             dz.style.borderColor = 'transparent';
-            dz.style.background  = '#fafafa';
+            dz.style.background  = 'var(--bg-body)';
             var g = dz.querySelector('.dp-ghost');
             if (g) g.style.display = 'none';
         });
@@ -1019,7 +1019,7 @@ function initDropZone(dz) {
         e.dataTransfer.dropEffect = 'copy';
         dz.classList.add('dp-over');
         dz.style.borderColor = '#0d6efd';
-        dz.style.background  = '#eff6ff';
+        dz.style.background  = 'rgba(13,110,253,0.15)';
 
         var sc         = document.getElementById('dp-scroll');
         var scrollRect = sc.getBoundingClientRect();
@@ -1038,7 +1038,7 @@ function initDropZone(dz) {
         if (!dz.contains(e.relatedTarget)) {
             dz.classList.remove('dp-over');
             dz.style.borderColor = 'transparent';
-            dz.style.background  = '#fafafa';
+            dz.style.background  = 'var(--bg-body)';
             var g = dz.querySelector('.dp-ghost');
             if (g) g.style.display = 'none';
         }
@@ -1048,7 +1048,7 @@ function initDropZone(dz) {
         e.preventDefault();
         dz.classList.remove('dp-over');
         dz.style.borderColor = 'transparent';
-        dz.style.background  = '#fafafa';
+        dz.style.background  = 'var(--bg-body)';
         var g = dz.querySelector('.dp-ghost');
         if (g) g.style.display = 'none';
 

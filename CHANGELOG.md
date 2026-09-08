@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.4.3]
+
+### Geändert
+
+- der komplette Dark Mode wurde überarbeitet
+
 ## [2.4.2]
 
 ### Hinzugefügt
