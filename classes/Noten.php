@@ -11,32 +11,43 @@ class Noten {
     public function getAll($filter = []) {
         $where = [];
         $params = [];
-        
+
+        // Formations-Filter
+        $formFilter = Formation::getFilterCondition(Session::getFormationId(), 'n');
+        if ($formFilter['condition']) {
+            $where[]  = $formFilter['condition'];
+            $params   = array_merge($params, $formFilter['params']);
+        }
+
         if (!empty($filter['search'])) {
-            $where[] = "(titel LIKE ? OR komponist LIKE ? OR arrangeur LIKE ?)";
+            $where[] = "(n.titel LIKE ? OR n.komponist LIKE ? OR n.arrangeur LIKE ?)";
             $searchTerm = "%{$filter['search']}%";
             $params[] = $searchTerm;
             $params[] = $searchTerm;
             $params[] = $searchTerm;
         }
-        
+
         if (!empty($filter['genre'])) {
-            $where[] = "genre = ?";
+            $where[] = "n.genre = ?";
             $params[] = $filter['genre'];
         }
-        
+
         if (!empty($filter['schwierigkeitsgrad'])) {
-            $where[] = "schwierigkeitsgrad = ?";
+            $where[] = "n.schwierigkeitsgrad = ?";
             $params[] = $filter['schwierigkeitsgrad'];
         }
-        
+
         $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
         
-        $sql = "SELECT n.*, 
+        $sql = "SELECT n.*,
+                       f.name  AS formation_name,
+                       f.farbe AS formation_farbe,
+                       f.kuerzel AS formation_kuerzel,
                        (SELECT COUNT(*) FROM noten_dateien WHERE noten_id = n.id) as anzahl_dateien
                 FROM noten n
+                LEFT JOIN formationen f ON n.formation_id = f.id
                 {$whereClause}
-                ORDER BY titel";
+                ORDER BY n.titel";
         
         return $this->db->fetchAll($sql, $params);
     }
@@ -52,13 +63,16 @@ class Noten {
             $data['archiv_nummer'] = $this->generateArchivNummer();
         }
         
+        $formationId = $data['formation_id'] ?? Session::getFormationId();
+
         $sql = "INSERT INTO noten (
-                    titel, untertitel, komponist, arrangeur, verlag, besetzung,
+                    formation_id, titel, untertitel, komponist, arrangeur, verlag, besetzung,
                     schwierigkeitsgrad, dauer_minuten, genre, archiv_nummer,
                     anzahl_stimmen, zustand, bemerkungen, standort
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
         $params = [
+            $formationId,
             $data['titel'],
             $data['untertitel'] ?? null,
             $data['komponist'] ?? null,
@@ -74,19 +88,24 @@ class Noten {
             $data['bemerkungen'] ?? null,
             $data['standort'] ?? null
         ];
-        
+
         $this->db->execute($sql, $params);
         return $this->db->lastInsertId();
     }
     
     public function update($id, $data) {
-        $sql = "UPDATE noten SET 
-                titel = ?, untertitel = ?, komponist = ?, arrangeur = ?, verlag = ?, besetzung = ?,
+        $sql = "UPDATE noten SET
+                formation_id = ?, titel = ?, untertitel = ?, komponist = ?, arrangeur = ?, verlag = ?, besetzung = ?,
                 schwierigkeitsgrad = ?, dauer_minuten = ?, genre = ?, anzahl_stimmen = ?,
                 zustand = ?, bemerkungen = ?, standort = ?
                 WHERE id = ?";
-        
+
+        $formationId = array_key_exists('formation_id', $data)
+            ? ($data['formation_id'] ?: null)
+            : Session::getFormationId();
+
         $params = [
+            $formationId,
             $data['titel'],
             $data['untertitel'] ?? null,
             $data['komponist'] ?? null,

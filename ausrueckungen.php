@@ -126,6 +126,7 @@ include 'includes/header.php';
                         <th class="d-none d-md-table-cell">Typ</th>
                         <th class="d-none d-md-table-cell">Ort</th>
                         <th class="d-none d-md-table-cell">Status</th>
+                        <th class="d-none d-md-table-cell">Formation</th>
                         <th>Anwesenheit</th>
                         <th class="text-end no-print d-none d-md-table-cell">Aktionen</th>
                     </tr>
@@ -185,6 +186,15 @@ include 'includes/header.php';
                             <span class="badge bg-<?php echo $statusColor; ?>">
                                 <?php echo $statusText[$a['status']]; ?>
                             </span>
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <?php if (!empty($a['formation_name'])): ?>
+                            <span class="badge" style="background-color:<?php echo htmlspecialchars($a['formation_farbe']); ?>;color:#fff">
+                                <?php echo htmlspecialchars($a['formation_kuerzel'] ?: $a['formation_name']); ?>
+                            </span>
+                            <?php else: ?>
+                            <span class="text-muted">–</span>
+                            <?php endif; ?>
                         </td>
                         <td>
                             <?php
@@ -284,6 +294,13 @@ include 'includes/header.php';
                         <?php echo date('d.m.Y', strtotime($a['start_datum'])); ?>
                         &nbsp;<?php echo date('H:i', strtotime($a['start_datum'])); ?> Uhr
                     </small>
+                    <?php if (!empty($a['formation_name'])): ?>
+                    <div class="mt-1">
+                        <span class="badge" style="background-color:<?php echo htmlspecialchars($a['formation_farbe']); ?>;color:#fff;font-size:10px">
+                            <?php echo htmlspecialchars($a['formation_kuerzel'] ?: $a['formation_name']); ?>
+                        </span>
+                    </div>
+                    <?php endif; ?>
                 </div>
                 <!-- Spalte 2: 3 Buttons -->
                 <?php if ($meineMitgliedId): ?>

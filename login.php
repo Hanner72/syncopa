@@ -33,6 +33,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             Session::set('rolle',     $user['rolle']);      // primäre Rolle (Rückwärtskompatibilität)
             Session::set('rollen_ids', $rollenIds);
             Session::set('ist_admin',  $istAdmin);
+
+            // Formation automatisch setzen wenn User genau einer angehört
+            if (!$istAdmin) {
+                try {
+                    $userFormationen = $db->fetchAll(
+                        "SELECT mf.formation_id
+                         FROM mitglied_formationen mf
+                         JOIN formationen f ON mf.formation_id = f.id
+                         WHERE f.aktiv = 1
+                           AND mf.mitglied_id IN (
+                               SELECT id FROM mitglieder WHERE benutzer_id = ?
+                               UNION
+                               SELECT mitglied_id FROM benutzer WHERE id = ? AND mitglied_id IS NOT NULL
+                           )",
+                        [$user['id'], $user['id']]
+                    );
+                    if (count($userFormationen) === 1) {
+                        Session::set('active_formation_id', (int)$userFormationen[0]['formation_id']);
+                    }
+                } catch (\Throwable $e) {
+                    // Formation-Tabellen noch nicht migriert → ignorieren
+                }
+            }
+
             $db->execute("UPDATE benutzer SET letzter_login = NOW() WHERE id = ?", [$user['id']]);
             $db->execute("INSERT INTO aktivitaetslog (benutzer_id, aktion, beschreibung, ip_adresse) VALUES (?, ?, ?, ?)",
                 [$user['id'], 'login', 'Login', $_SERVER['REMOTE_ADDR']]);

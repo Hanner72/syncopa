@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.4.0]
+
+### Hinzugefügt
+
+- Formationsverwaltung
+  - Formationen können angelegt werden (Musikkapelle, 7er Partie, etc.)
+  - Jedes Mitglied kann einer oder mehrerer Formationen zugewiesen werden
+
+- Notenaufteilung (Splitten)
+  - Instrumenten Pattern in den Einstellungen eingefügt
+  - Instrumente für die Notaufteilung bzw. Erkennung können selber ergänzt und erweitert werden
+  - Hilfe zur Erstellung der Pattern eingefügt
+
+- Live Noten lesen
+ - der Kapellmeister wählt noten und die Musikanten bekommen automatisch die richtigen Noten angezeigt
+ - Halbseitige Blätterfunktion für mehr Übersicht eingebaut
+ - Noten bearbeiten bzw. Notizen machen
+ - Stempel für Musiksymbole eingefügt
+ - Notenbücher anlegen
+  - getrennt nach Formation
+
+- Rollenmatrix
+ - einfaches bearbeiten der Rollenberechtigungen
+
+### Geändert
+
+- Noten PDF Aufteilung
+  - PDF 1.5+ kann von FPDI nicht gelesen werden, Info zum speichern als PDF 1.4 oder qpdf am Server installieren
+
 ## [2.3.9]
 
 - größere Updatescript Änderungen

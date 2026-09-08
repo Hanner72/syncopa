@@ -20,11 +20,16 @@ include 'includes/header.php';
     <h1 class="h2">
         <i class="bi bi-calendar-event"></i> Kalender
     </h1>
-    <?php if (Session::checkPermission('ausrueckungen', 'schreiben')): ?>
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newEventModal">
-        <i class="bi bi-plus-circle"></i> Neuer Termin
-    </button>
-    <?php endif; ?>
+    <div class="d-flex gap-2">
+        <a href="kalender_abonnement.php" class="btn btn-outline-primary">
+            <i class="bi bi-calendar-check"></i> Kalender abonnieren
+        </a>
+        <?php if (Session::checkPermission('ausrueckungen', 'schreiben')): ?>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newEventModal">
+            <i class="bi bi-plus-circle"></i> Neuer Termin
+        </button>
+        <?php endif; ?>
+    </div>
 </div>
 
 <div class="card">

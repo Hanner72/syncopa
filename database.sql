@@ -59,12 +59,31 @@ CREATE TABLE IF NOT EXISTS `anwesenheit` (
 ) ENGINE=InnoDB AUTO_INCREMENT=608 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
+-- Tabellenstruktur für Tabelle `formationen`
+--
+
+DROP TABLE IF EXISTS `formationen`;
+CREATE TABLE IF NOT EXISTS `formationen` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `kuerzel` varchar(10) DEFAULT NULL,
+  `farbe` varchar(7) NOT NULL DEFAULT '#4471A3',
+  `beschreibung` text DEFAULT NULL,
+  `aktiv` tinyint(1) NOT NULL DEFAULT 1,
+  `erstellt_am` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Tabellenstruktur für Tabelle `ausrueckungen`
 --
 
 DROP TABLE IF EXISTS `ausrueckungen`;
 CREATE TABLE IF NOT EXISTS `ausrueckungen` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
+  `formation_id` int(11) DEFAULT NULL,
   `titel` varchar(200) NOT NULL,
   `beschreibung` text DEFAULT NULL,
   `typ` enum('Probe','Konzert','Ausrückung','Fest','Wertung','Sonstiges') NOT NULL,
@@ -176,8 +195,9 @@ CREATE TABLE IF NOT EXISTS `berechtigungen` (
   `schreiben` tinyint(1) DEFAULT 0,
   `loeschen` tinyint(1) DEFAULT 0,
   PRIMARY KEY (`id`),
-  KEY `rolle_id` (`rolle_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=84 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  KEY `rolle_id` (`rolle_id`),
+  UNIQUE KEY `uk_rolle_modul` (`rolle`,`modul`)
+) ENGINE=InnoDB AUTO_INCREMENT=97 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Daten für Tabelle `berechtigungen`
@@ -259,7 +279,20 @@ INSERT INTO `berechtigungen` (`id`, `rolle_id`, `rolle`, `modul`, `lesen`, `schr
 (80, 10, 'notenwart', 'instrumente', 1, 0, 0),
 (81, 10, 'notenwart', 'uniformen', 1, 0, 0),
 (82, 10, 'notenwart', 'finanzen', 0, 0, 0),
-(83, 10, 'notenwart', 'benutzer', 0, 0, 0);
+(83, 10, 'notenwart', 'benutzer', 0, 0, 0),
+(84, 1, 'admin', 'formationen', 1, 1, 1),
+(85, 2, 'obmann', 'formationen', 1, 0, 0),
+(86, 3, 'kapellmeister', 'formationen', 1, 0, 0),
+(87, 4, 'kassier', 'formationen', 1, 0, 0),
+(88, 5, 'schriftfuehrer', 'formationen', 1, 0, 0),
+(89, 6, 'trachtenwart', 'formationen', 1, 0, 0),
+(90, 7, 'instrumentenwart', 'formationen', 1, 0, 0),
+(91, 8, 'jugendbeauftragter', 'formationen', 1, 0, 0),
+(92, 9, 'mitglied', 'formationen', 1, 0, 0),
+(93, 10, 'notenwart', 'formationen', 1, 0, 0),
+(94, 12, 'extern', 'ausrueckungen', 1, 0, 0),
+(95, 12, 'extern', 'noten', 1, 0, 0),
+(96, 12, 'extern', 'formationen', 1, 0, 0);
 
 -- --------------------------------------------------------
 
@@ -349,6 +382,7 @@ INSERT INTO `einstellungen` (`id`, `schluessel`, `wert`, `beschreibung`, `aktual
 DROP TABLE IF EXISTS `finanzen`;
 CREATE TABLE IF NOT EXISTS `finanzen` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
+  `formation_id` int(11) DEFAULT NULL,
   `typ` enum('einnahme','ausgabe') NOT NULL,
   `datum` date NOT NULL,
   `betrag` decimal(10,2) NOT NULL,
@@ -516,6 +550,24 @@ CREATE TABLE IF NOT EXISTS `mitglieder` (
 ) ENGINE=InnoDB AUTO_INCREMENT=69 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
+-- Tabellenstruktur für Tabelle `mitglied_formationen`
+--
+
+DROP TABLE IF EXISTS `mitglied_formationen`;
+CREATE TABLE IF NOT EXISTS `mitglied_formationen` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `mitglied_id` int(11) NOT NULL,
+  `formation_id` int(11) NOT NULL,
+  `rolle` varchar(50) DEFAULT NULL,
+  `seit_datum` date DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_mitglied_formation` (`mitglied_id`,`formation_id`),
+  KEY `formation_id` (`formation_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Tabellenstruktur für Tabelle `mitglied_instrumente`
 --
 
@@ -539,6 +591,7 @@ CREATE TABLE IF NOT EXISTS `mitglied_instrumente` (
 DROP TABLE IF EXISTS `noten`;
 CREATE TABLE IF NOT EXISTS `noten` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
+  `formation_id` int(11) DEFAULT NULL,
   `titel` varchar(200) NOT NULL,
   `untertitel` varchar(200) DEFAULT NULL,
   `komponist` varchar(150) DEFAULT NULL,
@@ -630,7 +683,7 @@ CREATE TABLE IF NOT EXISTS `rollen` (
   `aktiv` tinyint(1) DEFAULT 1,
   `erstellt_am` timestamp NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Daten für Tabelle `rollen`
@@ -647,7 +700,8 @@ INSERT INTO `rollen` (`id`, `name`, `beschreibung`, `ist_admin`, `farbe`, `sorti
 (8, 'jugendbeauftragter', 'Jugendbeauftragter', 0, 'info', 8, 1, '2026-02-10 09:25:15'),
 (9, 'mitglied', 'Normales Mitglied', 0, 'secondary', 999, 1, '2026-02-10 09:25:15'),
 (10, 'notenwart', 'Notenwart - Verwaltung des Notenarchivs', 0, 'danger', 9, 1, '2026-02-10 10:30:25'),
-(11, 'user', 'Neuer Benutzer (noch nicht freigeschaltet)', 0, 'secondary', 1000, 1, '2026-02-10 12:54:59');
+(11, 'user', 'Neuer Benutzer (noch nicht freigeschaltet)', 0, 'secondary', 1000, 1, '2026-02-10 12:54:59'),
+(12, 'extern', 'Externer Gastmusiker', 0, 'secondary', 998, 1, '2026-01-01 00:00:00');
 
 -- --------------------------------------------------------
 
@@ -923,7 +977,8 @@ ALTER TABLE `anwesenheit`
 -- Constraints der Tabelle `ausrueckungen`
 --
 ALTER TABLE `ausrueckungen`
-  ADD CONSTRAINT `ausrueckungen_ibfk_1` FOREIGN KEY (`erstellt_von`) REFERENCES `benutzer` (`id`) ON DELETE SET NULL;
+  ADD CONSTRAINT `ausrueckungen_ibfk_1` FOREIGN KEY (`erstellt_von`) REFERENCES `benutzer` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `ausrueckungen_ibfk_formation` FOREIGN KEY (`formation_id`) REFERENCES `formationen` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints der Tabelle `ausrueckung_noten`
@@ -961,7 +1016,8 @@ ALTER TABLE `dokumente`
 -- Constraints der Tabelle `finanzen`
 --
 ALTER TABLE `finanzen`
-  ADD CONSTRAINT `finanzen_ibfk_1` FOREIGN KEY (`erstellt_von`) REFERENCES `benutzer` (`id`) ON DELETE SET NULL;
+  ADD CONSTRAINT `finanzen_ibfk_1` FOREIGN KEY (`erstellt_von`) REFERENCES `benutzer` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `finanzen_ibfk_formation` FOREIGN KEY (`formation_id`) REFERENCES `formationen` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints der Tabelle `instrumente`
@@ -989,6 +1045,13 @@ ALTER TABLE `kalender_termine`
   ADD CONSTRAINT `kalender_termine_ibfk_1` FOREIGN KEY (`erstellt_von`) REFERENCES `benutzer` (`id`) ON DELETE SET NULL;
 
 --
+-- Constraints der Tabelle `mitglied_formationen`
+--
+ALTER TABLE `mitglied_formationen`
+  ADD CONSTRAINT `mf_ibfk_mitglied`  FOREIGN KEY (`mitglied_id`)  REFERENCES `mitglieder` (`id`)  ON DELETE CASCADE,
+  ADD CONSTRAINT `mf_ibfk_formation` FOREIGN KEY (`formation_id`) REFERENCES `formationen` (`id`) ON DELETE CASCADE;
+
+--
 -- Constraints der Tabelle `mitglieder`
 --
 ALTER TABLE `mitglieder`
@@ -1001,6 +1064,12 @@ ALTER TABLE `mitglieder`
 ALTER TABLE `mitglied_instrumente`
   ADD CONSTRAINT `mitglied_instrumente_ibfk_1` FOREIGN KEY (`mitglied_id`) REFERENCES `mitglieder` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `mitglied_instrumente_ibfk_2` FOREIGN KEY (`instrument_typ_id`) REFERENCES `instrument_typen` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints der Tabelle `noten`
+--
+ALTER TABLE `noten`
+  ADD CONSTRAINT `noten_ibfk_formation` FOREIGN KEY (`formation_id`) REFERENCES `formationen` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints der Tabelle `noten_dateien`
@@ -1021,6 +1090,39 @@ ALTER TABLE `uniform_kleidungsstuecke`
 ALTER TABLE `uniform_zuweisungen`
   ADD CONSTRAINT `zuweisungen_ibfk_1` FOREIGN KEY (`mitglied_id`) REFERENCES `mitglieder` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `zuweisungen_ibfk_2` FOREIGN KEY (`kleidungsstueck_id`) REFERENCES `uniform_kleidungsstuecke` (`id`) ON DELETE CASCADE;
+--
+-- Tabellenstruktur für Tabelle `notenbucher`
+--
+
+CREATE TABLE IF NOT EXISTS `notenbucher` (
+  `id`           int(11) NOT NULL AUTO_INCREMENT,
+  `name`         varchar(150) NOT NULL,
+  `beschreibung` text DEFAULT NULL,
+  `benutzer_id`  int(11) NOT NULL,
+  `typ`          enum('privat','geteilt') NOT NULL DEFAULT 'privat',
+  `formation_id` int(11) DEFAULT NULL,
+  `erstellt_am`  timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `benutzer_id` (`benutzer_id`),
+  CONSTRAINT `notenbucher_ibfk_1` FOREIGN KEY (`benutzer_id`) REFERENCES `benutzer` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Tabellenstruktur für Tabelle `notenbuch_noten`
+--
+
+CREATE TABLE IF NOT EXISTS `notenbuch_noten` (
+  `id`           int(11) NOT NULL AUTO_INCREMENT,
+  `notenbuch_id` int(11) NOT NULL,
+  `noten_id`     int(11) NOT NULL,
+  `reihenfolge`  int(11) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_notenbuch_note` (`notenbuch_id`,`noten_id`),
+  KEY `noten_id` (`noten_id`),
+  CONSTRAINT `notenbuch_noten_ibfk_1` FOREIGN KEY (`notenbuch_id`) REFERENCES `notenbucher` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `notenbuch_noten_ibfk_2` FOREIGN KEY (`noten_id`)     REFERENCES `noten` (`id`)       ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

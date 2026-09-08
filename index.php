@@ -20,14 +20,22 @@ $instrumentStats = $instrument->getStatistik();
 $naechsteAusrueckungen = $ausrueckung->getUpcoming(5);
 $faelligeWartungen = $instrument->getFaelligeWartungen();
 
-// Geburtstage diesen Monat
-$sql = "SELECT vorname, nachname, geburtsdatum, 
-        DAY(geburtsdatum) as tag, MONTH(geburtsdatum) as monat
-        FROM mitglieder 
-        WHERE status = 'aktiv' 
-        AND MONTH(geburtsdatum) BETWEEN MONTH(CURDATE()) AND MONTH(CURDATE()) + 1
-        ORDER BY MONTH(geburtsdatum), DAY(geburtsdatum)";
-$geburtstage = $db->fetchAll($sql);
+// Geburtstage diesen Monat – mit Formationsfilter
+$formationId = Session::getFormationId();
+$joinFormation = '';
+$paramsGeb = [];
+if ($formationId) {
+    $joinFormation = "JOIN mitglied_formationen mf_geb ON mf_geb.mitglied_id = m.id AND mf_geb.formation_id = ?";
+    $paramsGeb[] = $formationId;
+}
+$sql = "SELECT m.vorname, m.nachname, m.geburtsdatum,
+        DAY(m.geburtsdatum) as tag, MONTH(m.geburtsdatum) as monat
+        FROM mitglieder m
+        {$joinFormation}
+        WHERE m.status = 'aktiv'
+        AND MONTH(m.geburtsdatum) BETWEEN MONTH(CURDATE()) AND MONTH(CURDATE()) + 1
+        ORDER BY MONTH(m.geburtsdatum), DAY(m.geburtsdatum)";
+$geburtstage = $db->fetchAll($sql, $paramsGeb);
 
 // Neue Benutzer mit Rolle "user" (nur für Admin und Obmann)
 $neueBenutzer = [];

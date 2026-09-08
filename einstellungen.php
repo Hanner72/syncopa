@@ -249,6 +249,37 @@ include 'includes/header.php';
         </div>
     </div>
 
+    <!-- Noten / PDF-Aufteilung -->
+    <div class="card mb-3">
+        <div class="card-header">
+            <h5 class="mb-0">Noten-Aufteilung</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-3">Definiere, welche Instrumente beim automatischen PDF-Aufteilen erkannt werden sollen und in welcher Reihenfolge die Muster geprüft werden.</p>
+            <a href="noten_instrumente.php" class="btn btn-outline-primary">
+                <i class="bi bi-music-note"></i> Instrument-Pattern verwalten
+            </a>
+        </div>
+    </div>
+
+    <!-- Rollen & Berechtigungen -->
+    <div class="card mb-3">
+        <div class="card-header">
+            <h5 class="mb-0">Rollen &amp; Berechtigungen</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-3">Verwalte Rollen und lege fest, welche Rolle auf welche Module zugreifen darf.</p>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="rollen.php" class="btn btn-outline-secondary">
+                    <i class="bi bi-shield-lock"></i> Rollen verwalten
+                </a>
+                <a href="berechtigungen_matrix.php" class="btn btn-outline-primary">
+                    <i class="bi bi-grid-3x3-gap"></i> Berechtigungs-Matrix
+                </a>
+            </div>
+        </div>
+    </div>
+
     <!-- System-Informationen -->
     <div class="card mb-3">
         <div class="card-header d-flex justify-content-between align-items-center">
