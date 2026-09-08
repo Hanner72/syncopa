@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.1]
+
+### Bugs
+
+- Noten Seite lässt sich nicht mehr öffnen bei Update von 2.3.9 auf 2.4.0
+ - behoben
+
 ## [2.4.0]
 
 ### Hinzugefügt
