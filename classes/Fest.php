@@ -69,7 +69,7 @@ class Fest {
     public function update(int $id, array $data): bool {
         $sql = "UPDATE feste SET name=?, jahr=?, datum_von=?, datum_bis=?, ort=?, adresse=?, beschreibung=?, status=?
                 WHERE id=?";
-        return $this->db->execute($sql, [
+        return (bool) $this->db->execute($sql, [
             $data['name'],
             (int)$data['jahr'],
             $data['datum_von'],
@@ -86,7 +86,7 @@ class Fest {
      * Fest löschen (Cascade löscht alle Sub-Datensätze)
      */
     public function delete(int $id): bool {
-        return $this->db->execute("DELETE FROM feste WHERE id = ?", [$id]);
+        return (bool) $this->db->execute("DELETE FROM feste WHERE id = ?", [$id]);
     }
 
     /**

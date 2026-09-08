@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.4.2]
+
+### Hinzugefügt
+
+- Changelog bei den Updates hinzugefügt um Änderungen Nachvollziehbar sind
+- Musikanten Statistik bei Live-Leitung hinzugefügt
+
+### Geändert
+
+- Statistikkarten am Dashboard angeglichen
+- Geburtstagsliste Alter richtig darstellen mit Farbpatch bei runden Geburtstagen
+- Live-Ansicht für Kapellmeister überarbeitet
+- Instrumentendetail Ansicht überarbeitet
+
+### Bugs
+
+- In der Live Ansicht für den Kapellmeister wurde die Stimmenzuordnung nicht richtig angezeigt
+- Status von Fest ändern - Fehlermeldung - behoben
+
 ## [2.4.1]
 
 ### Bugs

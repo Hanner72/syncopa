@@ -48,7 +48,7 @@ if ($session) {
     $spieler = $db->fetchOne(
         "SELECT stimme_id FROM probe_session_spieler
          WHERE session_id = ? AND benutzer_id = ?
-         ORDER BY joined_am DESC LIMIT 1",
+         ORDER BY joined_am DESC, id DESC LIMIT 1",
         [$session['id'], $benutzerId]
     );
     $activeStimmeId = $spieler ? (int)$spieler['stimme_id'] : null;
@@ -608,8 +608,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // PDF Viewer starten
     window.pdfViewer = new PDFViewer('pdf-canvas', userData.pdf_file, userData.seite_von, userData.seite_bis);
 
-    // Halbseiten-Modus über Stückwechsel hinweg wiederherstellen
-    if (localStorage.getItem('probe_halfpage') === '1') {
+    // Halbseiten-Modus: standardmäßig aktiv, außer explizit ausgeschaltet
+    if (localStorage.getItem('probe_halfpage') !== '0') {
         window.pdfViewer.splitPageMode = true;
     }
 
@@ -729,8 +729,7 @@ document.addEventListener('DOMContentLoaded', function() {
         halfBtn.addEventListener('click', function() {
             var isHalf = window.pdfViewer.toggleSplitPageMode();
             this.classList.toggle('active', isHalf);
-            if (isHalf) localStorage.setItem('probe_halfpage', '1');
-            else localStorage.removeItem('probe_halfpage');
+            localStorage.setItem('probe_halfpage', isHalf ? '1' : '0');
         });
     }
 
@@ -812,6 +811,12 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(function() {});
     }, 5000);
     <?php endif; ?>
+
+    // Formulare (Stimme wählen, Favoriten) navigieren zur selben Seite zurück –
+    // das ist kein echtes Verlassen. Ohne diese Markierung feuert pagehide beim
+    // Absenden trotzdem und der "leave"-Beacon löscht die gerade erst gewählte
+    // Stimme wieder, bevor der Reload sie anzeigen kann.
+    document.addEventListener('submit', function() { _isReloading = true; }, true);
 });
 </script>
 

@@ -8,7 +8,7 @@
 // ============================================================================
 // ANWENDUNGS-KONSTANTEN
 // ============================================================================
-if (!defined('APP_VERSION')) define('APP_VERSION', '2.4.1');
+if (!defined('APP_VERSION')) define('APP_VERSION', '2.4.2');
 if (!defined('APP_NAME'))    define('APP_NAME',    'Syncopa');
 if (!defined('BASE_PATH'))   define('BASE_PATH', __DIR__);
 
