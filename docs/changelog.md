@@ -13,6 +13,7 @@
 - Geburtstagsliste Alter richtig darstellen mit Farbpatch bei runden Geburtstagen
 - Live-Ansicht für Kapellmeister überarbeitet
 - Instrumentendetail Ansicht überarbeitet
+- komplette Dokumentation überarbeitet
 
 ### Bugs
 

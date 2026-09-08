@@ -10,6 +10,9 @@
   <!-- * [Mitglied anlegen / bearbeiten](mitglied-bearbeiten.md) -->
   <!-- * [Mitgliedsbeiträge](beitraege.md) -->
 
+* **🏷️ Formationen**
+  * [Übersicht & Verwaltung](formationen.md)
+
 * **🎺 Ausrückungen**
   * [Übersicht & Planung](ausrueckungen.md)
   <!-- * [Ausrückung anlegen](ausrueckung-anlegen.md) -->
@@ -24,10 +27,12 @@
 
 * **🎼 Noten**
   * [Notenarchiv](noten.md)
+  * [Notenbücher](notenbucher.md)
+  * [Live-Probe](live-probe.md)
 
 * **🎻 Instrumente**
   * [Inventar](instrumente.md)
-  <!-- * [Wartungen](instrumente.md#wartungen) -->
+  * [Wartungen](instrumente.md#wartungen)
 
 * **👔 Uniformen**
   * [Verwaltung](uniformen.md)

@@ -61,9 +61,28 @@ Kategorien für die Ausrückungen.
 
 ![Nummernkreise](screenshots/stammdaten4.png)
 
-Nummernkreise für die Mitglieder, Noten und Instrumente.
+Nummernkreise legen fest, wie automatisch vergebene Nummern für **Mitglieder**, **Noten** und **Instrumente** aussehen (z.B. Mitgliedsnummer, Archivnummer, Inventarnummer).
 
-> ⚠️ **Hinweis:** Beschreibung in der rechten Tabelle
+Für jeden der drei Bereiche kann eingestellt werden:
+
+| Einstellung | Beschreibung |
+|---|---|
+| Präfix | Text vor der laufenden Nummer, z.B. `M`, `NY` oder `Iy` |
+| Stellen (Zahl) | Wie viele Ziffern die laufende Nummer hat, mit führenden Nullen aufgefüllt (1–10 Stellen) |
+| Vorschau nächste Nr. | Zeigt live, wie die nächste vergebene Nummer aussehen würde |
+
+Im Präfix können zwei Platzhalter verwendet werden, die automatisch durch das aktuelle Jahr ersetzt werden:
+
+- `Y` → aktuelles Jahr 4-stellig (z.B. `2026`)
+- `y` → aktuelles Jahr 2-stellig (z.B. `26`)
+
+**Beispiel:** Präfix `Iy` mit 3 Stellen ergibt im Jahr 2026 die Nummer `I26001`.
+
+1. Navigiere zu **Administration → Stammdaten → Nummernkreise**
+2. Präfix und/oder Stellenanzahl je Bereich anpassen (Vorschau aktualisiert sich sofort)
+3. **Nummernkreise speichern**
+
+> ⚠️ **Achtung:** Änderungen wirken sich nur auf **neu angelegte** Datensätze aus. Bereits vergebene Nummern (z.B. bestehende Mitgliedsnummern) werden nicht nachträglich geändert.
 
 ---
 
@@ -73,6 +92,7 @@ Bevor Mitglieder und Instrumente angelegt werden, sollten die Stammdaten vollst�
 
 1. ✅ Register anlegen
 2. ✅ Instrumententypen anlegen
-3. ✅ Noten-Kategorien anlegen
-4. ✅ Uniform-Kategorien anlegen
-5. → Jetzt [Mitglieder](mitglieder.md) anlegen
+3. ✅ Nummernkreise nach Wunsch anpassen (optional, Standard funktioniert auch ohne Anpassung)
+4. ✅ Uniform-Kategorien anlegen (→ [Uniformen](uniformen.md))
+5. Falls der Verein mehrere Besetzungen führt: → [Formationen](formationen.md) anlegen
+6. → Jetzt [Mitglieder](mitglieder.md) anlegen
