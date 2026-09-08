@@ -114,11 +114,35 @@ try {
     }
 
     // ----------------------------------------------------------------
-    // Seitenanzahl ermitteln
+    // Seitenanzahl ermitteln (mit qpdf-Fallback für PDF 1.5+)
     // ----------------------------------------------------------------
-    $pageCount = fpdiSeitenanzahl($tmpPdf);
+    $fpdiPfad = $tmpPdf;
+    $tmpFpdi  = null;
+    $pageCount = 0;
+    try {
+        $pageCount = fpdiSeitenanzahl($fpdiPfad);
+    } catch (\setasign\Fpdi\PdfParser\CrossReference\CrossReferenceException $e) {
+        // PDF 1.5+ mit komprimierten Querverweisen – qpdf-Preprocessing versuchen
+        $tmpFpdi = qpdfPreprocess($fpdiPfad);
+        if ($tmpFpdi !== null) {
+            $fpdiPfad = $tmpFpdi;
+            try {
+                $pageCount = fpdiSeitenanzahl($fpdiPfad);
+            } catch (Exception $e2) {
+                @unlink($tmpPdf); @unlink($tmpFpdi);
+                echo json_encode(['success' => false, 'error' => 'PDF konnte auch nach Konvertierung nicht gelesen werden: ' . $e2->getMessage()]);
+                exit;
+            }
+        } else {
+            $seitenInfo = pdfinfoSeitenanzahl($tmpPdf);
+            $hint = $seitenInfo > 0 ? " Das PDF hat {$seitenInfo} Seiten." : '';
+            @unlink($tmpPdf);
+            echo json_encode(['success' => false, 'error' => 'PDF-Format nicht unterstützt (PDF 1.5+ komprimiert).' . $hint . ' Lösung: qpdf installieren (sudo apt install qpdf) oder PDF als PDF 1.4 neu exportieren.']);
+            exit;
+        }
+    }
     if ($pageCount <= 0) {
-        @unlink($tmpPdf);
+        @unlink($tmpPdf); if ($tmpFpdi) @unlink($tmpFpdi);
         echo json_encode(['success' => false, 'error' => 'PDF konnte nicht gelesen werden (0 Seiten erkannt)']);
         exit;
     }
@@ -152,7 +176,7 @@ try {
         // Versuch 2: OCR.space API (Scans)
         $methode = 'ocr_api';
         for ($p = 1; $p <= $pageCount; $p++) {
-            $seitenStimmen[$p] = erkenneStimmePerOcrApi($tmpPdf, $p, $ocrApiKey);
+            $seitenStimmen[$p] = erkenneStimmePerOcrApi($fpdiPfad, $p, $ocrApiKey);
         }
         $erkannte = array_filter($seitenStimmen);
     }
@@ -230,7 +254,7 @@ try {
         $uniqueName = $notenId . '_' . uniqid() . '_' . time() . '.pdf';
         $zielPfad   = NOTEN_DIR . DIRECTORY_SEPARATOR . $uniqueName;
 
-        $ok = fpdiExtrahiere($tmpPdf, $seiten, $zielPfad);
+        $ok = fpdiExtrahiere($fpdiPfad, $seiten, $zielPfad);
         if (!$ok) {
             $ergebnis[] = [
                 'name'    => $anzeigeNamen,
@@ -250,6 +274,19 @@ try {
             [$notenId, $uniqueName, $anzeigeNamen, filesize($zielPfad), $beschreibung, $sortierung, $benutzerId]
         );
 
+        // Stimme automatisch anlegen / aktualisieren
+        $neueDateiId = $db->lastInsertId();
+        $stimmeName  = $bekannt ? $stimme : ('Seite ' . $seiten[0]);
+        $nextRf      = (int)($db->fetchOne(
+            "SELECT COALESCE(MAX(reihenfolge),0)+1 as n FROM noten_stimmen WHERE noten_id=?", [$notenId]
+        )['n'] ?? 1);
+        $db->execute(
+            "INSERT INTO noten_stimmen (noten_id, datei_id, name, seite_von, seite_bis, reihenfolge)
+             VALUES (?,?,?,1,?,?)
+             ON DUPLICATE KEY UPDATE datei_id=VALUES(datei_id), seite_von=1, seite_bis=VALUES(seite_bis)",
+            [$notenId, $neueDateiId, $stimmeName, count($seiten), $nextRf]
+        );
+
         $ergebnis[] = [
             'name'    => $anzeigeNamen,
             'stimme'  => $stimme,
@@ -261,6 +298,7 @@ try {
     }
 
     @unlink($tmpPdf);
+    if ($tmpFpdi) @unlink($tmpFpdi);
 
     $hinweis = $istScan
         ? 'Hinweis: Das PDF ist ein Scan – Stimmen konnten nicht erkannt werden. Bitte die Dateien unten umbenennen.'
@@ -292,22 +330,41 @@ try {
 // HILFSFUNKTIONEN
 // ============================================================
 
-/**
- * Seitenanzahl via FPDI ermitteln.
- */
 function fpdiSeitenanzahl(string $pdfPath): int
 {
     try {
         $pdf = new \setasign\Fpdi\Fpdi();
         return $pdf->setSourceFile($pdfPath);
+    } catch (\setasign\Fpdi\PdfParser\CrossReference\CrossReferenceException $e) {
+        throw $e; // Weiterwerfen damit der Aufrufer qpdf-Fallback starten kann
     } catch (Exception $e) {
         return 0;
     }
 }
 
-/**
- * Seiten mit FPDI in neue Datei extrahieren.
- */
+function qpdfPreprocess(string $pdfPath): ?string
+{
+    if (!function_exists('shell_exec')) return null;
+    $qpdf = trim((string)shell_exec('which qpdf 2>/dev/null'));
+    if (empty($qpdf)) return null;
+    $tmpOut = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'syncopa_qpdf_' . uniqid() . '.pdf';
+    $esc    = escapeshellarg($pdfPath);
+    $escOut = escapeshellarg($tmpOut);
+    shell_exec("qpdf --decode-level=all --stream-data=uncompress $esc $escOut 2>/dev/null");
+    if (file_exists($tmpOut) && filesize($tmpOut) > 100) return $tmpOut;
+    @unlink($tmpOut);
+    return null;
+}
+
+function pdfinfoSeitenanzahl(string $pdfPath): int
+{
+    if (!function_exists('shell_exec')) return 0;
+    $esc = escapeshellarg($pdfPath);
+    $out = (string)shell_exec("pdfinfo $esc 2>/dev/null");
+    if (preg_match('/^Pages:\s*(\d+)/m', $out, $m)) return (int)$m[1];
+    return 0;
+}
+
 function fpdiExtrahiere(string $quellPdf, array $seiten, string $zielPfad): bool
 {
     try {
@@ -411,41 +468,20 @@ function erkenneStimmePerText(string $pdfPath, int $seite): ?string
 
 function matcheStimme(string $text): ?string
 {
-    // WICHTIG: Spezifischere Namen ZUERST (Tenorhorn vor Horn, Bassklarinette vor Klarinette etc.)
-    $instrumente = [
-        // Holzbläser
-        'Piccolo(?:fl[öu]te)?',
-        'Querfl[öu]te[n]?', 'Bassfl[öu]te', 'Fl[öu]te[n]?',
-        'Bassklarinette', 'Klarinette[n]?',
-        'Englisch(?:es)?\s*Horn',
-        'Oboe[n]?', 'Fagott[e]?', 'Kontrafagott',
-        'Sopransaxophon', 'Altsaxophon', 'Tenorsaxophon', 'Baritonsaxophon', 'Basssaxophon', 'Saxophon[e]?',
-        // Blechbläser – REIHENFOLGE WICHTIG: länger/spezifischer zuerst
-        'Fl[üu]gelhorn(?:er)?',
-        'Cornet(?:te)?',
-        'Trompete[n]?',
-        'Tenorhorn(?:er)?',      // VOR Horn!
-        'Waldhorn(?:er)?',
-        'Horn(?:er)?',           // NACH Tenorhorn und Waldhorn
-        'Bariton[e]?', 'Euphonium',
-        'Kontrabassposaune', 'Bassposaune', 'Posaune[n]?',
-        'Kontrabasstuba', 'Basstuba', 'Tuba[s]?',
-        'Es-Bass', 'B-Bass',
-        // Schlagwerk
-        'Schlagzeug', 'Drumset',
-        'Kleine\s*Trommel', 'Grosse?\s*Trommel',
-        'Pauken?', 'Becken',
-        'Glockenspiel', 'Xylophon', 'Vibraphon', 'Marimba',
-        'Percussion',
-        // Sonstiges
-        'Partitur', 'Direktion', 'Score',
-        'Kontrabass', 'Akkordeon', 'Klavier', 'Orgel', 'Gitarre',
-    ];
+    static $instrumente = null;
+    if ($instrumente === null) {
+        try {
+            $rows = Database::getInstance()->fetchAll(
+                "SELECT pattern FROM noten_instrumente_pattern WHERE aktiv = 1 ORDER BY sortierung ASC, id ASC"
+            );
+            $instrumente = array_column($rows, 'pattern');
+        } catch (\Throwable $e) {
+            $instrumente = [];
+        }
+    }
     foreach ($instrumente as $instr) {
         $pat = '/(?:(\d+)\s*[.\-]\s*)?(' . $instr . ')(?:\s*in\s+[A-Za-z]+)?(?:\s*(?:[IVX]+|(\d+)))?\b/iu';
-        if (preg_match($pat, $text, $m)) {
-            return trim(preg_replace('/\s+/', ' ', $m[0]));
-        }
+        if (@preg_match($pat, $text, $m)) return trim(preg_replace('/\s+/', ' ', $m[0]));
     }
     return null;
 }

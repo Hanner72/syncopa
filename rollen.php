@@ -45,9 +45,14 @@ include 'includes/header.php';
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h2"><i class="bi bi-shield-lock"></i> Rollenverwaltung</h1>
-    <a href="rolle_bearbeiten.php" class="btn btn-primary">
-        <i class="bi bi-plus-circle"></i> Neue Rolle
-    </a>
+    <div class="d-flex gap-2">
+        <a href="berechtigungen_matrix.php" class="btn btn-outline-primary">
+            <i class="bi bi-grid-3x3-gap"></i> Berechtigungs-Matrix
+        </a>
+        <a href="rolle_bearbeiten.php" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Neue Rolle
+        </a>
+    </div>
 </div>
 
 <div class="alert alert-info">
@@ -157,7 +162,7 @@ include 'includes/header.php';
                         <tr>
                             <td><span class="badge bg-success">Kapellmeister</span></td>
                             <td>Musikalische Leitung</td>
-                            <td>Ausrückungen, Noten, Proben planen; Mitglieder verwalten</td>
+                            <td>Ausrückungen, Noten, Live-Sessions leiten; Mitglieder verwalten</td>
                         </tr>
                         <tr>
                             <td><span class="badge bg-info">Kassier</span></td>

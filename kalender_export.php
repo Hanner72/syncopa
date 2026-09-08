@@ -6,6 +6,7 @@
  * Parameter:
  *   ?include=termine  → Ausrückungen + Kalender-Termine exportieren
  *   ?download=1       → Als Datei herunterladen statt als Feed ausgeben
+ *   ?formation=ID     → Nur Ausrückungen dieser Formation (+ Einträge ohne Formation)
  */
 require_once 'config.php';
 require_once 'includes.php';
@@ -18,18 +19,39 @@ $db = Database::getInstance();
 // Parameter: include=termine → auch Kalender-Termine exportieren
 $includeTermine = isset($_GET['include']) && $_GET['include'] === 'termine';
 
+// Formation-Filter (optional)
+$formationId = isset($_GET['formation']) ? max(0, (int)$_GET['formation']) : 0;
+$formationName = '';
+if ($formationId > 0) {
+    $formRow = $db->fetchOne("SELECT name FROM formationen WHERE id = ? AND aktiv = 1", [$formationId]);
+    if ($formRow) {
+        $formationName = $formRow['name'];
+    } else {
+        $formationId = 0;
+    }
+}
+
 // iCalendar erstellen
 $calendar = new ICalendar();
 
 // Kalender-Name je nach Export-Variante setzen
-if ($includeTermine) {
+if ($formationName) {
+    $calendar->setCalendarName($formationName . ($includeTermine ? ' – Ausrückungen & Termine' : ' – Ausrückungen'));
+} elseif ($includeTermine) {
     $calendar->setCalendarName('Musikverein Ausrueckungen und Termine');
 }
 
 // -------------------------------------------------------
 // Alle zukuenftigen Ausrueckungen laden
 // -------------------------------------------------------
-$sql = "SELECT 
+$ausrParams = [];
+$whereFormation = '';
+if ($formationId > 0) {
+    $whereFormation = " AND (formation_id = ? OR formation_id IS NULL)";
+    $ausrParams[] = $formationId;
+}
+
+$sql = "SELECT
             id,
             titel,
             start_datum,
@@ -40,11 +62,11 @@ $sql = "SELECT
             notizen,
             aktualisiert_am,
             erstellt_am
-        FROM ausrueckungen 
-        WHERE DATE(start_datum) >= CURDATE()
+        FROM ausrueckungen
+        WHERE DATE(start_datum) >= CURDATE(){$whereFormation}
         ORDER BY start_datum";
 
-$ausrueckungen = $db->fetchAll($sql);
+$ausrueckungen = $db->fetchAll($sql, $ausrParams);
 
 foreach ($ausrueckungen as $ausrueckung) {
     $start = new DateTime($ausrueckung['start_datum']);
@@ -82,7 +104,7 @@ foreach ($ausrueckungen as $ausrueckung) {
 // Kalender-Termine laden (nur wenn ?include=termine)
 // -------------------------------------------------------
 if ($includeTermine) {
-    $sqlTermine = "SELECT 
+    $sqlTermine = "SELECT
                 id,
                 titel,
                 typ,

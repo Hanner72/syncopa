@@ -44,10 +44,12 @@ $pages = [
     'kalender' => ['kalender', 'ausrueckungen', 'ausrueckung_detail', 'ausrueckung_bearbeiten'],
     'mitglieder' => ['mitglieder', 'mitglied_detail', 'mitglied_bearbeiten'],
     'noten' => ['noten', 'noten_bearbeiten'],
+    'probe' => ['probe', 'probe_leiter', 'probe_stimmen'],
     'instrumente' => ['instrumente', 'instrument_detail', 'instrument_bearbeiten'],
     'uniformen' => ['uniformen', 'uniform_detail', 'uniform_bearbeiten', 'uniform_mitglied', 'uniform_kleidungsstuecke', 'uniform_kategorien'],
     'finanzen' => ['finanzen', 'transaktion_bearbeiten', 'beitraege_verwalten'],
     'admin' => ['benutzer', 'benutzer_bearbeiten', 'rollen', 'rolle_bearbeiten', 'einstellungen', 'berechtigungen_bearbeiten'],
+    'formationen' => ['formationen', 'formation_bearbeiten', 'formation_mitglieder'],
     'fest'  => [
         'feste', 'fest_bearbeiten', 'fest_detail',
         'fest_stationen', 'fest_station_bearbeiten',
@@ -237,6 +239,40 @@ function isActive($page, $pages, $current) {
             transition: all var(--transition);
         }
         .topbar-logout:hover { background: #fde8e8; color: var(--c-danger); }
+
+        /* Formation-Switcher */
+        .formation-switcher {
+            display: flex; align-items: center; gap: 6px;
+            padding: 4px 10px 4px 8px;
+            border-radius: 20px;
+            background: var(--bg-body);
+            border: 1px solid var(--border);
+            cursor: pointer; position: relative;
+            font-size: 12px; font-weight: 500; color: var(--text-primary);
+            transition: border-color var(--transition);
+        }
+        .formation-switcher:hover { border-color: var(--c-primary); }
+        .formation-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .formation-dropdown {
+            position: absolute; top: calc(100% + 6px); right: 0;
+            min-width: 180px;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+            z-index: 1100; display: none; overflow: hidden;
+        }
+        .formation-dropdown.show { display: block; }
+        .formation-dropdown-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 12px; font-size: 12px;
+            cursor: pointer; color: var(--text-primary);
+            transition: background var(--transition);
+        }
+        .formation-dropdown-item:hover { background: var(--bg-body); }
+        .formation-dropdown-item.active { font-weight: 600; color: var(--c-primary); }
+        .formation-dropdown-sep { border-top: 1px solid var(--border-light); margin: 4px 0; }
         
         /* MAIN */
         .main-wrapper { margin-left: var(--sidebar-w); min-height: 100vh; transition: margin-left var(--transition); }
@@ -478,6 +514,16 @@ function isActive($page, $pages, $current) {
                         <i class="bi bi-flag"></i> Ausrückungen
                     </a></li>
                     <?php endif; ?>
+                    <?php if (Session::checkPermission('probe', 'lesen')): ?>
+                    <li><a class="nav-link <?php echo isActive('probe', $pages, $currentPage); ?>" href="probe.php">
+                        <i class="bi bi-broadcast"></i> Live
+                    </a></li>
+                    <?php if (Session::checkPermission('probe', 'schreiben')): ?>
+                    <li><a class="nav-link <?php echo isActive('probe_leiter', $pages, $currentPage); ?>" href="probe_leiter.php" style="padding-left:28px;font-size:12px">
+                        <i class="bi bi-sliders"></i> Live Leitung
+                    </a></li>
+                    <?php endif; ?>
+                    <?php endif; ?>
                 </ul>
             </div>
             <?php endif; ?>
@@ -489,6 +535,9 @@ function isActive($page, $pages, $current) {
                     <?php if (Session::checkPermission('noten', 'lesen')): ?>
                     <li><a class="nav-link <?php echo isActive('noten', $pages, $currentPage); ?>" href="noten.php">
                         <i class="bi bi-music-note-list"></i> Noten
+                    </a></li>
+                    <li><a class="nav-link <?php echo isActive('notenbucher', $pages, $currentPage); ?>" href="notenbucher.php">
+                        <i class="bi bi-journals"></i> Notenbücher
                     </a></li>
                     <?php endif; ?>
                     <?php if (Session::checkPermission('instrumente', 'lesen')): ?>
@@ -522,6 +571,17 @@ function isActive($page, $pages, $current) {
                 <ul class="nav flex-column">
                     <li><a class="nav-link <?php echo isActive('fest', $pages, $currentPage); ?>" href="feste.php">
                         <i class="bi bi-stars"></i> Feste
+                    </a></li>
+                </ul>
+            </div>
+            <?php endif; ?>
+
+            <?php if (Session::checkPermission('formationen', 'schreiben')): ?>
+            <div class="nav-group">
+                <div class="nav-label">Formationen</div>
+                <ul class="nav flex-column">
+                    <li><a class="nav-link <?php echo isActive('formationen', $pages, $currentPage); ?>" href="formationen.php">
+                        <i class="bi bi-collection"></i> Formationen
                     </a></li>
                 </ul>
             </div>
@@ -634,6 +694,60 @@ function isActive($page, $pages, $current) {
             </div>
             <?php endif; ?>
 
+            <?php
+            // Formation-Switcher: alle verfügbaren Formationen laden
+            $activeFormationId = Session::getFormationId();
+            if (Session::isAdmin()) {
+                $_allFormationen = (new Formation())->getAll(true);
+            } else {
+                $_formIds = Session::getFormationIds();
+                $_allFormationen = [];
+                if (!empty($_formIds)) {
+                    $_formObj = new Formation();
+                    foreach ($_formIds as $_fid) {
+                        $_fdata = $_formObj->getById($_fid);
+                        if ($_fdata && $_fdata['aktiv']) $_allFormationen[] = $_fdata;
+                    }
+                }
+            }
+            if (count($_allFormationen) > 0):
+                $activeFormation = $activeFormationId
+                    ? array_values(array_filter($_allFormationen, fn($f) => $f['id'] == $activeFormationId))[0] ?? null
+                    : null;
+            ?>
+            <div class="formation-switcher" id="formationSwitcher">
+                <span class="formation-dot" style="background:<?php echo htmlspecialchars($activeFormation['farbe'] ?? '#8699ac'); ?>"></span>
+                <span id="formationSwitcherLabel">
+                    <?php echo $activeFormation ? htmlspecialchars($activeFormation['kuerzel'] ?: $activeFormation['name']) : 'Alle'; ?>
+                </span>
+                <i class="bi bi-chevron-down" style="font-size:10px;opacity:0.6"></i>
+                <div class="formation-dropdown" id="formationDropdown">
+                    <?php if (Session::isAdmin()): ?>
+                    <div class="formation-dropdown-item <?php echo $activeFormationId === null ? 'active' : ''; ?>"
+                         onclick="switchFormation(0)">
+                        <span class="formation-dot" style="background:#8699ac"></span>
+                        Alle Formationen
+                    </div>
+                    <div class="formation-dropdown-sep"></div>
+                    <?php endif; ?>
+                    <?php foreach ($_allFormationen as $_f): ?>
+                    <div class="formation-dropdown-item <?php echo $activeFormationId == $_f['id'] ? 'active' : ''; ?>"
+                         onclick="switchFormation(<?php echo $_f['id']; ?>)">
+                        <span class="formation-dot" style="background:<?php echo htmlspecialchars($_f['farbe']); ?>"></span>
+                        <?php echo htmlspecialchars($_f['name']); ?>
+                    </div>
+                    <?php endforeach; ?>
+                    <?php if (Session::isAdmin()): ?>
+                    <div class="formation-dropdown-sep"></div>
+                    <div class="formation-dropdown-item" onclick="location.href='formationen.php'">
+                        <i class="bi bi-gear" style="width:10px;height:10px"></i>
+                        Formationen verwalten
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <div class="topbar-user">
                 <div class="topbar-avatar"><?php echo strtoupper(substr(Session::getUsername(), 0, 1)); ?></div>
                 <div class="topbar-info d-none d-sm-block">
@@ -690,6 +804,33 @@ function isActive($page, $pages, $current) {
             new bootstrap.Tooltip(el);
         });
     });
+    </script>
+    <script>
+    // Formation-Switcher
+    (function() {
+        var switcher = document.getElementById('formationSwitcher');
+        var dropdown = document.getElementById('formationDropdown');
+        if (!switcher || !dropdown) return;
+        switcher.addEventListener('click', function(e) {
+            e.stopPropagation();
+            dropdown.classList.toggle('show');
+        });
+        document.addEventListener('click', function() {
+            dropdown.classList.remove('show');
+        });
+    })();
+
+    function switchFormation(id) {
+        var body = 'formation_id=' + id;
+        fetch('api/formation_switch.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: body
+        }).then(function(r) { return r.json(); }).then(function(d) {
+            if (d.success) location.reload();
+            else alert('Fehler: ' + (d.error || 'Unbekannt'));
+        });
+    }
     </script>
     <?php endif; ?>
 

@@ -8,7 +8,7 @@
 // ============================================================================
 // ANWENDUNGS-KONSTANTEN
 // ============================================================================
-if (!defined('APP_VERSION')) define('APP_VERSION', '2.3.9');
+if (!defined('APP_VERSION')) define('APP_VERSION', '2.4.0');
 if (!defined('APP_NAME'))    define('APP_NAME',    'Syncopa');
 if (!defined('BASE_PATH'))   define('BASE_PATH', __DIR__);
 
@@ -24,7 +24,8 @@ if (!defined('UPLOAD_DIR'))         define('UPLOAD_DIR',         BASE_PATH . DIR
 if (!defined('NOTEN_DIR'))          define('NOTEN_DIR',          UPLOAD_DIR . DIRECTORY_SEPARATOR . 'noten');
 if (!defined('FOTOS_DIR'))          define('FOTOS_DIR',          UPLOAD_DIR . DIRECTORY_SEPARATOR . 'fotos');
 if (!defined('DOKUMENTE_DIR'))      define('DOKUMENTE_DIR',      UPLOAD_DIR . DIRECTORY_SEPARATOR . 'dokumente');
-if (!defined('FEST_VERTRAEGE_DIR')) define('FEST_VERTRAEGE_DIR', UPLOAD_DIR . DIRECTORY_SEPARATOR . 'fest_vertraege');
+if (!defined('FEST_VERTRAEGE_DIR'))       define('FEST_VERTRAEGE_DIR',       UPLOAD_DIR . DIRECTORY_SEPARATOR . 'fest_vertraege');
+if (!defined('PROBE_ANNOTATIONS_DIR'))  define('PROBE_ANNOTATIONS_DIR',  UPLOAD_DIR . DIRECTORY_SEPARATOR . 'probe_annotationen');
 if (!defined('MAX_UPLOAD_SIZE'))    define('MAX_UPLOAD_SIZE',    10485760); // 10 MB
 
 // ============================================================================
@@ -76,6 +77,6 @@ spl_autoload_register(function (string $class): void {
 // ============================================================================
 // UPLOAD-VERZEICHNISSE ERSTELLEN (beim ersten Aufruf)
 // ============================================================================
-foreach ([UPLOAD_DIR, NOTEN_DIR, FOTOS_DIR, DOKUMENTE_DIR, FEST_VERTRAEGE_DIR] as $dir) {
+foreach ([UPLOAD_DIR, NOTEN_DIR, FOTOS_DIR, DOKUMENTE_DIR, FEST_VERTRAEGE_DIR, PROBE_ANNOTATIONS_DIR] as $dir) {
     if (!file_exists($dir)) @mkdir($dir, 0755, true);
 }

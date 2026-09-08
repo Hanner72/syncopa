@@ -6,8 +6,21 @@ Session::requireLogin();
 Session::requirePermission('noten', 'schreiben');
 
 $notenObj = new Noten();
+$formationObj = new Formation();
 $id = $_GET['id'] ?? null;
 $isEdit = !empty($id);
+
+// Formationen für Dropdown
+if (Session::isAdmin()) {
+    $alleFormationen = $formationObj->getAll(true);
+} else {
+    $fids = Session::getFormationIds();
+    $alleFormationen = [];
+    foreach ($fids as $fid) {
+        $f = $formationObj->getById($fid);
+        if ($f && $f['aktiv']) $alleFormationen[] = $f;
+    }
+}
 
 // Nummernkreis
 require_once __DIR__ . '/classes/Nummernkreis.php';
@@ -30,19 +43,20 @@ if ($isEdit) {
 // Formular verarbeiten
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = [
-        'titel' => trim($_POST['titel'] ?? ''),
-        'untertitel' => trim($_POST['untertitel'] ?? '') ?: null,
-        'komponist' => trim($_POST['komponist'] ?? '') ?: null,
-        'arrangeur' => trim($_POST['arrangeur'] ?? '') ?: null,
-        'verlag' => trim($_POST['verlag'] ?? '') ?: null,
-        'besetzung' => trim($_POST['besetzung'] ?? '') ?: null,
+        'formation_id'      => !empty($_POST['formation_id']) ? (int)$_POST['formation_id'] : null,
+        'titel'             => trim($_POST['titel'] ?? ''),
+        'untertitel'        => trim($_POST['untertitel'] ?? '') ?: null,
+        'komponist'         => trim($_POST['komponist'] ?? '') ?: null,
+        'arrangeur'         => trim($_POST['arrangeur'] ?? '') ?: null,
+        'verlag'            => trim($_POST['verlag'] ?? '') ?: null,
+        'besetzung'         => trim($_POST['besetzung'] ?? '') ?: null,
         'schwierigkeitsgrad' => $_POST['schwierigkeitsgrad'] ?? '3',
-        'dauer_minuten' => !empty($_POST['dauer_minuten']) ? (int)$_POST['dauer_minuten'] : null,
-        'genre' => trim($_POST['genre'] ?? '') ?: null,
-        'anzahl_stimmen' => !empty($_POST['anzahl_stimmen']) ? (int)$_POST['anzahl_stimmen'] : null,
-        'zustand' => $_POST['zustand'] ?? 'gut',
-        'bemerkungen' => trim($_POST['bemerkungen'] ?? '') ?: null,
-        'standort' => trim($_POST['standort'] ?? '') ?: null
+        'dauer_minuten'     => !empty($_POST['dauer_minuten']) ? (int)$_POST['dauer_minuten'] : null,
+        'genre'             => trim($_POST['genre'] ?? '') ?: null,
+        'anzahl_stimmen'    => !empty($_POST['anzahl_stimmen']) ? (int)$_POST['anzahl_stimmen'] : null,
+        'zustand'           => $_POST['zustand'] ?? 'gut',
+        'bemerkungen'       => trim($_POST['bemerkungen'] ?? '') ?: null,
+        'standort'          => trim($_POST['standort'] ?? '') ?: null
     ];
     
     if (!$isEdit) {
@@ -127,9 +141,29 @@ include 'includes/header.php';
                         </div>
                     </div>
                     
+                    <?php if (!empty($alleFormationen)): ?>
+                    <div class="mb-3">
+                        <label for="formation_id" class="form-label">Formation</label>
+                        <select class="form-select" id="formation_id" name="formation_id">
+                            <?php if (Session::isAdmin()): ?>
+                            <option value="">– Alle Formationen –</option>
+                            <?php endif; ?>
+                            <?php
+                            $selFid = $note['formation_id'] ?? Session::getFormationId();
+                            foreach ($alleFormationen as $f):
+                            ?>
+                            <option value="<?php echo $f['id']; ?>"
+                                <?php echo $selFid == $f['id'] ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($f['name']); ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <?php endif; ?>
+
                     <div class="mb-3">
                         <label for="untertitel" class="form-label">Untertitel</label>
-                        <input type="text" class="form-control" id="untertitel" name="untertitel" 
+                        <input type="text" class="form-control" id="untertitel" name="untertitel"
                                value="<?php echo htmlspecialchars($note['untertitel'] ?? ''); ?>"
                                placeholder="z.B. Polka, Walzer, Konzertmarsch">
                     </div>
@@ -310,7 +344,13 @@ include 'includes/header.php';
                                     </div>
                                 </div>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="api/noten_download.php?id=<?php echo $datei['id']; ?>" 
+                                    <?php if (strtolower(pathinfo($datei['original_name'], PATHINFO_EXTENSION)) === 'pdf'): ?>
+                                    <a href="api/noten_download.php?id=<?php echo $datei['id']; ?>&view=1"
+                                       class="btn btn-outline-secondary" title="Im Browser ansehen" target="_blank">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <?php endif; ?>
+                                    <a href="api/noten_download.php?id=<?php echo $datei['id']; ?>"
                                        class="btn btn-outline-primary" title="Herunterladen">
                                         <i class="bi bi-download"></i>
                                     </a>
