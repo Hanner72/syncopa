@@ -32,7 +32,6 @@ include 'includes/header.php';
                 <div class="border rounded p-3 text-center">
                     <div class="text-muted small mb-1">Installierte Version</div>
                     <div class="fs-4 fw-bold"><?php echo APP_VERSION; ?></div>
-                    <div class="text-muted small" id="local-hash">–</div>
                 </div>
             </div>
             <div class="col-md-4">
@@ -41,7 +40,6 @@ include 'includes/header.php';
                     <div class="fs-4 fw-bold" id="remote-version">
                         <span class="text-muted">–</span>
                     </div>
-                    <div class="text-muted small" id="remote-hash">–</div>
                 </div>
             </div>
             <div class="col-md-4">
@@ -144,8 +142,6 @@ function checkVersion() {
 
             // Versionen anzeigen
             document.getElementById('remote-version').textContent = data.remoteVersion || '–';
-            document.getElementById('local-hash').textContent  = 'Stand: ' + (data.localHash  || '–');
-            document.getElementById('remote-hash').textContent = 'Stand: ' + (data.remoteHash || '–');
 
             // Status-Badge
             var statusEl = document.getElementById('status-badge');

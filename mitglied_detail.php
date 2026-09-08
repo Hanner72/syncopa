@@ -1,20 +1,4 @@
 <?php
-
-// === DEBUG START ===
-if (isset($_GET['debug'])) {
-    echo "<h3>Debug-Informationen</h3>";
-    echo "<pre>";
-    echo "Mitglied ID: " . $id . "\n";
-    echo "Hat Schreibrecht: " . (Session::checkPermission('mitglieder', 'schreiben') ? 'JA' : 'NEIN') . "\n";
-    echo "\nInstrumente:\n";
-    var_dump($instrumente);
-    echo "\nInstrumententypen verfügbar: " . count($instrumentTypen ?? []) . "\n";
-    echo "\nPOST-Daten:\n";
-    var_dump($_POST);
-    echo "</pre>";
-}
-// === DEBUG ENDE ===
-
 // mitglied_detail.php
 require_once 'config.php';
 require_once 'includes.php';

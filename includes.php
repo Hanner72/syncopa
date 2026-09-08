@@ -69,20 +69,32 @@ require_once __DIR__ . '/classes/Formation.php';
         CONSTRAINT fk_mf_formation FOREIGN KEY (formation_id) REFERENCES formationen(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-    // Spalten sicher hinzufügen (ALTER TABLE IF NOT EXISTS alternative per try/catch)
+    // Spalten sicher hinzufügen. Hinweis: "ADD COLUMN IF NOT EXISTS" ist auf älteren
+    // MySQL-Versionen ein Syntaxfehler (nicht nur "Spalte existiert bereits") und wird
+    // vom try/catch stillschweigend verschluckt – die Spalte wird dann NIE angelegt.
+    // Deshalb hier stattdessen über information_schema prüfen (funktioniert auf allen Versionen).
+    $columnExists = function(string $table, string $column) use ($db): bool {
+        $row = $db->fetchOne(
+            "SELECT COUNT(*) as cnt FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?",
+            [$table, $column]
+        );
+        return (int)($row['cnt'] ?? 0) > 0;
+    };
+
     foreach (['ausrueckungen', 'noten', 'finanzen'] as $tbl) {
-        try {
-            $db->execute("ALTER TABLE `{$tbl}` ADD COLUMN IF NOT EXISTS formation_id INT NULL");
-        } catch (\Throwable $e) { /* Spalte existiert bereits */ }
+        if (!$columnExists($tbl, 'formation_id')) {
+            $db->execute("ALTER TABLE `{$tbl}` ADD COLUMN formation_id INT NULL");
+        }
     }
     // formation_id für formationsspezifische Instrumentenzuordnung
-    try {
-        $db->execute("ALTER TABLE `mitglied_instrumente` ADD COLUMN IF NOT EXISTS formation_id INT NULL");
-    } catch (\Throwable $e) { /* Spalte existiert bereits */ }
+    if (!$columnExists('mitglied_instrumente', 'formation_id')) {
+        $db->execute("ALTER TABLE `mitglied_instrumente` ADD COLUMN formation_id INT NULL");
+    }
     // register_id für formationsspezifisches Register pro Mitglied
-    try {
-        $db->execute("ALTER TABLE `mitglied_formationen` ADD COLUMN IF NOT EXISTS register_id INT NULL");
-    } catch (\Throwable $e) { /* Spalte existiert bereits */ }
+    if (!$columnExists('mitglied_formationen', 'register_id')) {
+        $db->execute("ALTER TABLE `mitglied_formationen` ADD COLUMN register_id INT NULL");
+    }
 
     // Berechtigungen-Tabelle: Duplikate bereinigen + UNIQUE KEY anlegen (einmalig)
     try {
@@ -311,9 +323,13 @@ if (Session::isLoggedIn() && !Session::isAdmin() && Session::getFormationId() ==
 // Migration: last_seen für Anwesenheitserkennung in Probe-Session
 (function() {
     $db = Database::getInstance();
-    try {
-        $db->execute("ALTER TABLE probe_session_spieler ADD COLUMN IF NOT EXISTS last_seen DATETIME NULL");
-    } catch (\Throwable $e) { /* Spalte existiert bereits */ }
+    $col = $db->fetchOne(
+        "SELECT COUNT(*) as cnt FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'probe_session_spieler' AND COLUMN_NAME = 'last_seen'"
+    );
+    if ((int)($col['cnt'] ?? 0) === 0) {
+        $db->execute("ALTER TABLE probe_session_spieler ADD COLUMN last_seen DATETIME NULL");
+    }
 })();
 
 // Notenbücher
