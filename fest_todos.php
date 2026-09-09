@@ -114,8 +114,9 @@ include 'includes/header.php';
 </div>
 <?php else: ?>
 <div class="card">
-    <div class="card-body p-0">
-        <table class="table table-hover mb-0" id="todosTable">
+    <div class="card-body">
+        <div class="table-responsive">
+        <table class="table table-hover" id="todosTable">
             <thead>
                 <tr>
                     <th style="width:36px"></th>
@@ -192,6 +193,7 @@ include 'includes/header.php';
                 <?php endforeach; ?>
             </tbody>
         </table>
+        </div>
     </div>
 </div>
 <?php endif; ?>

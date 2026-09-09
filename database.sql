@@ -197,7 +197,7 @@ CREATE TABLE IF NOT EXISTS `berechtigungen` (
   PRIMARY KEY (`id`),
   KEY `rolle_id` (`rolle_id`),
   UNIQUE KEY `uk_rolle_modul` (`rolle`,`modul`)
-) ENGINE=InnoDB AUTO_INCREMENT=97 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=107 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Daten für Tabelle `berechtigungen`
@@ -292,7 +292,17 @@ INSERT INTO `berechtigungen` (`id`, `rolle_id`, `rolle`, `modul`, `lesen`, `schr
 (93, 10, 'notenwart', 'formationen', 1, 0, 0),
 (94, 12, 'extern', 'ausrueckungen', 1, 0, 0),
 (95, 12, 'extern', 'noten', 1, 0, 0),
-(96, 12, 'extern', 'formationen', 1, 0, 0);
+(96, 12, 'extern', 'formationen', 1, 0, 0),
+(97, 1, 'admin', 'fest', 1, 1, 1),
+(98, 2, 'obmann', 'fest', 1, 1, 1),
+(99, 4, 'kassier', 'fest', 1, 1, 0),
+(100, 5, 'schriftfuehrer', 'fest', 1, 1, 0),
+(101, 8, 'jugendbeauftragter', 'fest', 1, 1, 0),
+(102, 3, 'kapellmeister', 'fest', 1, 0, 0),
+(103, 10, 'notenwart', 'fest', 1, 0, 0),
+(104, 7, 'instrumentenwart', 'fest', 1, 0, 0),
+(105, 6, 'trachtenwart', 'fest', 1, 0, 0),
+(106, 9, 'mitglied', 'fest', 1, 0, 0);
 
 -- --------------------------------------------------------
 
@@ -812,6 +822,7 @@ CREATE TABLE IF NOT EXISTS `feste` (
   `status`       ENUM('geplant','aktiv','abgeschlossen','abgesagt') NOT NULL DEFAULT 'geplant',
   `erstellt_von` INT NULL,
   `erstellt_am`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `aktualisiert_am` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   KEY `erstellt_von` (`erstellt_von`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -887,7 +898,7 @@ CREATE TABLE IF NOT EXISTS `fest_einkauefe` (
   `bezeichnung`  VARCHAR(255) NOT NULL,
   `menge`        INT NOT NULL DEFAULT 1,
   `einheit`      VARCHAR(20) NULL,
-  `preis`        DECIMAL(10,2) NULL,
+  `preis_gesamt` DECIMAL(10,2) NULL,
   `lieferant`    VARCHAR(100) NULL,
   `status`       ENUM('geplant','bestellt','erhalten','storniert') NOT NULL DEFAULT 'geplant',
   `ist_vorlage`  TINYINT(1) NOT NULL DEFAULT 0,
@@ -907,7 +918,7 @@ CREATE TABLE IF NOT EXISTS `fest_vertraege` (
   `auftritt_datum`  DATE NULL,
   `auftritt_zeit`   TIME NULL,
   `honorar`         DECIMAL(10,2) NULL,
-  `zahlungsstatus`  ENUM('offen','angezahlt','bezahlt','storniert') NOT NULL DEFAULT 'offen',
+  `zahlungsstatus`  ENUM('offen','teilweise','bezahlt','storniert') NOT NULL DEFAULT 'offen',
   `zahlungsdatum`   DATE NULL,
   `dokument_pfad`   VARCHAR(255) NULL,
   `dokument_name`   VARCHAR(255) NULL,
@@ -923,7 +934,7 @@ CREATE TABLE IF NOT EXISTS `fest_todos` (
   `titel`         VARCHAR(255) NOT NULL,
   `beschreibung`  TEXT NULL,
   `prioritaet`    ENUM('niedrig','normal','hoch','kritisch') NOT NULL DEFAULT 'normal',
-  `status`        ENUM('offen','in_bearbeitung','erledigt') NOT NULL DEFAULT 'offen',
+  `status`        ENUM('offen','in_arbeit','erledigt','abgebrochen') NOT NULL DEFAULT 'offen',
   `faellig_am`    DATE NULL,
   `zustaendig_id` INT NULL,
   `erstellt_von`  INT NULL,

@@ -217,12 +217,14 @@ include 'includes/header.php';
         <div class="px-3 py-2 small fw-semibold text-muted bg-light" style="border-bottom:1px solid var(--border-light)">
             <i class="bi bi-geo-alt"></i> <?php echo htmlspecialchars($stData['name']); ?>
         </div>
+        <div class="table-responsive">
         <table class="table table-hover mb-0">
             <?php echo renderEinkaufTableHeader(false); ?>
             <tbody>
                 <?php foreach ($stData['items'] as $e): renderEinkaufRow($e, $statusLabels, $festId, false); endforeach; ?>
             </tbody>
         </table>
+        </div>
     </div>
     <?php endforeach; ?>
 </div>
@@ -241,13 +243,15 @@ include 'includes/header.php';
             <?php echo number_format(array_sum(array_map(fn($i) => (float)($i['preis_gesamt'] ?? 0), $grp['items'])), 2, ',', '.'); ?> €
         </span>
     </div>
-    <div class="card-body p-0">
-        <table class="table table-hover mb-0">
+    <div class="card-body">
+        <div class="table-responsive">
+        <table class="table table-hover">
             <?php echo renderEinkaufTableHeader($ansicht === 'station'); ?>
             <tbody>
                 <?php foreach ($grp['items'] as $e): renderEinkaufRow($e, $statusLabels, $festId, $ansicht === 'station'); endforeach; ?>
             </tbody>
         </table>
+        </div>
     </div>
 </div>
 <?php endforeach; ?>

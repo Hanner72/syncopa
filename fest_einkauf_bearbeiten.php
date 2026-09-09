@@ -98,15 +98,20 @@ include 'includes/header.php';
                         </div>
                         <div class="col-md-4 mb-3">
                             <label for="kategorie_id" class="form-label">Kategorie</label>
-                            <select class="form-select" id="kategorie_id" name="kategorie_id">
-                                <option value="">– Keine –</option>
-                                <?php foreach ($kategorien as $k): ?>
-                                <option value="<?php echo $k['id']; ?>"
-                                        <?php echo ($einkauf['kategorie_id'] ?? '') == $k['id'] ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($k['name']); ?>
-                                </option>
-                                <?php endforeach; ?>
-                            </select>
+                            <div class="input-group">
+                                <select class="form-select" id="kategorie_id" name="kategorie_id">
+                                    <option value="">– Keine –</option>
+                                    <?php foreach ($kategorien as $k): ?>
+                                    <option value="<?php echo $k['id']; ?>"
+                                            <?php echo ($einkauf['kategorie_id'] ?? '') == $k['id'] ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($k['name']); ?>
+                                    </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#kategorieModal" title="Neue Kategorie anlegen">
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div class="row">
@@ -127,7 +132,7 @@ include 'includes/header.php';
                         <div class="col-md-3 mb-3">
                             <label for="menge" class="form-label">Menge</label>
                             <input type="number" class="form-control" id="menge" name="menge"
-                                   value="<?php echo htmlspecialchars($einkauf['menge'] !== null ? (int)$einkauf['menge'] : ''); ?>"
+                                   value="<?php echo htmlspecialchars(isset($einkauf['menge']) ? (int)$einkauf['menge'] : ''); ?>"
                                    step="1" min="0" placeholder="z.B. 50">
                         </div>
                         <div class="col-md-3 mb-3">
@@ -210,4 +215,77 @@ include 'includes/header.php';
     </div>
 </form>
 
+<!-- Kategorie-Modal -->
+<div class="modal fade" id="kategorieModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-tag"></i> Neue Kategorie anlegen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="neue-kategorie-name" class="form-label">Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="neue-kategorie-name" placeholder="z.B. Getränke, Deko, Verbrauchsmaterial">
+                </div>
+                <div class="alert alert-danger d-none" id="kategorie-error"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-primary" id="btn-kategorie-speichern"><i class="bi bi-check-lg"></i> Anlegen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?php include 'includes/footer.php'; ?>
+<script>
+var kategorieModalEl = document.getElementById('kategorieModal');
+var kategorieModal   = new bootstrap.Modal(kategorieModalEl);
+var kategorieSelect  = document.getElementById('kategorie_id');
+var kategorieInput   = document.getElementById('neue-kategorie-name');
+var kategorieError   = document.getElementById('kategorie-error');
+
+kategorieModalEl.addEventListener('shown.bs.modal', function() {
+    kategorieError.classList.add('d-none');
+    kategorieInput.value = '';
+    kategorieInput.focus();
+});
+
+function kategorieSpeichern() {
+    var name = kategorieInput.value.trim();
+    if (!name) {
+        kategorieError.textContent = 'Bitte einen Namen eingeben.';
+        kategorieError.classList.remove('d-none');
+        return;
+    }
+    fetch('api/fest_einkauf_kategorie_speichern.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'name=' + encodeURIComponent(name)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            var opt = document.createElement('option');
+            opt.value = data.id;
+            opt.textContent = data.name;
+            opt.selected = true;
+            kategorieSelect.appendChild(opt);
+            kategorieModal.hide();
+        } else {
+            kategorieError.textContent = data.error || 'Fehler beim Anlegen.';
+            kategorieError.classList.remove('d-none');
+        }
+    })
+    .catch(function() {
+        kategorieError.textContent = 'Fehler beim Anlegen.';
+        kategorieError.classList.remove('d-none');
+    });
+}
+
+document.getElementById('btn-kategorie-speichern').addEventListener('click', kategorieSpeichern);
+kategorieInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); kategorieSpeichern(); }
+});
+</script>

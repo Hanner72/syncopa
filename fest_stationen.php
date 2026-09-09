@@ -49,7 +49,7 @@ include 'includes/header.php';
 </div>
 
 <div class="card">
-    <div class="card-body p-0">
+    <div class="card-body">
         <?php if (empty($stationen)): ?>
         <div class="text-center text-muted py-5">
             <i class="bi bi-shop fs-1 d-block mb-2 opacity-25"></i>
@@ -59,7 +59,8 @@ include 'includes/header.php';
             <?php endif; ?>
         </div>
         <?php else: ?>
-        <table class="table table-hover mb-0" id="stationenTable">
+        <div class="table-responsive">
+        <table class="table table-hover" id="stationenTable">
             <thead>
                 <tr>
                     <th>Sort.</th>
@@ -134,6 +135,7 @@ include 'includes/header.php';
                 <?php endforeach; ?>
             </tbody>
         </table>
+        </div>
         <?php endif; ?>
     </div>
 </div>
@@ -161,7 +163,8 @@ include 'includes/header.php';
                     <tbody id="tageBody"></tbody>
                 </table>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer justify-content-between">
+                <span class="text-muted small"><i class="bi bi-info-circle"></i> Liegt „Bis" vor „Von" (z.B. 16:00–02:00), wird automatisch der Folgetag angenommen.</span>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Schließen</button>
             </div>
         </div>

@@ -133,6 +133,7 @@ include 'includes/header.php';
                             <label for="zeit_bis" class="form-label">Bis <span class="text-danger">*</span></label>
                             <input type="time" class="form-control" id="zeit_bis" name="zeit_bis" required
                                    value="<?php echo htmlspecialchars($dp['zeit_bis'] ?? ''); ?>">
+                            <div class="form-text">Liegt „Bis" vor „Von", wird automatisch der Folgetag angenommen.</div>
                         </div>
                     </div>
                     <div class="mb-3">

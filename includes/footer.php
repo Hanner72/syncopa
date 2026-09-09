@@ -69,8 +69,9 @@
     
     // DataTables Config
     $.extend(true, $.fn.dataTable.defaults, {
-        language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/de-DE.json' },
+        language: { url: 'assets/js/libs/datatables-de-DE.json' },
         pageLength: 25,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Alle']],
         responsive: true,
         dom: '<"row align-items-center mb-2"<"col-auto"l><"col"f>><"table-responsive"t><"row align-items-center mt-2"<"col-sm-5"i><"col-sm-7"p>>'
     });
