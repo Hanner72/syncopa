@@ -9,6 +9,7 @@
 ### Geändert
 
 - optisches bei Tabellen der Festverwaltung angepasst
+- Stationen und Dienstplan auch über Mitternacht möglich
 
 ### Bugs
 

@@ -57,6 +57,17 @@ function dpTimeToMin(string $t): int {
 function dpMinToTime(int $m): string {
     return sprintf('%02d:%02d', intdiv($m, 60), $m % 60);
 }
+// Für die Anzeige: Wanduhrzeit (00:00–23:59) + "+1" wenn der Zeitpunkt auf den Folgetag fällt
+function dpDisplayTime(int $m): string {
+    $wall = $m % 1440;
+    return sprintf('%02d:%02d', intdiv($wall, 60), $wall % 60) . ($m >= 1440 ? ' +1' : '');
+}
+// Endzeit "über Mitternacht" erkennen: liegt Bis <= Von, gilt Bis als Folgetag
+function dpBisToMin(string $von, string $bis): int {
+    $v = dpTimeToMin($von);
+    $b = dpTimeToMin($bis);
+    return $b <= $v ? $b + 1440 : $b;
+}
 
 $SLOT_W   = 64;   // px pro 30 Min
 $LABEL_W  = 200;  // px linke Spalte
@@ -65,17 +76,21 @@ $ST_HDR_H = 38;   // px Stations-Header-Zeile
 $HEAD_H   = 34;   // px Zeitkopf
 
 // Früheste Öffnung / späteste Schließung aus Stationen ermitteln
+// (Bis <= Von wird als Folgetag gewertet, z.B. 16:00–02:00 → 960–1560)
 $stStartMin = null;
 $stEndMin   = null;
 foreach ($stationen as $s) {
     if (!empty($s['oeffnung_von'])) $stStartMin = $stStartMin === null ? dpTimeToMin($s['oeffnung_von']) : min($stStartMin, dpTimeToMin($s['oeffnung_von']));
-    if (!empty($s['oeffnung_bis'])) $stEndMin   = $stEndMin   === null ? dpTimeToMin($s['oeffnung_bis']) : max($stEndMin,   dpTimeToMin($s['oeffnung_bis']));
+    if (!empty($s['oeffnung_von']) && !empty($s['oeffnung_bis'])) {
+        $b = dpBisToMin($s['oeffnung_von'], $s['oeffnung_bis']);
+        $stEndMin = $stEndMin === null ? $b : max($stEndMin, $b);
+    }
 }
 
-// 2 Stunden Puffer, auf 30 Min gerundet, begrenzt auf 00:00–24:00
+// 2 Stunden Puffer, auf 30 Min gerundet, begrenzt auf 00:00–06:00 (Folgetag)
 if ($stStartMin !== null) {
     $startMin = (int)(floor(max(0,         $stStartMin - 60) / 30) * 30);
-    $endMin   = (int)(ceil( min(24 * 60,   $stEndMin   + 60) / 30) * 30);
+    $endMin   = (int)(ceil( min(30 * 60,   $stEndMin   + 60) / 30) * 30);
 } else {
     $startMin = 8 * 60;
     $endMin   = 22 * 60;
@@ -86,7 +101,10 @@ foreach ($gridData as $stSchichten) {
     foreach ($stSchichten as $maSchichten) {
         foreach ($maSchichten as $sch) {
             if (!empty($sch['zeit_von'])) $startMin = min($startMin, (int)(floor(dpTimeToMin($sch['zeit_von']) / 30) * 30));
-            if (!empty($sch['zeit_bis'])) $endMin   = max($endMin,   (int)(ceil( dpTimeToMin($sch['zeit_bis']) / 30) * 30));
+            if (!empty($sch['zeit_von']) && !empty($sch['zeit_bis'])) {
+                $b = dpBisToMin($sch['zeit_von'], $sch['zeit_bis']);
+                $endMin = max($endMin, (int)(ceil($b / 30) * 30));
+            }
         }
     }
 }
@@ -200,7 +218,7 @@ include 'includes/header.php';
                     </div>
                     <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
                         <?php if (!empty($s['oeffnung_von'])): ?>
-                        <span style="font-size:10px;opacity:0.85"><?= substr($s['oeffnung_von'],0,5) ?>–<?= substr($s['oeffnung_bis'],0,5) ?></span>
+                        <span style="font-size:10px;opacity:0.85"><?= substr($s['oeffnung_von'],0,5) ?>–<?= substr($s['oeffnung_bis'],0,5) ?><?= (!empty($s['oeffnung_bis']) && dpBisToMin($s['oeffnung_von'], $s['oeffnung_bis']) > 1440) ? ' <span title="endet am Folgetag">+1</span>' : '' ?></span>
                         <?php endif; ?>
                         <span style="font-size:10px;background:rgba(255,255,255,0.25);
                                      border-radius:10px;padding:1px 6px;font-weight:600">
@@ -259,7 +277,12 @@ include 'includes/header.php';
 
                     <!-- Zeitkopf -->
                     <div style="height:<?= $HEAD_H ?>px;position:relative;border-bottom:2px solid var(--border);background:var(--bg-card)">
-                        <?php for ($i = 0; $i <= $slotCount; $i++):
+                        <?php
+                        // Die letzte Marke (i === $slotCount) liegt exakt am rechten Rand des Rasters;
+                        // da das Label-Div keine feste Breite hat, würde sein Text nach rechts über den
+                        // Container hinausragen und dadurch dauerhaft einen horizontalen Scrollbalken
+                        // erzeugen – daher wird sie hier bewusst ausgelassen.
+                        for ($i = 0; $i < $slotCount; $i++):
                             $m = $startMin + $i * 30;
                             $isHour = ($m % 60 === 0);
                         ?>
@@ -269,7 +292,7 @@ include 'includes/header.php';
                                     border-left:2px solid var(--border);padding:8px 4px 0;
                                     font-size:11px;font-weight:700;color:var(--text-primary);
                                     white-space:nowrap;box-sizing:border-box">
-                            <?= dpMinToTime($m) ?>
+                            <?= dpDisplayTime($m) ?>
                         </div>
                         <?php else: ?>
                         <div class="dp-time-label" data-slot-idx="<?= $i ?>"
@@ -286,7 +309,7 @@ include 'includes/header.php';
                         $color = $stColors[$stId];
                         $hasOef = !empty($s['oeffnung_von']) && !empty($s['oeffnung_bis']);
                         $stVon  = $hasOef ? dpTimeToMin($s['oeffnung_von']) : $startMin;
-                        $stBis  = $hasOef ? dpTimeToMin($s['oeffnung_bis']) : $endMin;
+                        $stBis  = $hasOef ? dpBisToMin($s['oeffnung_von'], $s['oeffnung_bis']) : $endMin;
                         $stL    = ($stVon - $startMin) / 30 * $SLOT_W;
                         $stW    = ($stBis - $stVon)    / 30 * $SLOT_W;
                     ?>
@@ -337,12 +360,12 @@ include 'includes/header.php';
                         <!-- Schicht-Blöcke -->
                         <?php foreach ($maSchichten as $sch):
                             $vonMin = dpTimeToMin($sch['zeit_von']);
-                            $bisMin = dpTimeToMin($sch['zeit_bis']);
+                            $bisMin = dpBisToMin($sch['zeit_von'], $sch['zeit_bis']);
                             $left   = ($vonMin - $startMin) / 30 * $SLOT_W;
                             $width  = max(($bisMin - $vonMin) / 30 * $SLOT_W, $SLOT_W);
                             $ttText = htmlspecialchars($ma['vollname'], ENT_QUOTES)
                                     . ' @ ' . htmlspecialchars($s['name'], ENT_QUOTES)
-                                    . ' | ' . substr($sch['zeit_von'],0,5) . '–' . substr($sch['zeit_bis'],0,5)
+                                    . ' | ' . dpDisplayTime($vonMin) . '–' . dpDisplayTime($bisMin)
                                     . ($sch['notizen'] ? ' | ' . htmlspecialchars($sch['notizen'], ENT_QUOTES) : '');
                         ?>
                         <div class="dp-shift"
@@ -352,6 +375,7 @@ include 'includes/header.php';
                              data-duration="<?= $bisMin - $vonMin ?>"
                              data-station-id="<?= $stId ?>"
                              data-ma-id="<?= $ma['id'] ?>"
+                             data-notizen="<?= htmlspecialchars($sch['notizen'] ?? '', ENT_QUOTES) ?>"
                              data-bs-toggle="tooltip"
                              data-bs-placement="top"
                              data-bs-title="<?= $ttText ?>"
@@ -369,10 +393,10 @@ include 'includes/header.php';
                                      background:rgba(0,0,0,0.18)"></div>
                             <?php endif; ?>
                             <div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5">
-                                <?= substr($sch['zeit_von'],0,5) ?> – <?= substr($sch['zeit_bis'],0,5) ?>
+                                <?= dpDisplayTime($vonMin) ?> – <?= dpDisplayTime($bisMin) ?>
                             </div>
                             <div class="dp-shift-time" style="font-size:10px;opacity:0.85">
-                                <?= dpTimeToMin($sch['zeit_bis']) - dpTimeToMin($sch['zeit_von']) ?> Min
+                                <?= $bisMin - $vonMin ?> Min
                             </div>
                             <?php if ($canWrite): ?>
                             <div class="dp-resize-right" style="position:absolute;right:0;top:0;bottom:0;width:10px;
@@ -514,6 +538,7 @@ foreach ($gridData as $stId => $maSchichten) {
                     <div class="col-6 mb-3">
                         <label class="form-label fw-semibold">Bis <span class="text-danger">*</span></label>
                         <input type="time" id="sf-zeit-bis" class="form-control" step="1800">
+                        <div class="form-text">Liegt „Bis" vor „Von", wird automatisch der Folgetag angenommen.</div>
                     </div>
                 </div>
                 <div class="mb-2">
@@ -579,6 +604,11 @@ const MITARBEITER = <?= json_encode($mitarbeiterJson) ?>;
 function timeToMin(t) {
     var p = t.split(':'); return parseInt(p[0])*60 + parseInt(p[1]);
 }
+// Bis <= Von wird als Folgetag gewertet (z.B. 16:00–02:00)
+function bisToMin(vonStr, bisStr) {
+    var v = timeToMin(vonStr), b = timeToMin(bisStr);
+    return b <= v ? b + 1440 : b;
+}
 
 // ── Tooltips ───────────────────────────────────────────────────────────────
 function initTooltip(el) {
@@ -588,7 +618,21 @@ document.querySelectorAll('.dp-shift[data-bs-toggle="tooltip"]').forEach(initToo
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function minToTime(m) {
-    return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
+    var mm = ((m % 1440) + 1440) % 1440;
+    return String(Math.floor(mm/60)).padStart(2,'0') + ':' + String(mm%60).padStart(2,'0');
+}
+// Für Anzeige: Wanduhrzeit + "+1" wenn der Zeitpunkt auf den Folgetag fällt
+function minToTimeDisplay(m) {
+    var wall = ((m % 1440) + 1440) % 1440;
+    var s = String(Math.floor(wall/60)).padStart(2,'0') + ':' + String(wall%60).padStart(2,'0');
+    return m >= 1440 ? s + ' +1' : s;
+}
+function shiftTooltipTitle(el, vonMin, bisMin) {
+    var tl     = el.closest('.dp-timeline');
+    var maName = tl ? tl.dataset.maName : '';
+    var stName = tl ? tl.dataset.stationName : '';
+    var notiz  = el.dataset.notizen || '';
+    return maName + ' @ ' + stName + ' | ' + minToTimeDisplay(vonMin) + '–' + minToTimeDisplay(bisMin) + (notiz ? ' | ' + notiz : '');
 }
 function pxToSlot(px) { return Math.round(px / SLOT_W); }
 function slotToMin(s)  { return GRID_START + s * 30; }
@@ -603,7 +647,7 @@ function updateTimeLabel(el, vonMin, bisMin) {
     var t = el.querySelector('.dp-shift-time');
     if (t) t.textContent = (bisMin - vonMin) + ' Min';
     var h = el.querySelector('div:not(.dp-resize-left):not(.dp-resize-right):not(.dp-shift-time)');
-    if (h) h.textContent = minToTime(vonMin) + ' – ' + minToTime(bisMin);
+    if (h) h.textContent = minToTimeDisplay(vonMin) + ' – ' + minToTimeDisplay(bisMin);
 }
 function snapToSlot(min) { return Math.round(min / 30) * 30; }
 
@@ -710,6 +754,7 @@ document.addEventListener('mouseup', function(e) {
     el.style.width = Math.max((newBis - newVon) / 30 * SLOT_W, SLOT_W) + 'px';
     updateTimeLabel(el, newVon, newBis);
 
+    el.setAttribute('data-bs-title', shiftTooltipTitle(el, newVon, newBis));
     var oldTt = bootstrap.Tooltip.getInstance(el);
     if (oldTt) oldTt.dispose();
     initTooltip(el);
@@ -809,8 +854,8 @@ document.getElementById('sf-save').addEventListener('click', function() {
         sfError.textContent = 'Bitte alle Pflichtfelder ausfüllen.';
         sfError.classList.remove('d-none'); return;
     }
-    if (von >= bis) {
-        sfError.textContent = 'Von-Zeit muss vor Bis-Zeit liegen.';
+    if (von === bis) {
+        sfError.textContent = 'Von- und Bis-Zeit dürfen nicht gleich sein.';
         sfError.classList.remove('d-none'); return;
     }
     sfError.classList.add('d-none');
@@ -833,7 +878,7 @@ document.getElementById('sf-save').addEventListener('click', function() {
             var vonStr = sfVon.value;
             var bisStr = sfBis.value;
             var vonMin = timeToMin(vonStr);
-            var bisMin = timeToMin(bisStr);
+            var bisMin = bisToMin(vonStr, bisStr);
 
             // Timeline-Zeile finden oder erstellen
             var tl = findOrCreateTimeline(stId, maId);
@@ -893,9 +938,10 @@ function createShiftBlock(id, vonMin, bisMin, stId, maId, notizen) {
     el.dataset.duration  = bisMin - vonMin;
     el.dataset.stationId = stId;
     el.dataset.maId      = maId;
+    el.dataset.notizen   = notizen || '';
     el.setAttribute('data-bs-toggle', 'tooltip');
     el.setAttribute('data-bs-placement', 'top');
-    el.setAttribute('data-bs-title', maName + ' @ ' + stName + ' | ' + minToTime(vonMin) + '–' + minToTime(bisMin) + (notizen ? ' | ' + notizen : ''));
+    el.setAttribute('data-bs-title', maName + ' @ ' + stName + ' | ' + minToTimeDisplay(vonMin) + '–' + minToTimeDisplay(bisMin) + (notizen ? ' | ' + notizen : ''));
     el.style.cssText = 'position:absolute;left:'+left+'px;width:'+width+'px;top:5px;height:'+(ROW_H-10)+'px;'
         + 'background:'+color+';color:#fff;border-radius:6px;'
         + 'padding:3px 20px 3px 20px;font-size:11px;overflow:hidden;'
@@ -906,7 +952,7 @@ function createShiftBlock(id, vonMin, bisMin, stId, maId, notizen) {
     var delBtn = CAN_DELETE ? '<button class="dp-del" data-id="'+id+'" style="position:absolute;top:3px;right:12px;border:none;background:rgba(0,0,0,0.28);color:#fff;border-radius:50%;width:14px;height:14px;font-size:12px;line-height:13px;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;z-index:7">×</button>' : '';
 
     el.innerHTML = resL
-        + '<div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5">'+minToTime(vonMin)+' – '+minToTime(bisMin)+'</div>'
+        + '<div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5">'+minToTimeDisplay(vonMin)+' – '+minToTimeDisplay(bisMin)+'</div>'
         + '<div class="dp-shift-time" style="font-size:10px;opacity:0.85">'+(bisMin-vonMin)+' Min</div>'
         + resR + delBtn;
     return el;
@@ -1190,7 +1236,8 @@ function rescaleGrid() {
     if (!sc) return;
     var available = sc.clientWidth - 4;
     if (available < 200) return; // Mobile: nicht skalieren
-    applySlotWidth(Math.max(36, Math.floor(available / SLOT_COUNT)));
+    // Immer exakt auf verfügbare Breite skalieren, damit kein horizontaler Scrollbalken entsteht
+    applySlotWidth(Math.max(8, Math.floor(available / SLOT_COUNT)));
 }
 
 // Beim Laden und bei Fenster-Größenänderung

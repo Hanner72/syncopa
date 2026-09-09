@@ -163,7 +163,8 @@ include 'includes/header.php';
                     <tbody id="tageBody"></tbody>
                 </table>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer justify-content-between">
+                <span class="text-muted small"><i class="bi bi-info-circle"></i> Liegt „Bis" vor „Von" (z.B. 16:00–02:00), wird automatisch der Folgetag angenommen.</span>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Schließen</button>
             </div>
         </div>

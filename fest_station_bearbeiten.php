@@ -105,6 +105,7 @@ include 'includes/header.php';
                             <label for="oeffnung_bis" class="form-label">Öffnung bis</label>
                             <input type="time" class="form-control" id="oeffnung_bis" name="oeffnung_bis"
                                    value="<?php echo htmlspecialchars($station['oeffnung_bis'] ?? ''); ?>">
+                            <div class="form-text">Liegt „Bis" vor „Von" (z.B. 16:00–02:00), wird automatisch der Folgetag angenommen.</div>
                         </div>
                     </div>
                     <div class="col-md-4 mb-3">
