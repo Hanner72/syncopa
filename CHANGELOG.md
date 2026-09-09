@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.4.4]
+
+### Hinzugefügt
+
+- Tabellen habe jetzt immer Deutsch Beschreibungstexte und Pignationstexte
+
+### Geändert
+
+- optisches bei Tabellen der Festverwaltung angepasst
+
+### Bugs
+
+- einige Bugs bei Installation und Updates behoben
+- Bei der Festverwaltung können jetzt wieder Kategorien angeleght werden
+- Datumsfehler bei Festeverwaltung Infoblock
+
 ## [2.4.3]
 
 ### Geändert

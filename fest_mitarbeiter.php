@@ -63,7 +63,7 @@ include 'includes/header.php';
 </div>
 
 <div class="card">
-    <div class="card-body p-0">
+    <div class="card-body">
         <?php if (empty($mitarbeiter)): ?>
         <div class="text-center text-muted py-5">
             <i class="bi bi-people fs-1 d-block mb-2 opacity-25"></i>
@@ -73,7 +73,8 @@ include 'includes/header.php';
             <?php endif; ?>
         </div>
         <?php else: ?>
-        <table class="table table-hover mb-0" id="mitarbeiterTable">
+        <div class="table-responsive">
+        <table class="table table-hover" id="mitarbeiterTable">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -127,6 +128,7 @@ include 'includes/header.php';
                 <?php endforeach; ?>
             </tbody>
         </table>
+        </div>
         <?php endif; ?>
     </div>
 </div>

@@ -211,6 +211,11 @@ class FestEinkauf {
         return $this->db->fetchAll("SELECT * FROM fest_einkauf_kategorien ORDER BY sortierung, name");
     }
 
+    public function createKategorie(string $name): int {
+        $this->db->execute("INSERT INTO fest_einkauf_kategorien (name) VALUES (?)", [$name]);
+        return $this->db->lastInsertId();
+    }
+
     /**
      * Gesamtsummen pro Status und gesamt
      */
