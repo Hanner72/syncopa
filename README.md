@@ -15,10 +15,7 @@ Eine moderne, umfassende Webapplikation zur Verwaltung von Musikvereinen. Entwic
 
 https://syncopa.dannerbam.eu/
 
-Admin Login
-
-- Benutzer: admin
-- Passwort: admin123
+Zugangsdaten auf Anfrage
 
 ---
 
