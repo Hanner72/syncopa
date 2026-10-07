@@ -72,6 +72,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - <?php echo APP_NAME; ?></title>
     <link rel="icon" type="image/png" href="assets/favicon.png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="assets/icon-192.png">
+    <meta name="theme-color" content="#4471A3">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
@@ -145,11 +150,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </a>
                 <?php endif; ?>
             </form>
-            <div class="footer"><strong>admin</strong> / <strong>admin123</strong></div>
         </div>
     </div>
     
     <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('sw.js').catch(function() {});
+        });
+    }
     const t=document.getElementById('themeToggle'),h=document.documentElement,s=localStorage.getItem('theme')||'light';
     h.setAttribute('data-theme',s);t.querySelector('i').className=s==='light'?'bi bi-moon':'bi bi-sun';
     t.onclick=()=>{const n=h.getAttribute('data-theme')==='light'?'dark':'light';h.setAttribute('data-theme',n);localStorage.setItem('theme',n);t.querySelector('i').className=n==='light'?'bi bi-moon':'bi bi-sun'};

@@ -10,6 +10,13 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
     <script>
+    // Service Worker für die Installierbarkeit als App registrieren
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('sw.js').catch(function() {});
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         // Sidebar Toggle
         const sidebar = document.getElementById('sidebar');

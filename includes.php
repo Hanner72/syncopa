@@ -12,6 +12,8 @@ require_once __DIR__ . '/classes/Noten.php';
 require_once __DIR__ . '/classes/Instrument.php';
 require_once __DIR__ . '/classes/Uniform.php';
 require_once __DIR__ . '/classes/Nummernkreis.php';
+require_once __DIR__ . '/classes/BmvApi.php';
+require_once __DIR__ . '/classes/BmvMitgliederSync.php';
 
 // Migration: Mehrfachrollen-Pivot-Tabelle
 (function() {
@@ -543,5 +545,45 @@ require_once __DIR__ . '/classes/FestAbrechnung.php';
             ('jugendbeauftragter','fest',1,1,0),('kapellmeister','fest',1,0,0),
             ('notenwart','fest',1,0,0),('instrumentenwart','fest',1,0,0),
             ('trachtenwart','fest',1,0,0),('mitglied','fest',1,0,0)");
+    }
+})();
+
+// BMV-Abgleich: Zuordnung der Mitglieder zum BMV-Datensatz
+(function() {
+    $db = Database::getInstance();
+    $spalten = [
+        "ALTER TABLE mitglieder ADD COLUMN bmv_id VARCHAR(36) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_status VARCHAR(10) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_abgeglichen_am DATETIME NULL",
+        "ALTER TABLE mitglieder ADD KEY bmv_id (bmv_id)",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_anrede VARCHAR(50) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_titel VARCHAR(100) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_titeln VARCHAR(100) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_telefon2 VARCHAR(50) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_fax VARCHAR(50) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_telefon_firma VARCHAR(50) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_email2 VARCHAR(150) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_beruf VARCHAR(150) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_firma VARCHAR(150) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_bemerkung TEXT NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_kategorien VARCHAR(255) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_exp_telnr1 TINYINT(1) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_exp_telnr2 TINYINT(1) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_exp_email1 TINYINT(1) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_exp_email2 TINYINT(1) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_exp_adresse TINYINT(1) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_exp_internet TINYINT(1) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_foto MEDIUMTEXT NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_aenderung VARCHAR(50) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_pcanmeldename VARCHAR(100) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_pcipadresse VARCHAR(50) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_verein_id INT NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_nicht_uebertragen TINYINT(1) NOT NULL DEFAULT 0",
+        "ALTER TABLE mitglieder MODIFY COLUMN status ENUM('aktiv','passiv','ausgetreten','ehrenmitglied','ueberpruefen') DEFAULT 'aktiv'",
+    ];
+    foreach ($spalten as $sql) {
+        try {
+            $db->execute($sql);
+        } catch (\Throwable $e) { /* bereits vorhanden */ }
     }
 })();

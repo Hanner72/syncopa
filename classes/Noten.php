@@ -243,10 +243,11 @@ class Noten {
             throw new Exception('Datei zu groß (max. ' . (MAX_UPLOAD_SIZE / 1024 / 1024) . ' MB)');
         }
         
-        // Sicheren Dateinamen generieren
+        // Sicheren Dateinamen generieren – Endung wird unabhängig vom Original-Dateinamen
+        // immer auf .pdf gesetzt, da der Inhalt bereits oben als application/pdf geprüft wurde.
+        // (Der Original-Dateiname wird nur als original_name angezeigt, nie als Pfad verwendet.)
         $originalName = basename($file['name']);
-        $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-        $uniqueName = $notenId . '_' . uniqid() . '_' . time() . '.' . $extension;
+        $uniqueName = $notenId . '_' . uniqid() . '_' . time() . '.pdf';
         $filePath = NOTEN_DIR . DIRECTORY_SEPARATOR . $uniqueName;
         
         // Upload-Verzeichnis erstellen falls nötig

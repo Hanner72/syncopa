@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.5.0]
+
+### Hinzugefügt
+
+- BMV (Blasmusikverband Österreich) Integration
+  - Vereinsdaten werden mit dem BMV synchronisiert
+  - Kontakte werden mit dem BMV synchronisiert
+
+### Verbessert
+
+- Sicherheit gegen Angriffe verbessert
+
 ## [2.4.4]
 
 ### Hinzugefügt
