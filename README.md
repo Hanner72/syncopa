@@ -15,7 +15,8 @@ Eine moderne, umfassende Webapplikation zur Verwaltung von Musikvereinen. Entwic
 
 https://syncopa.dannerbam.eu/
 
-Zugangsdaten auf Anfrage
+Zugangsdaten auf Anfrage unter:
+Telegram: https://t.me/hanner72
 
 ---
 
