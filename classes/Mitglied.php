@@ -97,18 +97,67 @@ class Mitglied {
             $data['status'] ?? 'aktiv',
             $data['notizen'] ?? null
         ];
-        
+
+        $bmv = $this->bmvSpaltenAusDaten($data);
+        if ($bmv) {
+            $sql = str_replace(') VALUES (', ', ' . implode(', ', array_keys($bmv)) . ') VALUES (', $sql);
+            $sql = preg_replace('/VALUES \(([^)]*)\)$/', 'VALUES ($1' . str_repeat(', ?', count($bmv)) . ')', $sql);
+            $params = array_merge($params, array_values($bmv));
+        }
+
         $this->db->execute($sql, $params);
         return $this->db->lastInsertId();
     }
     
+    /** Speichert das Originalbild im Fotoverzeichnis unter zufälligem Namen und liefert den Dateinamen. */
+    public static function fotoSpeichern(string $tmpPfad): string {
+        $endung = match (@getimagesize($tmpPfad)[2] ?? null) {
+            IMAGETYPE_JPEG => 'jpg',
+            IMAGETYPE_PNG  => 'png',
+            IMAGETYPE_GIF  => 'gif',
+            IMAGETYPE_WEBP => 'webp',
+            default        => null,
+        };
+        if ($endung === null) {
+            throw new RuntimeException('Bildformat nicht unterstützt (JPG, PNG, GIF oder WebP).');
+        }
+        if (!is_dir(FOTOS_DIR)) {
+            mkdir(FOTOS_DIR, 0755, true);
+        }
+        $name = bin2hex(random_bytes(12)) . '.' . $endung;
+        if (!copy($tmpPfad, FOTOS_DIR . DIRECTORY_SEPARATOR . $name)) {
+            throw new RuntimeException('Das Originalfoto konnte nicht gespeichert werden.');
+        }
+        return $name;
+    }
+
+    /** Entfernt eine gespeicherte Originaldatei (nur Dateiname, kein Pfad). */
+    public static function fotoLoeschen(?string $name): void {
+        if ($name === null || $name === '') return;
+        $pfad = FOTOS_DIR . DIRECTORY_SEPARATOR . basename($name);
+        if (is_file($pfad)) {
+            unlink($pfad);
+        }
+    }
+
+    /** BMV-Felder, die im Datensatz enthalten sind, als zusätzliche Spalten (Name => Wert) */
+    private function bmvSpaltenAusDaten(array $data): array {
+        $spalten = [];
+        foreach (array_merge(BmvMitgliederSync::aenderbareSpalten(), ['bmv_nicht_uebertragen', 'foto']) as $spalte) {
+            if (array_key_exists($spalte, $data)) {
+                $spalten[$spalte] = $data[$spalte] === '' ? null : $data[$spalte];
+            }
+        }
+        return $spalten;
+    }
+
     public function update($id, $data) {
-        $sql = "UPDATE mitglieder SET 
+        $sql = "UPDATE mitglieder SET
                 vorname = ?, nachname = ?, geburtsdatum = ?, geschlecht = ?,
                 strasse = ?, plz = ?, ort = ?, land = ?, telefon = ?, mobil = ?, email = ?,
                 register_id = ?, status = ?, notizen = ?
                 WHERE id = ?";
-        
+
         $params = [
             $data['vorname'],
             $data['nachname'],
@@ -126,7 +175,13 @@ class Mitglied {
             $data['notizen'] ?? null,
             $id
         ];
-        
+
+        $bmv = $this->bmvSpaltenAusDaten($data);
+        if ($bmv) {
+            $sql = str_replace(' WHERE id = ?', ', ' . implode(', ', array_map(fn($s) => "$s = ?", array_keys($bmv))) . ' WHERE id = ?', $sql);
+            array_splice($params, -1, 0, array_values($bmv));
+        }
+
         return $this->db->execute($sql, $params);
     }
     

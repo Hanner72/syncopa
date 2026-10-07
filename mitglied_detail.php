@@ -83,9 +83,25 @@ $ausgelieheneInstrumente = $db->fetchAll("
 include 'includes/header.php';
 ?>
 
+<?php if (!empty($mitglied['bmv_nicht_uebertragen'])): ?>
+<div class="alert alert-danger"><i class="bi bi-cloud-slash"></i>
+    <strong>Nicht im BMV gespeichert:</strong> Die Änderungen sind nur in Syncopa vorhanden und wurden noch nicht an den BMV übertragen.
+    Beim nächsten Speichern werden sie übertragen.
+</div>
+<?php endif; ?>
+
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h2">
-        <i class="bi bi-person"></i> <?php echo htmlspecialchars($mitglied['vorname'] . ' ' . $mitglied['nachname']); ?>
+    <h1 class="h2 d-flex align-items-center gap-3">
+        <?php if (!empty($mitglied['foto']) || !empty($mitglied['bmv_foto'])): ?>
+        <img src="api/mitglied_foto.php?id=<?php echo (int)$mitglied['id']; ?>&amp;v=<?php echo strtotime($mitglied['aktualisiert_am']); ?>" alt="Foto"
+             class="rounded border" style="width:64px;height:64px;object-fit:cover">
+        <?php else: ?>
+        <i class="bi bi-person"></i>
+        <?php endif; ?>
+        <?php echo htmlspecialchars($mitglied['vorname'] . ' ' . $mitglied['nachname']); ?>
+        <?php if (!empty($mitglied['bmv_nicht_uebertragen'])): ?>
+        <span class="badge bg-danger fs-6 align-middle">nicht im BMV gespeichert</span>
+        <?php endif; ?>
     </h1>
     <div>
         <a href="mitglieder.php" class="btn btn-secondary">
@@ -114,10 +130,11 @@ include 'includes/header.php';
                     <dt class="col-sm-5">Status:</dt>
                     <dd class="col-sm-7">
                         <?php
-                        $statusColors = ['aktiv' => 'success', 'passiv' => 'warning', 'ausgetreten' => 'secondary', 'ehrenmitglied' => 'primary'];
+                        $statusColors = ['aktiv' => 'success', 'passiv' => 'warning', 'ausgetreten' => 'secondary', 'ehrenmitglied' => 'primary', 'ueberpruefen' => 'info'];
+                        $statusLabels = ['ueberpruefen' => 'Überprüfen'];
                         $color = $statusColors[$mitglied['status']] ?? 'secondary';
                         ?>
-                        <span class="badge bg-<?php echo $color; ?>"><?php echo ucfirst($mitglied['status']); ?></span>
+                        <span class="badge bg-<?php echo $color; ?>"><?php echo $statusLabels[$mitglied['status']] ?? ucfirst($mitglied['status']); ?></span>
                     </dd>
                     
                     <?php if ($mitglied['geburtsdatum']): ?>
