@@ -204,7 +204,7 @@ include 'includes/header.php';
                     $end->modify('+2 hours');
                 }
                 ?>
-                <pre class="bg-light p-3 rounded"><code>BEGIN:VEVENT
+                <pre class="p-3 rounded" style="background:#1e1e1e;color:#d4d4d4"><code>BEGIN:VEVENT
 UID:ausrueckung-<?php echo $first['id']; ?>@musikverein.local
 DTSTART;TZID=Europe/Vienna:<?php echo $start->format('Ymd\THis'); ?>
 

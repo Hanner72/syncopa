@@ -72,6 +72,7 @@ include 'includes/header.php';
                     <th>Komponist</th>
                     <th>Genre</th>
                     <th>Schwierigkeit</th>
+                    <th>Formation</th>
                     <th class="text-center">PDFs</th>
                     <th class="text-end">Aktionen</th>
                 </tr>
@@ -94,6 +95,15 @@ include 'includes/header.php';
                                 <?php echo $note['schwierigkeitsgrad']; ?>/6
                             </div>
                         </div>
+                    </td>
+                    <td>
+                        <?php if (!empty($note['formation_name'])): ?>
+                        <span class="badge" style="background-color:<?php echo htmlspecialchars($note['formation_farbe']); ?>;color:#fff">
+                            <?php echo htmlspecialchars($note['formation_kuerzel'] ?: $note['formation_name']); ?>
+                        </span>
+                        <?php else: ?>
+                        <span class="text-muted">–</span>
+                        <?php endif; ?>
                     </td>
                     <td class="text-center">
                         <?php if (($note['anzahl_dateien'] ?? 0) > 0): ?>
@@ -195,8 +205,12 @@ include 'includes/header.php';
                             html += '<span>' + datei.original_name + '</span>';
                             html += '<br><small class="text-muted">' + size + ' KB</small>';
                             html += '</div>';
-                            html += '<a href="api/noten_download.php?id=' + datei.id + '" class="btn btn-sm btn-primary">';
-                            html += '<i class="bi bi-download"></i> Download</a>';
+                            html += '<div class="d-flex gap-1">';
+                            html += '<a href="api/noten_download.php?id=' + datei.id + '&view=1" class="btn btn-sm btn-outline-secondary" target="_blank" title="Im Browser ansehen">';
+                            html += '<i class="bi bi-eye"></i></a>';
+                            html += '<a href="api/noten_download.php?id=' + datei.id + '" class="btn btn-sm btn-primary" title="Herunterladen">';
+                            html += '<i class="bi bi-download"></i></a>';
+                            html += '</div>';
                             html += '</li>';
                         });
                         html += '</ul>';

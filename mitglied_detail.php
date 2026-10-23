@@ -1,20 +1,4 @@
 <?php
-
-// === DEBUG START ===
-if (isset($_GET['debug'])) {
-    echo "<h3>Debug-Informationen</h3>";
-    echo "<pre>";
-    echo "Mitglied ID: " . $id . "\n";
-    echo "Hat Schreibrecht: " . (Session::checkPermission('mitglieder', 'schreiben') ? 'JA' : 'NEIN') . "\n";
-    echo "\nInstrumente:\n";
-    var_dump($instrumente);
-    echo "\nInstrumententypen verfügbar: " . count($instrumentTypen ?? []) . "\n";
-    echo "\nPOST-Daten:\n";
-    var_dump($_POST);
-    echo "</pre>";
-}
-// === DEBUG ENDE ===
-
 // mitglied_detail.php
 require_once 'config.php';
 require_once 'includes.php';
@@ -37,14 +21,16 @@ if (!$mitglied) {
     exit;
 }
 
-$instrumente = $mitgliedObj->getInstrumente($id);
+$activeFormationId = Session::getFormationId();
+$instrumente = $mitgliedObj->getInstrumente($id, $activeFormationId);
 
 // Instrument hinzufügen
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_instrument'])) {
     if (Session::checkPermission('mitglieder', 'schreiben')) {
         try {
-            $seitDatum = !empty($_POST['seit_datum']) ? $_POST['seit_datum'] : null;
-            $mitgliedObj->addInstrument($id, $_POST['instrument_typ_id'], isset($_POST['hauptinstrument']) ? 1 : 0, $seitDatum);
+            $seitDatum    = !empty($_POST['seit_datum']) ? $_POST['seit_datum'] : null;
+            $formIdNew    = !empty($_POST['formation_id']) ? (int)$_POST['formation_id'] : null;
+            $mitgliedObj->addInstrument($id, $_POST['instrument_typ_id'], isset($_POST['hauptinstrument']) ? 1 : 0, $seitDatum, $formIdNew);
             Session::setFlashMessage('success', 'Instrument hinzugefügt');
             header('Location: mitglied_detail.php?id=' . $id);
             exit;
@@ -73,11 +59,17 @@ if (isset($_GET['remove_instrument'])) {
 // Verfügbare Instrumententypen laden
 $db = Database::getInstance();
 $instrumentTypen = $db->fetchAll("
-    SELECT it.*, r.name as register_name 
+    SELECT it.*, r.name as register_name
     FROM instrument_typen it
     LEFT JOIN register r ON it.register_id = r.id
     ORDER BY r.sortierung, it.name
 ");
+
+// Formationen für Modal laden
+$alleFormationen = [];
+try {
+    $alleFormationen = (new Formation())->getAll(true);
+} catch (\Throwable $e) {}
 
 // Ausgeliehene Instrumente des Mitglieds laden
 $ausgelieheneInstrumente = $db->fetchAll("
@@ -91,9 +83,25 @@ $ausgelieheneInstrumente = $db->fetchAll("
 include 'includes/header.php';
 ?>
 
+<?php if (!empty($mitglied['bmv_nicht_uebertragen'])): ?>
+<div class="alert alert-danger"><i class="bi bi-cloud-slash"></i>
+    <strong>Nicht im BMV gespeichert:</strong> Die Änderungen sind nur in Syncopa vorhanden und wurden noch nicht an den BMV übertragen.
+    Beim nächsten Speichern werden sie übertragen.
+</div>
+<?php endif; ?>
+
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h2">
-        <i class="bi bi-person"></i> <?php echo htmlspecialchars($mitglied['vorname'] . ' ' . $mitglied['nachname']); ?>
+    <h1 class="h2 d-flex align-items-center gap-3">
+        <?php if (!empty($mitglied['foto']) || !empty($mitglied['bmv_foto'])): ?>
+        <img src="api/mitglied_foto.php?id=<?php echo (int)$mitglied['id']; ?>&amp;v=<?php echo strtotime($mitglied['aktualisiert_am']); ?>" alt="Foto"
+             class="rounded border" style="width:64px;height:64px;object-fit:cover">
+        <?php else: ?>
+        <i class="bi bi-person"></i>
+        <?php endif; ?>
+        <?php echo htmlspecialchars($mitglied['vorname'] . ' ' . $mitglied['nachname']); ?>
+        <?php if (!empty($mitglied['bmv_nicht_uebertragen'])): ?>
+        <span class="badge bg-danger fs-6 align-middle">nicht im BMV gespeichert</span>
+        <?php endif; ?>
     </h1>
     <div>
         <a href="mitglieder.php" class="btn btn-secondary">
@@ -122,10 +130,11 @@ include 'includes/header.php';
                     <dt class="col-sm-5">Status:</dt>
                     <dd class="col-sm-7">
                         <?php
-                        $statusColors = ['aktiv' => 'success', 'passiv' => 'warning', 'ausgetreten' => 'secondary', 'ehrenmitglied' => 'primary'];
+                        $statusColors = ['aktiv' => 'success', 'passiv' => 'warning', 'ausgetreten' => 'secondary', 'ehrenmitglied' => 'primary', 'ueberpruefen' => 'info'];
+                        $statusLabels = ['ueberpruefen' => 'Überprüfen'];
                         $color = $statusColors[$mitglied['status']] ?? 'secondary';
                         ?>
-                        <span class="badge bg-<?php echo $color; ?>"><?php echo ucfirst($mitglied['status']); ?></span>
+                        <span class="badge bg-<?php echo $color; ?>"><?php echo $statusLabels[$mitglied['status']] ?? ucfirst($mitglied['status']); ?></span>
                     </dd>
                     
                     <?php if ($mitglied['geburtsdatum']): ?>
@@ -221,7 +230,12 @@ include 'includes/header.php';
         <!-- Instrumente die das Mitglied spielt -->
         <div class="card mb-3">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Gespielte Instrumente</h5>
+                <h5 class="mb-0">
+                    Gespielte Instrumente
+                    <?php if ($activeFormationId): ?>
+                    <small class="text-muted fw-normal ms-1">(gefiltert nach aktiver Formation)</small>
+                    <?php endif; ?>
+                </h5>
                 <?php if (Session::checkPermission('mitglieder', 'schreiben')): ?>
                 <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addInstrumentModal">
                     <i class="bi bi-plus"></i> Instrument hinzufügen
@@ -230,7 +244,7 @@ include 'includes/header.php';
             </div>
             <div class="card-body">
                 <?php if (empty($instrumente)): ?>
-                <p class="text-muted">Keine Instrumente zugeordnet</p>
+                <p class="text-muted">Keine Instrumente zugeordnet<?php echo $activeFormationId ? ' (für diese Formation)' : ''; ?></p>
                 <?php else: ?>
                 <div class="table-responsive">
                     <table class="table">
@@ -238,6 +252,7 @@ include 'includes/header.php';
                             <tr>
                                 <th>Instrument</th>
                                 <th>Register</th>
+                                <th>Formation</th>
                                 <th>Hauptinstrument</th>
                                 <th>Seit</th>
                                 <?php if (Session::checkPermission('mitglieder', 'schreiben')): ?>
@@ -251,6 +266,15 @@ include 'includes/header.php';
                                 <td><strong><?php echo htmlspecialchars($instr['instrument_name']); ?></strong></td>
                                 <td><?php echo htmlspecialchars($instr['register_name'] ?? '-'); ?></td>
                                 <td>
+                                    <?php if (!empty($instr['formation_name'])): ?>
+                                    <span class="badge" style="background-color:<?php echo htmlspecialchars($instr['formation_farbe']); ?>;color:#fff">
+                                        <?php echo htmlspecialchars($instr['formation_kuerzel'] ?: $instr['formation_name']); ?>
+                                    </span>
+                                    <?php else: ?>
+                                    <span class="text-muted small">Alle</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
                                     <?php if ($instr['hauptinstrument']): ?>
                                     <span class="badge bg-success"><i class="bi bi-star-fill"></i> Ja</span>
                                     <?php else: ?>
@@ -260,7 +284,7 @@ include 'includes/header.php';
                                 <td><?php echo $instr['seit_datum'] ? date('d.m.Y', strtotime($instr['seit_datum'])) : '-'; ?></td>
                                 <?php if (Session::checkPermission('mitglieder', 'schreiben')): ?>
                                 <td>
-                                    <a href="?id=<?php echo $id; ?>&remove_instrument=<?php echo $instr['id']; ?>" 
+                                    <a href="?id=<?php echo $id; ?>&remove_instrument=<?php echo $instr['id']; ?>"
                                        class="btn btn-sm btn-danger"
                                        onclick="return confirm('Instrumentenzuordnung wirklich entfernen?')">
                                         <i class="bi bi-trash"></i>
@@ -337,9 +361,9 @@ include 'includes/header.php';
                         <label for="instrument_typ_id" class="form-label">Instrument *</label>
                         <select class="form-select" id="instrument_typ_id" name="instrument_typ_id" required>
                             <option value="">Bitte wählen</option>
-                            <?php 
+                            <?php
                             $currentRegister = null;
-                            foreach ($instrumentTypen as $typ): 
+                            foreach ($instrumentTypen as $typ):
                                 if ($currentRegister !== $typ['register_name']):
                                     if ($currentRegister !== null) echo '</optgroup>';
                                     $currentRegister = $typ['register_name'];
@@ -353,14 +377,31 @@ include 'includes/header.php';
                             <?php if ($currentRegister !== null) echo '</optgroup>'; ?>
                         </select>
                     </div>
-                    
+
+                    <?php if (!empty($alleFormationen)): ?>
+                    <div class="mb-3">
+                        <label for="formation_id" class="form-label">Gilt für Formation</label>
+                        <select class="form-select" id="formation_id" name="formation_id">
+                            <option value="">Alle Formationen</option>
+                            <?php foreach ($alleFormationen as $form): ?>
+                            <option value="<?php echo $form['id']; ?>"
+                                <?php echo ($activeFormationId == $form['id']) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($form['name']); ?>
+                                <?php if ($form['kuerzel']): ?>(<?php echo htmlspecialchars($form['kuerzel']); ?>)<?php endif; ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="text-muted">„Alle Formationen" = Instrument gilt formationsübergreifend</small>
+                    </div>
+                    <?php endif; ?>
+
                     <div class="mb-3">
                         <label for="seit_datum" class="form-label">Spielt seit</label>
-                        <input type="date" class="form-control" id="seit_datum" name="seit_datum" 
+                        <input type="date" class="form-control" id="seit_datum" name="seit_datum"
                                value="<?php echo date('Y-m-d'); ?>">
                         <small class="text-muted">Wird auf heute gesetzt, falls leer</small>
                     </div>
-                    
+
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="hauptinstrument" name="hauptinstrument">
                         <label class="form-check-label" for="hauptinstrument">

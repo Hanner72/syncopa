@@ -138,6 +138,7 @@ class Uniform {
      * Kleidungsstück löschen
      */
     public function deleteKleidungsstueck($id) {
+        $this->db->execute("DELETE FROM uniform_zuweisungen WHERE kleidungsstueck_id = ?", [$id]);
         $sql = "UPDATE uniform_kleidungsstuecke SET aktiv = 0 WHERE id = ?";
         return $this->db->execute($sql, [$id]);
     }
@@ -193,8 +194,8 @@ class Uniform {
      */
     public function zuweisen($mitgliedId, $kleidungsstueckId, $data = []) {
         $sql = "INSERT INTO uniform_zuweisungen 
-                (mitglied_id, kleidungsstueck_id, groesse, zustand, ausgabe_datum, bemerkungen)
-                VALUES (?, ?, ?, ?, ?, ?)";
+                (mitglied_id, kleidungsstueck_id, groesse, zustand, ausgabe_datum, bemerkungen, nicht_benoetigt)
+                VALUES (?, ?, ?, ?, ?, ?, 0)";
         $this->db->execute($sql, [
             $mitgliedId,
             $kleidungsstueckId,
@@ -203,6 +204,22 @@ class Uniform {
             $data['ausgabe_datum'] ?? date('Y-m-d'),
             $data['bemerkungen'] ?? null
         ]);
+        return $this->db->lastInsertId();
+    }
+
+    /**
+     * Kleidungsstück für ein Mitglied als "nicht benötigt" markieren
+     */
+    public function nichtBenoetigt($mitgliedId, $kleidungsstueckId) {
+        // Vorhandenen Eintrag löschen falls vorhanden, dann neu anlegen
+        $this->db->execute(
+            "DELETE FROM uniform_zuweisungen WHERE mitglied_id = ? AND kleidungsstueck_id = ?",
+            [$mitgliedId, $kleidungsstueckId]
+        );
+        $sql = "INSERT INTO uniform_zuweisungen 
+                (mitglied_id, kleidungsstueck_id, nicht_benoetigt)
+                VALUES (?, ?, 1)";
+        $this->db->execute($sql, [$mitgliedId, $kleidungsstueckId]);
         return $this->db->lastInsertId();
     }
     

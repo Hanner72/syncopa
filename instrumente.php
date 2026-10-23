@@ -70,6 +70,7 @@ include 'includes/header.php';
                     <th>Hersteller/Modell</th>
                     <th>Zustand</th>
                     <th>Status</th>
+                    <th>Notizen</th>
                     <th class="text-end">Aktionen</th>
                 </tr>
             </thead>
@@ -103,6 +104,9 @@ include 'includes/header.php';
                         <?php else: ?>
                         <span class="badge bg-success">Verfügbar</span>
                         <?php endif; ?>
+                    </td>
+                    <td>
+                        <?php echo htmlspecialchars($instr['notizen'] ?? ''); ?>
                     </td>
                     <td class="text-end">
                         <a href="instrument_detail.php?id=<?php echo $instr['id']; ?>" class="btn btn-sm btn-info" title="Details">

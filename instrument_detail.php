@@ -159,7 +159,7 @@ include 'includes/header.php';
             </div>
             <div class="card-body">
                 <?php if ($instrument['mitglied_id']): ?>
-                <div class="alert alert-warning mb-0">
+                <div class="alert alert-warning alert-permanent mb-0">
                     <h6><i class="bi bi-person"></i> Ausgeliehen an:</h6>
                     <p class="mb-1">
                         <strong><?php echo htmlspecialchars($instrument['vorname'] . ' ' . $instrument['nachname']); ?></strong><br>
@@ -170,7 +170,7 @@ include 'includes/header.php';
                     </small>
                 </div>
                 <?php else: ?>
-                <div class="alert alert-success mb-0">
+                <div class="alert alert-success alert-permanent mb-0">
                     <h6><i class="bi bi-check-circle"></i> Verfügbar</h6>
                     <p class="mb-0">Das Instrument ist nicht ausgeliehen</p>
                 </div>

@@ -10,6 +10,13 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
     <script>
+    // Service Worker für die Installierbarkeit als App registrieren
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('sw.js').catch(function() {});
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         // Sidebar Toggle
         const sidebar = document.getElementById('sidebar');
@@ -40,12 +47,14 @@
         // Load saved theme
         const savedTheme = localStorage.getItem('theme') || 'light';
         html.setAttribute('data-theme', savedTheme);
+        html.setAttribute('data-bs-theme', savedTheme); // aktiviert Bootstraps eigene Dark-Mode-Farben (-subtle/-emphasis Utilities)
         updateThemeIcon(savedTheme);
-        
+
         themeToggle?.addEventListener('click', function() {
             const current = html.getAttribute('data-theme');
             const next = current === 'light' ? 'dark' : 'light';
             html.setAttribute('data-theme', next);
+            html.setAttribute('data-bs-theme', next);
             localStorage.setItem('theme', next);
             updateThemeIcon(next);
         });
@@ -67,8 +76,9 @@
     
     // DataTables Config
     $.extend(true, $.fn.dataTable.defaults, {
-        language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/de-DE.json' },
+        language: { url: 'assets/js/libs/datatables-de-DE.json' },
         pageLength: 25,
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'Alle']],
         responsive: true,
         dom: '<"row align-items-center mb-2"<"col-auto"l><"col"f>><"table-responsive"t><"row align-items-center mt-2"<"col-sm-5"i><"col-sm-7"p>>'
     });

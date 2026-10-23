@@ -66,6 +66,7 @@ include 'includes/header.php';
                     <option value="passiv" <?php echo ($_GET['status'] ?? '') === 'passiv' ? 'selected' : ''; ?>>Passiv</option>
                     <option value="ausgetreten" <?php echo ($_GET['status'] ?? '') === 'ausgetreten' ? 'selected' : ''; ?>>Ausgetreten</option>
                     <option value="ehrenmitglied" <?php echo ($_GET['status'] ?? '') === 'ehrenmitglied' ? 'selected' : ''; ?>>Ehrenmitglied</option>
+                    <option value="ueberpruefen" <?php echo ($_GET['status'] ?? '') === 'ueberpruefen' ? 'selected' : ''; ?>>Überprüfen</option>
                 </select>
             </div>
             
@@ -116,13 +117,27 @@ include 'includes/header.php';
                             <strong><?php echo htmlspecialchars($m['mitgliedsnummer']); ?></strong>
                         </td>
                         <td>
-                            <?php 
-                            echo htmlspecialchars($m['nachname'] . ' ' . $m['vorname']); 
+                            <?php if (!empty($m['foto']) || !empty($m['bmv_foto'])):
+                                $fotoUrl = 'api/mitglied_foto.php?id=' . (int)$m['id'] . '&v=' . strtotime($m['aktualisiert_am']);
+                            ?>
+                            <img src="<?php echo $fotoUrl; ?>" alt="" class="rounded me-2 align-middle"
+                                 style="width:40px;height:40px;object-fit:cover"
+                                 data-bs-toggle="tooltip" data-bs-placement="right" data-bs-html="true"
+                                 data-bs-title="<img src='<?php echo $fotoUrl; ?>' style='width:220px;height:220px;object-fit:cover' class='rounded'>">
+                            <?php endif; ?>
+                            <?php
+                            echo htmlspecialchars($m['nachname'] . ' ' . $m['vorname']);
                             if ($m['geburtsdatum']) {
                                 $alter = date_diff(date_create($m['geburtsdatum']), date_create('today'))->y;
                                 echo "<br><small class='text-muted'>{$alter} Jahre</small>";
                             }
+                            if (empty($m['bmv_id']) && !empty($m['bmv_abgeglichen_am'])):
                             ?>
+                            <br><span class="badge bg-warning text-dark" title="Beim Abgleich mit dem BMV-Datenservice nicht gefunden">nicht im BMV</span>
+                            <?php endif; ?>
+                            <?php if (!empty($m['bmv_nicht_uebertragen'])): ?>
+                            <br><span class="badge bg-danger" title="Änderungen sind nur in Syncopa gespeichert">nicht im BMV gespeichert</span>
+                            <?php endif; ?>
                         </td>
                         <td>
                             <?php if ($m['register_name']): ?>
@@ -162,12 +177,14 @@ include 'includes/header.php';
                                 'aktiv' => 'success',
                                 'passiv' => 'warning',
                                 'ausgetreten' => 'secondary',
-                                'ehrenmitglied' => 'primary'
+                                'ehrenmitglied' => 'primary',
+                                'ueberpruefen' => 'info'
                             ];
+                            $statusLabels = ['ueberpruefen' => 'Überprüfen'];
                             $color = $statusColors[$m['status']] ?? 'secondary';
                             ?>
                             <span class="badge bg-<?php echo $color; ?>">
-                                <?php echo ucfirst($m['status']); ?>
+                                <?php echo $statusLabels[$m['status']] ?? ucfirst($m['status']); ?>
                             </span>
                         </td>
                         <td class="text-end no-print">
@@ -239,7 +256,7 @@ $(document).ready(function() {
     // Bootstrap Tooltips initialisieren
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
+        return new bootstrap.Tooltip(tooltipTriggerEl, { html: true });
     });
 });
 
