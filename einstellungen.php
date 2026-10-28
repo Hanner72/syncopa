@@ -107,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($error)) {
         }
 
         // Checkboxen (die nicht in POST sind wenn nicht angeklickt)
-        $checkboxen = ['beitrag_aktiv', 'beitrag_passiv', 'beitrag_ehrenmitglied', 'beitrag_ausgetreten', 'telemetry_enabled'];
+        $checkboxen = ['beitrag_aktiv', 'beitrag_passiv', 'beitrag_ehrenmitglied', 'beitrag_ausgetreten', 'telemetry_enabled', 'bmv_aktiv'];
         foreach ($checkboxen as $checkbox) {
             $wert = isset($_POST[$checkbox]) ? '1' : '0';
             $db->execute(
@@ -143,7 +143,8 @@ include 'includes/header.php';
         </div>
         <div class="card-body">
             <?php
-            $bmvVereinBereit = !empty($settings['bmv_land']) && !empty($settings['bmv_bezirk'])
+            $bmvVereinBereit = ($settings['bmv_aktiv'] ?? '0') === '1'
+                && !empty($settings['bmv_land']) && !empty($settings['bmv_bezirk'])
                 && !empty($settings['bmv_verein']) && !empty($settings['bmv_passwort']);
             ?>
             <div class="alert alert-info small mb-3">
@@ -411,6 +412,18 @@ include 'includes/header.php';
                 es wird dann nichts synchronisiert.
             </p>
 
+            <div class="p-3 border rounded mb-3">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="bmv_aktiv" name="bmv_aktiv" value="1"
+                           <?php echo ($settings['bmv_aktiv'] ?? '0') === '1' ? 'checked' : ''; ?>>
+                    <label class="form-check-label fw-semibold" for="bmv_aktiv">BMV-Synchronisation aktiv</label>
+                </div>
+                <div class="text-muted small mt-1">
+                    Schaltet alle BMV-Funktionen auf einmal frei bzw. ab (Vereins- und Mitgliederabgleich,
+                    automatische Aktualisierung, Übertragung von Änderungen). Die Zugangsdaten bleiben dabei gespeichert.
+                </div>
+            </div>
+
             <div class="row">
                 <div class="col-md-12 mb-3">
                     <label for="bmv_api_url" class="form-label">API-Link</label>
@@ -453,7 +466,20 @@ include 'includes/header.php';
                            value="<?php echo htmlspecialchars($settings['bmv_verein'] ?? ''); ?>">
                     <small class="text-muted">2-stellige Zahl, z.B. 13</small>
                 </div>
+
+                <div class="col-md-4 mb-3">
+                    <label for="bmv_sync_intervall_stunden" class="form-label">Mitglieder automatisch aktualisieren alle (Stunden)</label>
+                    <input type="number" class="form-control" id="bmv_sync_intervall_stunden" name="bmv_sync_intervall_stunden"
+                           min="1" max="168" value="<?php echo htmlspecialchars($settings['bmv_sync_intervall_stunden'] ?? '24'); ?>">
+                    <small class="text-muted">z.B. 24 = einmal täglich, 3 = alle 3 Stunden. Läuft automatisch beim ersten Aufruf der Mitgliederliste danach.</small>
+                </div>
             </div>
+
+            <?php if (!empty($settings['bmv_letzte_sync_mitglieder'])): ?>
+            <div class="text-muted small mb-3">
+                Mitglieder zuletzt automatisch synchronisiert: <?php echo htmlspecialchars(date('d.m.Y H:i', strtotime($settings['bmv_letzte_sync_mitglieder']))); ?>
+            </div>
+            <?php endif; ?>
 
             <div class="alert alert-secondary mb-3">
                 <i class="bi bi-person-badge"></i>

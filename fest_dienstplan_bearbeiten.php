@@ -142,7 +142,7 @@ include 'includes/header.php';
                                value="<?php echo htmlspecialchars($dp['notizen'] ?? ''); ?>">
                     </div>
                 </div>
-                <div class="card-footer">
+                <div class="card-footer page-actions-sticky">
                     <div class="d-flex justify-content-between">
                         <a href="fest_dienstplan.php?fest_id=<?php echo $festId; ?>" class="btn btn-outline-secondary">
                             <i class="bi bi-x-lg"></i> Abbrechen

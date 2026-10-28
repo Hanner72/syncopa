@@ -185,7 +185,7 @@ include 'includes/header.php';
                                   placeholder="Zusätzliche Informationen..."><?php echo htmlspecialchars($uniform['notizen'] ?? ''); ?></textarea>
                     </div>
                 </div>
-                <div class="card-footer bg-white">
+                <div class="card-footer bg-white page-actions-sticky">
                     <div class="d-flex justify-content-between">
                         <a href="uniformen.php" class="btn btn-outline-secondary">
                             <i class="bi bi-x-lg"></i> Abbrechen

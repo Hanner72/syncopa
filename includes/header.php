@@ -298,7 +298,20 @@ function isActive($page, $pages, $current) {
         
         /* MAIN */
         .main-wrapper { margin-left: var(--sidebar-w); min-height: 100vh; transition: margin-left var(--transition); }
-        .main-content { padding: calc(var(--topbar-h) + 16px) 16px 16px; }
+        .main-content { padding: calc(var(--topbar-h) + 16px) 16px 90px; }
+
+        /* Aktions-Buttons (Speichern, Erstellen, Löschen, Abbrechen ...) am unteren Bildschirmrand fixiert,
+           damit sie auf langen Formularseiten nicht erst durch Scrollen erreichbar sind. */
+        .page-actions-sticky {
+            position: fixed; bottom: 0; left: var(--sidebar-w); right: 0;
+            background: var(--bg-card);
+            border-top: 1px solid var(--border);
+            padding: 12px 24px;
+            z-index: 1040;
+            box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+            transition: left var(--transition);
+        }
+        body.sidebar-collapsed .page-actions-sticky { left: 0; }
         
         /* CARDS - Modern mit linkem Akzentrand */
         .card {
@@ -519,26 +532,28 @@ function isActive($page, $pages, $current) {
             .topbar { left: 0; }
             .main-wrapper { margin-left: 0; }
             .topbar-user .topbar-info { display: none; }
+            .page-actions-sticky { left: 0; }
         }
-        
+
         @media (max-width: 767.98px) {
-            .main-content { padding: calc(var(--topbar-h) + 12px) 12px 12px; }
+            .main-content { padding: calc(var(--topbar-h) + 12px) 12px 100px; }
             .card-body { padding: 12px; }
             .stat-card h2 { font-size: 20px; }
             .stat-card .stat-icon { font-size: 24px; }
             .col-md-3 { margin-bottom: 8px; }
+            .page-actions-sticky { padding: 10px 12px; flex-wrap: wrap; gap: 8px; }
         }
-        
+
         @media (max-width: 575.98px) {
             .topbar-name { display: none; }
-            .main-content { padding: calc(var(--topbar-h) + 8px) 8px 8px; }
+            .main-content { padding: calc(var(--topbar-h) + 8px) 8px 100px; }
             .row { margin-left: -4px; margin-right: -4px; }
             .row > [class*="col-"] { padding-left: 4px; padding-right: 4px; }
         }
-        
+
         /* PRINT */
         @media print {
-            .sidebar, .topbar, .no-print { display: none !important; }
+            .sidebar, .topbar, .no-print, .page-actions-sticky { display: none !important; }
             .main-wrapper { margin: 0; }
             .main-content { padding: 0; }
             body { background: #fff; }

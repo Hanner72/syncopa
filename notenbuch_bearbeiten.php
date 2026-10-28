@@ -201,7 +201,7 @@ include 'includes/header.php';
                     <textarea name="beschreibung" class="form-control" rows="2"><?= htmlspecialchars($buch['beschreibung'] ?? '') ?></textarea>
                 </div>
             </div>
-            <div class="mt-3">
+            <div class="mt-3 page-actions-sticky">
                 <button type="submit" name="save_buch" class="btn btn-primary">
                     <i class="bi bi-save"></i> Speichern
                 </button>

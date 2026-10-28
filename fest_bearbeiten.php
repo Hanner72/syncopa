@@ -119,7 +119,7 @@ include 'includes/header.php';
                                   placeholder="Allgemeine Informationen zum Fest..."><?php echo htmlspecialchars($fest['beschreibung'] ?? ''); ?></textarea>
                     </div>
                 </div>
-                <div class="card-footer">
+                <div class="card-footer page-actions-sticky">
                     <div class="d-flex justify-content-between">
                         <a href="<?php echo $isEdit ? 'fest_detail.php?id='.$id : 'feste.php'; ?>" class="btn btn-outline-secondary">
                             <i class="bi bi-x-lg"></i> Abbrechen

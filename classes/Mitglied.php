@@ -111,13 +111,14 @@ class Mitglied {
     
     /** Speichert das Originalbild im Fotoverzeichnis unter zufälligem Namen und liefert den Dateinamen. */
     public static function fotoSpeichern(string $tmpPfad): string {
-        $endung = match (@getimagesize($tmpPfad)[2] ?? null) {
-            IMAGETYPE_JPEG => 'jpg',
-            IMAGETYPE_PNG  => 'png',
-            IMAGETYPE_GIF  => 'gif',
-            IMAGETYPE_WEBP => 'webp',
-            default        => null,
-        };
+        $typ = @getimagesize($tmpPfad)[2] ?? null;
+        switch ($typ) {
+            case IMAGETYPE_JPEG: $endung = 'jpg';  break;
+            case IMAGETYPE_PNG:  $endung = 'png';  break;
+            case IMAGETYPE_GIF:  $endung = 'gif';  break;
+            case IMAGETYPE_WEBP: $endung = 'webp'; break;
+            default:             $endung = null;
+        }
         if ($endung === null) {
             throw new RuntimeException('Bildformat nicht unterstützt (JPG, PNG, GIF oder WebP).');
         }
@@ -140,10 +141,18 @@ class Mitglied {
         }
     }
 
-    /** BMV-Felder, die im Datensatz enthalten sind, als zusätzliche Spalten (Name => Wert) */
+    /**
+     * BMV-Felder, die im Datensatz enthalten sind, als zusätzliche Spalten (Name => Wert).
+     * Spalten, die bereits in der festen Liste von create()/update() stehen (vorname, nachname,
+     * geburtsdatum, geschlecht, strasse, plz, ort, telefon, mobil, email), werden hier bewusst
+     * ausgeschlossen, sonst würde die Spalte doppelt in der SQL-Anweisung landen.
+     */
     private function bmvSpaltenAusDaten(array $data): array {
+        $bereitsVorhanden = ['vorname', 'nachname', 'geburtsdatum', 'geschlecht', 'strasse', 'plz', 'ort',
+            'telefon', 'mobil', 'email'];
         $spalten = [];
-        foreach (array_merge(BmvMitgliederSync::aenderbareSpalten(), ['bmv_nicht_uebertragen', 'foto']) as $spalte) {
+        foreach (array_merge(BmvMitgliederSync::aenderbareSpalten(), ['bmv_nicht_uebertragen', 'foto', 'bmv_id', 'bmv_abgeglichen_am']) as $spalte) {
+            if (in_array($spalte, $bereitsVorhanden, true)) continue;
             if (array_key_exists($spalte, $data)) {
                 $spalten[$spalte] = $data[$spalte] === '' ? null : $data[$spalte];
             }

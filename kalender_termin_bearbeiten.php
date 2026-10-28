@@ -157,7 +157,7 @@ include 'includes/header.php';
                 <textarea class="form-control" id="beschreibung" name="beschreibung" rows="3"><?php echo htmlspecialchars($termin['beschreibung'] ?? ''); ?></textarea>
             </div>
             
-            <div class="d-flex justify-content-between">
+            <div class="d-flex justify-content-between page-actions-sticky">
                 <a href="kalender.php" class="btn btn-secondary">Abbrechen</a>
                 <div>
                     <?php if (Session::getRole() === 'admin' || Session::checkPermission('ausrueckungen', 'loeschen')): ?>
