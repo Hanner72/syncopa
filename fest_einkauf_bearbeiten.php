@@ -177,7 +177,7 @@ include 'includes/header.php';
                         <textarea class="form-control" id="notizen" name="notizen" rows="2"><?php echo htmlspecialchars($einkauf['notizen'] ?? ''); ?></textarea>
                     </div>
                 </div>
-                <div class="card-footer">
+                <div class="card-footer page-actions-sticky">
                     <div class="d-flex justify-content-between">
                         <a href="fest_einkauefe.php?fest_id=<?php echo $festId; ?>" class="btn btn-outline-secondary">
                             <i class="bi bi-x-lg"></i> Abbrechen

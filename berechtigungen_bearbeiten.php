@@ -179,7 +179,7 @@ include 'includes/header.php';
                 </ul>
             </div>
             
-            <div class="d-flex justify-content-between">
+            <div class="d-flex justify-content-between page-actions-sticky">
                 <a href="rollen.php" class="btn btn-secondary"><i class="bi bi-x"></i> Abbrechen</a>
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-save"></i> Berechtigungen speichern

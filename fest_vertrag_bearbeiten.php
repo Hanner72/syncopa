@@ -147,7 +147,7 @@ include 'includes/header.php';
                                   placeholder="Besondere Vereinbarungen, technische Anforderungen, ..."><?php echo htmlspecialchars($vertrag['notizen'] ?? ''); ?></textarea>
                     </div>
                 </div>
-                <div class="card-footer">
+                <div class="card-footer page-actions-sticky">
                     <div class="d-flex justify-content-between">
                         <a href="fest_vertraege.php?fest_id=<?php echo $festId; ?>" class="btn btn-outline-secondary">
                             <i class="bi bi-x-lg"></i> Abbrechen

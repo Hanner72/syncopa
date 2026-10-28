@@ -117,7 +117,7 @@ include 'includes/header.php';
                                   placeholder="Detaillierte Beschreibung, Hinweise, Links..."><?php echo htmlspecialchars($todo['beschreibung'] ?? ''); ?></textarea>
                     </div>
                 </div>
-                <div class="card-footer">
+                <div class="card-footer page-actions-sticky">
                     <div class="d-flex justify-content-between">
                         <a href="fest_todos.php<?php echo $festId ? '?fest_id='.$festId : ''; ?>" class="btn btn-outline-secondary">
                             <i class="bi bi-x-lg"></i> Abbrechen

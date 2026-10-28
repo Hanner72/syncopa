@@ -6,6 +6,10 @@ require_once 'includes.php';
 Session::requireLogin();
 Session::requirePermission('mitglieder', 'lesen');
 
+// Mitglieder automatisch mit dem BMV abgleichen, wenn das Intervall abgelaufen ist (siehe Einstellungen).
+// Macht nichts, falls BMV nicht aktiv/konfiguriert ist oder das Intervall noch nicht erreicht wurde.
+BmvMitgliederSync::automatischSynchronisierenFallsFaellig();
+
 $mitglied = new Mitglied();
 $db = Database::getInstance();
 

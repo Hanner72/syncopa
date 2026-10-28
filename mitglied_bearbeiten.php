@@ -7,6 +7,8 @@ Session::requireLogin();
 
 $mitgliedObj = new Mitglied();
 $db = Database::getInstance();
+$bmvApi = new BmvApi();
+$bmvKonfiguriert = $bmvApi->istKonfiguriert();
 
 $id = $_GET['id'] ?? null;
 $isEdit = !empty($id);
@@ -105,16 +107,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data['foto'] = null;
         }
 
-        // Mitglieder mit BMV-Zuordnung: Änderungen in den BMV übertragen, außer bei „Nur lokal speichern".
+        // Entscheidend ist, ob das Mitglied bereits eine BMV-ID hat – unabhängig davon, ob es sich
+        // um ein neues oder ein bestehendes (aber noch nicht im BMV angelegtes) Mitglied handelt.
         // Solange Änderungen nicht übertragen sind (Flag), werden beim nächsten Speichern alle Felder gesendet.
         $data['bmv_nicht_uebertragen'] = 0;
-        if ($isEdit && !empty($mitglied['bmv_id'])) {
-            $bmvApi = new BmvApi();
+        $nurLokal = isset($_POST['nur_lokal']) || !$bmvKonfiguriert;
+
+        if (!empty($mitglied['bmv_id'])) {
+            // Bereits im BMV vorhanden: Änderungen übertragen oder bewusst nur lokal speichern
             $offen = !empty($mitglied['bmv_nicht_uebertragen']);
             $aenderungen = $offen
                 ? BmvMitgliederSync::komplettZuBmv($data)
                 : BmvMitgliederSync::aenderungenZuBmv($mitglied, $data);
-            $nurLokal = isset($_POST['nur_lokal']) || !$bmvApi->istKonfiguriert();
 
             if ($nurLokal) {
                 $data['bmv_nicht_uebertragen'] = ($offen || BmvMitgliederSync::aenderungenZuBmv($mitglied, $data)) ? 1 : 0;
@@ -123,6 +127,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $bmvApi->musikerAktualisieren($mitglied['bmv_id'], $aenderungen);
                 } catch (RuntimeException $e) {
                     throw new Exception('Nicht gespeichert, da der BMV-Datenservice die Änderung nicht übernommen hat: ' . $e->getMessage());
+                }
+            }
+        } else {
+            // Noch nicht im BMV (neu oder bestehend, aber noch nie gesendet): anlegen oder nur lokal
+            if ($nurLokal) {
+                $data['bmv_nicht_uebertragen'] = 1;
+            } else {
+                $vereinZeile = $db->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = 'bmv_verein_nr'");
+                $vereinNr = $vereinZeile ? (int)$vereinZeile['wert'] : 0;
+                if ($vereinNr <= 0) {
+                    throw new Exception('Das Mitglied kann erst im BMV angelegt werden, nachdem einmal „Mit BMV synchronisieren" in den Einstellungen ausgeführt wurde. Verwende stattdessen „Nur lokal speichern".');
+                }
+                // Pflichtfelder des BMV-Formulars (gelb markiert): Vorname, Zuname, Geburtsdatum, Geschlecht.
+                // Der BMV kennt nur männlich/weiblich, kein „divers".
+                $fehlendeFelder = [];
+                if (empty($data['vorname']))  $fehlendeFelder[] = 'Vorname';
+                if (empty($data['nachname'])) $fehlendeFelder[] = 'Nachname';
+                if (empty($data['geburtsdatum'])) $fehlendeFelder[] = 'Geburtsdatum';
+                if (!in_array($data['geschlecht'] ?? '', ['m', 'w'], true)) $fehlendeFelder[] = 'Geschlecht (männlich oder weiblich)';
+                if ($fehlendeFelder) {
+                    throw new Exception('Der BMV verlangt beim Anlegen folgende Pflichtfelder: ' . implode(', ', $fehlendeFelder)
+                        . '. Bitte ausfüllen oder „Nur lokal speichern" verwenden.');
+                }
+                try {
+                    $data['bmv_id'] = $bmvApi->musikerErstellen(BmvMitgliederSync::neuAnlageZuBmv($data, $vereinNr));
+                    $data['bmv_abgeglichen_am'] = date('Y-m-d H:i:s');
+                } catch (RuntimeException $e) {
+                    throw new Exception('Nicht gespeichert, da der BMV-Datenservice das Mitglied nicht anlegen konnte: ' . $e->getMessage());
                 }
             }
         }
@@ -146,12 +178,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             if (!empty($data['bmv_nicht_uebertragen'])) {
                 Session::setFlashMessage('warning', 'Nur lokal gespeichert: noch nicht im BMV gespeichert.');
+            } elseif (!empty($data['bmv_id']) && empty($mitglied['bmv_id'])) {
+                Session::setFlashMessage('success', 'Mitglied erfolgreich aktualisiert und im BMV angelegt');
             } else {
                 Session::setFlashMessage('success', 'Mitglied erfolgreich aktualisiert');
             }
         } else {
             $id = $mitgliedObj->create($data);
-            Session::setFlashMessage('success', 'Mitglied erfolgreich erstellt');
+            if (!empty($data['bmv_nicht_uebertragen'])) {
+                Session::setFlashMessage('warning', 'Mitglied erstellt – nur lokal, noch nicht im BMV gespeichert.');
+            } else {
+                Session::setFlashMessage('success', 'Mitglied erfolgreich erstellt' . (!empty($data['bmv_id']) ? ' und im BMV angelegt' : ''));
+            }
         }
         header('Location: mitglied_detail.php?id=' . $id);
         exit;
@@ -220,10 +258,13 @@ include 'includes/header.php';
                         
                         <div class="col-md-4 mb-3">
                             <label for="geburtsdatum" class="form-label">Geburtsdatum</label>
-                            <input type="date" class="form-control" id="geburtsdatum" name="geburtsdatum" 
+                            <input type="date" class="form-control" id="geburtsdatum" name="geburtsdatum"
                                    value="<?php echo htmlspecialchars($mitglied['geburtsdatum'] ?? ''); ?>">
+                            <?php if ($bmvKonfiguriert && empty($mitglied['bmv_id'])): ?>
+                            <div class="form-text">Für die BMV-Anlage erforderlich.</div>
+                            <?php endif; ?>
                         </div>
-                        
+
                         <div class="col-md-4 mb-3">
                             <label for="geschlecht" class="form-label">Geschlecht</label>
                             <select class="form-select" id="geschlecht" name="geschlecht">
@@ -231,6 +272,9 @@ include 'includes/header.php';
                                 <option value="m" <?php echo ($mitglied['geschlecht'] ?? '') === 'm' ? 'selected' : ''; ?>>Männlich</option>
                                 <option value="w" <?php echo ($mitglied['geschlecht'] ?? '') === 'w' ? 'selected' : ''; ?>>Weiblich</option>
                             </select>
+                            <?php if ($bmvKonfiguriert && empty($mitglied['bmv_id'])): ?>
+                            <div class="form-text">Für die BMV-Anlage erforderlich – der BMV kennt nur männlich/weiblich.</div>
+                            <?php endif; ?>
                         </div>
                     </div>
                     
@@ -455,7 +499,7 @@ include 'includes/header.php';
                 <div class="col-md-6">
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="<?php echo $feld; ?>" name="<?php echo $feld; ?>"
-                               <?php echo !empty($mitglied[$feld]) ? 'checked' : ''; ?>>
+                               <?php echo (!$isEdit || !empty($mitglied[$feld])) ? 'checked' : ''; ?>>
                         <label class="form-check-label" for="<?php echo $feld; ?>"><?php echo $label; ?></label>
                     </div>
                 </div>
@@ -478,20 +522,34 @@ include 'includes/header.php';
         </div>
     </div>
 
-    <div class="d-flex justify-content-between mt-3">
+    <div class="d-flex justify-content-between mt-3 page-actions-sticky">
         <a href="mitglieder.php" class="btn btn-secondary">
             <i class="bi bi-x"></i> Abbrechen
         </a>
         <div class="d-flex gap-2">
-            <?php if ($isEdit && !empty($mitglied['bmv_id'])): ?>
+            <?php if (!empty($mitglied['bmv_id'])): ?>
+            <!-- Mitglied ist bereits im BMV: Änderungen werden normal übertragen, oder bewusst nur lokal -->
             <button type="submit" name="nur_lokal" value="1" class="btn btn-outline-warning"
                     title="Speichert nur in Syncopa. Die Änderung wird als „nicht im BMV gespeichert" markiert.">
                 <i class="bi bi-hdd"></i> Nur lokal speichern
             </button>
-            <?php endif; ?>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save"></i> Aktualisieren
+            </button>
+            <?php elseif ($bmvKonfiguriert): ?>
+            <!-- Mitglied ist noch nicht im BMV: anlegen/verknüpfen oder bewusst nur lokal -->
+            <button type="submit" name="nur_lokal" value="1" class="btn btn-outline-warning"
+                    title="Speichert nur in Syncopa, ohne das Mitglied an den BMV zu senden.">
+                <i class="bi bi-hdd"></i> Nur lokal speichern
+            </button>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-cloud-check"></i> <?php echo $isEdit ? 'Ändern' : 'Speichern'; ?> und an BMV senden
+            </button>
+            <?php else: ?>
             <button type="submit" class="btn btn-primary">
                 <i class="bi bi-save"></i> <?php echo $isEdit ? 'Aktualisieren' : 'Erstellen'; ?>
             </button>
+            <?php endif; ?>
         </div>
     </div>
 </form>

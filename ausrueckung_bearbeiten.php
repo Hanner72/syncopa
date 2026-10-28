@@ -224,7 +224,7 @@ include 'includes/header.php';
                 <textarea class="form-control" id="notizen" name="notizen" rows="3"><?php echo htmlspecialchars($ausrueckung['notizen'] ?? ''); ?></textarea>
             </div>
             
-            <div class="d-flex justify-content-between">
+            <div class="d-flex justify-content-between page-actions-sticky">
                 <a href="ausrueckungen.php" class="btn btn-secondary">
                     <i class="bi bi-x"></i> Abbrechen
                 </a>

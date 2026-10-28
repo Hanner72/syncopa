@@ -190,7 +190,7 @@ include 'includes/header.php';
                 <label class="form-check-label" for="aktiv">Benutzer ist aktiv</label>
             </div>
             
-            <div class="d-flex justify-content-between">
+            <div class="d-flex justify-content-between page-actions-sticky">
                 <a href="benutzer.php" class="btn btn-secondary"><i class="bi bi-x"></i> Abbrechen</a>
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-save"></i> <?php echo $isEdit ? 'Aktualisieren' : 'Erstellen'; ?>

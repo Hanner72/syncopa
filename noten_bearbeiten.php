@@ -258,7 +258,7 @@ include 'includes/header.php';
                                   placeholder="Zusätzliche Informationen..."><?php echo htmlspecialchars($note['bemerkungen'] ?? ''); ?></textarea>
                     </div>
                 </div>
-                <div class="card-footer">
+                <div class="card-footer page-actions-sticky">
                     <div class="d-flex justify-content-between">
                         <a href="noten.php" class="btn btn-outline-secondary">
                             <i class="bi bi-x-lg"></i> Abbrechen

@@ -5,6 +5,44 @@
 class BmvMitgliederSync {
 
     /**
+     * Stößt die Mitglieder-Übernahme automatisch an, wenn das BMV-Intervall seit dem letzten Lauf
+     * abgelaufen ist (Einstellung „bmv_sync_intervall_stunden", Standard 24h). Macht nichts, wenn die
+     * BMV-Synchronisation nicht aktiv/konfiguriert ist. Fehler werden nur geloggt, nie angezeigt,
+     * damit ein nicht erreichbarer BMV-Datenservice keine normale Seite blockiert. Der Zeitstempel wird
+     * auch bei einem Fehler aktualisiert, damit nicht bei jedem Seitenaufruf erneut (und erneut langsam)
+     * versucht wird – der nächste Versuch folgt einfach beim nächsten fälligen Intervall.
+     */
+    public static function automatischSynchronisierenFallsFaellig(): void {
+        $db  = Database::getInstance();
+        $api = new BmvApi();
+        if (!$api->istKonfiguriert()) {
+            return;
+        }
+
+        $zeile      = $db->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = 'bmv_letzte_sync_mitglieder'");
+        $letzteSync = $zeile ? strtotime((string)$zeile['wert']) : false;
+
+        $intervallZeile = $db->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = 'bmv_sync_intervall_stunden'");
+        $intervallStunden = $intervallZeile && (int)$intervallZeile['wert'] > 0 ? (int)$intervallZeile['wert'] : 24;
+
+        if ($letzteSync !== false && $letzteSync > time() - $intervallStunden * 3600) {
+            return; // noch nicht fällig
+        }
+
+        try {
+            self::uebernehmen($api);
+        } catch (\Throwable $e) {
+            error_log('BMV-Mitglieder-Autosync fehlgeschlagen: ' . $e->getMessage());
+        }
+
+        $jetzt = date('Y-m-d H:i:s');
+        $db->execute(
+            "INSERT INTO einstellungen (schluessel, wert) VALUES ('bmv_letzte_sync_mitglieder', ?) ON DUPLICATE KEY UPDATE wert = ?",
+            [$jetzt, $jetzt]
+        );
+    }
+
+    /**
      * Zuordnung lokale Spalte => [BMV-Feld, Typ, änderbar in Syncopa]
      * Nicht änderbare Felder werden vom BMV übernommen, aber nicht zurückgeschrieben.
      */
@@ -226,13 +264,13 @@ class BmvMitgliederSync {
         if ($info === false) {
             throw new RuntimeException('Die Datei ist kein lesbares Bild.');
         }
-        $quelle = match ($info[2]) {
-            IMAGETYPE_JPEG => @imagecreatefromjpeg($pfad),
-            IMAGETYPE_PNG  => @imagecreatefrompng($pfad),
-            IMAGETYPE_GIF  => @imagecreatefromgif($pfad),
-            IMAGETYPE_WEBP => @imagecreatefromwebp($pfad),
-            default        => false,
-        };
+        switch ($info[2]) {
+            case IMAGETYPE_JPEG: $quelle = @imagecreatefromjpeg($pfad); break;
+            case IMAGETYPE_PNG:  $quelle = @imagecreatefrompng($pfad);  break;
+            case IMAGETYPE_GIF:  $quelle = @imagecreatefromgif($pfad);  break;
+            case IMAGETYPE_WEBP: $quelle = @imagecreatefromwebp($pfad); break;
+            default:             $quelle = false;
+        }
         if ($quelle === false) {
             throw new RuntimeException('Bildformat nicht unterstützt (JPG, PNG, GIF oder WebP).');
         }
@@ -260,6 +298,18 @@ class BmvMitgliederSync {
             if ($typ === 'geschlecht' && !in_array($neu[$lokal], ['m', 'w'], true)) continue;
             $daten[$bmv] = self::fuerBmv($typ, $neu[$lokal]);
         }
+        return $daten;
+    }
+
+    /**
+     * Baut den vollständigen Datensatz für die Neuanlage eines Musikers im BMV: alle änderbaren Felder
+     * aus dem Formular plus die Vereinszuordnung und die vom BMV für eine Neuanlage vorgeschriebenen
+     * Pflichtfelder. Status „U" ist der vom Verein vorgegebene Standardwert.
+     */
+    public static function neuAnlageZuBmv(array $data, int $vereinNr): array {
+        $daten = self::komplettZuBmv($data);
+        $daten['verein_id'] = $vereinNr;
+        $daten['status']    = 'U';
         return $daten;
     }
 

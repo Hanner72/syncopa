@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.1]
+
+### Verbessert
+
+- Sticky Buttons
+- Sicherheitsupdates
+
 ## [2.5.0]
 
 ### Hinzugefügt
@@ -11,6 +18,7 @@
 ### Verbessert
 
 - Sicherheit gegen Angriffe verbessert
+- Buttons immer am unteren Bildschirmrand sichtbar
 
 ## [2.4.4]
 

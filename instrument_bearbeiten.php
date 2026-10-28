@@ -279,7 +279,7 @@ include 'includes/header.php';
         </div>
     </div>
     
-    <div class="d-flex justify-content-between mt-3">
+    <div class="d-flex justify-content-between mt-3 page-actions-sticky">
         <a href="instrumente.php" class="btn btn-secondary">
             <i class="bi bi-x"></i> Abbrechen
         </a>
