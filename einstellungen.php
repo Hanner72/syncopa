@@ -61,39 +61,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Geänderte Vereinsdaten zuerst in den BMV-Datenservice schreiben; schlägt das fehl, wird nichts gespeichert
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($error)) {
-    $vereinSchluessel = ['verein_name', 'verein_adresse', 'verein_plz', 'verein_ort', 'verein_gemeinde',
-        'verein_email', 'verein_telefon', 'verein_website', 'verein_zvr_nr', 'verein_gruendungsjahr',
-        'verein_kontaktperson', 'verein_kontoname', 'verein_iban', 'verein_bic'];
-    $vereinGeaendert = [];
-    foreach ($vereinSchluessel as $schluessel) {
-        $neu = trim((string)($_POST[$schluessel] ?? ''));
-        if ($neu !== trim((string)($settings[$schluessel] ?? ''))) {
-            $vereinGeaendert[$schluessel] = $neu;
-        }
-    }
-
-    $bmvApi = new BmvApi();
-    if ($vereinGeaendert && $bmvApi->istKonfiguriert()) {
-        $bmvNr = (int)($settings['bmv_verein_nr'] ?? 0);
-        if ($bmvNr <= 0) {
-            $error = 'Vereinsdaten können erst nach der ersten Synchronisation mit dem BMV geändert werden. Bitte zuerst „Mit BMV synchronisieren" ausführen.';
-        } else {
-            try {
-                $bmvApi->vereinsdatenAktualisieren($bmvNr, BmvApi::einstellungenZuVereinsdaten($vereinGeaendert));
-            } catch (RuntimeException $e) {
-                $error = 'Nicht gespeichert, da der BMV-Datenservice die Änderung nicht übernommen hat: ' . $e->getMessage();
-            }
-        }
-        if (isset($error)) {
-            foreach ($vereinGeaendert as $schluessel => $wert) {
-                $settings[$schluessel] = $wert;
-            }
-        }
-    }
-}
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($error)) {
     try {
         // Normale Einstellungen
@@ -116,6 +83,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($error)) {
             );
         }
 
+        // Geänderte BMV-Zugangsdaten: alte Prüfung verwerfen, damit beim nächsten Laden neu geprüft wird
+        $bmvZugang = ['bmv_api_url', 'bmv_email', 'bmv_land', 'bmv_bezirk', 'bmv_verein'];
+        $zugangGeaendert = isset($_POST['bmv_passwort'])
+            || (isset($_POST['bmv_aktiv']) ? '1' : '0') !== ($settings['bmv_aktiv'] ?? '0');
+        foreach ($bmvZugang as $schluessel) {
+            if (isset($_POST[$schluessel]) && (string)$_POST[$schluessel] !== (string)($settings[$schluessel] ?? '')) {
+                $zugangGeaendert = true;
+            }
+        }
+        if ($zugangGeaendert) {
+            $db->execute("DELETE FROM einstellungen WHERE schluessel = 'bmv_pruefung'");
+        }
+
         Session::setFlashMessage('success', 'Einstellungen gespeichert');
         header('Location: einstellungen.php');
         exit;
@@ -124,12 +104,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($error)) {
     }
 }
 
+// BMV: regelmäßig prüfen, ob es dort neue Daten gibt (nur lesend), für den Hinweis unten
+$bmvApi = new BmvApi();
+if (isset($_GET['bmv_pruefen']) && $bmvApi->istKonfiguriert()) {
+    BmvDaten::pruefen($bmvApi);
+    header('Location: einstellungen.php');
+    exit;
+}
+$bmvPruefung = BmvDaten::pruefenFallsFaellig();
+$bmvNeuigkeiten = BmvDaten::anzahlNeuigkeiten($bmvPruefung);
+
 include 'includes/header.php';
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h2"><i class="bi bi-gear"></i> Einstellungen</h1>
 </div>
+
+<?php if ($bmvPruefung && isset($bmvPruefung['fehler'])): ?>
+<div class="alert alert-permanent alert-secondary small py-2">
+    <i class="bi bi-cloud-slash"></i>
+    BMV konnte nicht geprüft werden: <?php echo htmlspecialchars($bmvPruefung['fehler']); ?>
+    <a href="einstellungen.php?bmv_pruefen=1" class="ms-1">Erneut prüfen</a>
+</div>
+<?php elseif ($bmvNeuigkeiten > 0): ?>
+<div class="alert alert-permanent alert-warning small py-2 d-flex flex-wrap align-items-center gap-2">
+    <i class="bi bi-cloud-arrow-down"></i>
+    <span>
+        <strong>Neue Daten im BMV:</strong>
+        <?php
+        $teile = [];
+        if (($bmvPruefung['verein'] ?? 0) > 0) $teile[] = '<a href="bmv_daten.php?bereich=verein">Vereinsdaten geändert</a>';
+        $neu = (int)($bmvPruefung['mitglieder_neu'] ?? 0);
+        $geaendert = (int)($bmvPruefung['mitglieder_geaendert'] ?? 0);
+        if ($neu > 0) $teile[] = '<a href="bmv_daten.php?bereich=mitglieder">' . $neu . ($neu === 1 ? ' neues Mitglied' : ' neue Mitglieder') . '</a>';
+        if ($geaendert > 0) $teile[] = '<a href="bmv_daten.php?bereich=mitglieder">' . $geaendert . ($geaendert === 1 ? ' geändertes Mitglied' : ' geänderte Mitglieder') . '</a>';
+        $zusatz = (int)($bmvPruefung['zusatz'] ?? 0);
+        if ($zusatz > 0) $teile[] = '<a href="bmv_daten.php?bereich=mitglieder">' . $zusatz . ' Änderungen bei Ehrungen, Funktionen u. a.</a>';
+        $notenNeu = (int)($bmvPruefung['noten_neu'] ?? 0);
+        if ($notenNeu > 0) $teile[] = '<a href="bmv_daten.php?bereich=noten">' . $notenNeu . ($notenNeu === 1 ? ' neues Stück' : ' neue Stücke') . ' im Notenarchiv</a>';
+        echo implode(' · ', $teile);
+        ?>
+    </span>
+    <span class="text-muted ms-auto">Geprüft <?php echo htmlspecialchars(date('d.m.Y H:i', strtotime($bmvPruefung['zeitpunkt']))); ?></span>
+</div>
+<?php endif; ?>
 
 <?php if (isset($error)): ?>
 <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
@@ -142,30 +161,10 @@ include 'includes/header.php';
             <h5 class="mb-0">Allgemeine Einstellungen</h5>
         </div>
         <div class="card-body">
-            <?php
-            $bmvVereinBereit = ($settings['bmv_aktiv'] ?? '0') === '1'
-                && !empty($settings['bmv_land']) && !empty($settings['bmv_bezirk'])
-                && !empty($settings['bmv_verein']) && !empty($settings['bmv_passwort']);
-            ?>
-            <div class="alert alert-info small mb-3">
-                <i class="bi bi-info-circle"></i>
-                Die Vereinsdaten werden aus dem BMV-Datenservice übernommen. Jede Änderung hier wird beim Speichern
-                zusätzlich an den BMV-Datenservice übertragen. Schlägt die Übertragung fehl, wird nichts gespeichert.
-            </div>
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                <div class="text-muted small">
-                    <?php if (!empty($settings['bmv_letzte_sync_verein'])): ?>
-                    Zuletzt aus dem BMV-Datenservice synchronisiert: <?php echo htmlspecialchars(date('d.m.Y H:i', strtotime($settings['bmv_letzte_sync_verein']))); ?>
-                    <?php else: ?>
-                    Die Vereinsdaten können aus dem BMV-Datenservice übernommen werden.
-                    <?php endif; ?>
-                </div>
-                <button type="button" class="btn btn-outline-primary btn-sm" id="btnBmvVereinSync"
-                        <?php echo $bmvVereinBereit ? '' : 'disabled title="Zuerst die BMV-Zugangsdaten eintragen und speichern"'; ?>>
-                    <i class="bi bi-arrow-repeat"></i> Mit BMV synchronisieren
-                </button>
-            </div>
-            <div id="bmvVereinSyncMeldung" class="alert d-none mb-3"></div>
+            <p class="text-muted small mb-3">
+                Änderungen hier werden nur in Syncopa gespeichert, nicht im BMV.
+                Die Vereinsdaten aus dem BMV holst du unter <a href="bmv_daten.php?bereich=verein">BMV Daten holen</a>.
+            </p>
 
             <div class="row">
                 <div class="col-md-6 mb-3">
@@ -401,26 +400,26 @@ include 'includes/header.php';
         </div>
     </div>
     
-    <!-- BMV Synchronisation -->
+    <!-- BMV Zugangsdaten -->
     <div class="card mb-3">
         <div class="card-header">
-            <h5 class="mb-0">BMV Synchronisation Zugangsdaten</h5>
+            <h5 class="mb-0">BMV Zugangsdaten</h5>
         </div>
         <div class="card-body">
             <p class="text-muted small mb-3">
-                Zugangsdaten für den Datenservice des Blasmusikverbands. Ohne Eingabe funktioniert Syncopa wie bisher,
-                es wird dann nichts synchronisiert.
+                Zugangsdaten für den Datenservice des Blasmusikverbands. Syncopa holt damit nur Daten aus dem BMV,
+                im BMV wird nichts geändert. Ohne Eingabe funktioniert Syncopa wie bisher.
             </p>
 
             <div class="p-3 border rounded mb-3">
                 <div class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" id="bmv_aktiv" name="bmv_aktiv" value="1"
                            <?php echo ($settings['bmv_aktiv'] ?? '0') === '1' ? 'checked' : ''; ?>>
-                    <label class="form-check-label fw-semibold" for="bmv_aktiv">BMV-Synchronisation aktiv</label>
+                    <label class="form-check-label fw-semibold" for="bmv_aktiv">BMV-Anbindung aktiv</label>
                 </div>
                 <div class="text-muted small mt-1">
-                    Schaltet alle BMV-Funktionen auf einmal frei bzw. ab (Vereins- und Mitgliederabgleich,
-                    automatische Aktualisierung, Übertragung von Änderungen). Die Zugangsdaten bleiben dabei gespeichert.
+                    Schaltet alle BMV-Funktionen auf einmal frei bzw. ab (Daten holen und Prüfung auf neue Daten).
+                    Die Zugangsdaten bleiben dabei gespeichert.
                 </div>
             </div>
 
@@ -468,29 +467,31 @@ include 'includes/header.php';
                 </div>
 
                 <div class="col-md-4 mb-3">
-                    <label for="bmv_sync_intervall_stunden" class="form-label">Mitglieder automatisch aktualisieren alle (Stunden)</label>
+                    <label for="bmv_sync_intervall_stunden" class="form-label">Auf neue Daten im BMV prüfen alle (Stunden)</label>
                     <input type="number" class="form-control" id="bmv_sync_intervall_stunden" name="bmv_sync_intervall_stunden"
                            min="1" max="168" value="<?php echo htmlspecialchars($settings['bmv_sync_intervall_stunden'] ?? '24'); ?>">
-                    <small class="text-muted">z.B. 24 = einmal täglich, 3 = alle 3 Stunden. Läuft automatisch beim ersten Aufruf der Mitgliederliste danach.</small>
+                    <small class="text-muted">z.B. 24 = einmal täglich. Geprüft wird beim Öffnen der Einstellungen. Gibt es Neues, erscheint oben ein Hinweis.</small>
                 </div>
             </div>
 
-            <?php if (!empty($settings['bmv_letzte_sync_mitglieder'])): ?>
-            <div class="text-muted small mb-3">
-                Mitglieder zuletzt automatisch synchronisiert: <?php echo htmlspecialchars(date('d.m.Y H:i', strtotime($settings['bmv_letzte_sync_mitglieder']))); ?>
-            </div>
-            <?php endif; ?>
-
-            <div class="alert alert-secondary mb-3">
+            <div class="alert alert-permanent alert-secondary mb-3">
                 <i class="bi bi-person-badge"></i>
                 Vereinskennung (Teil des API-Logins): <strong id="bmv_login_vorschau">–</strong>
             </div>
 
             <div class="d-flex flex-wrap align-items-center gap-2">
-                <a href="bmv_mitglieder_vorschau.php" class="btn btn-outline-primary btn-sm">
-                    <i class="bi bi-eye"></i> BMV-Mitglieder-Vorschau anzeigen
+                <a href="bmv_daten.php" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-cloud-download"></i> BMV Daten holen
                 </a>
-                <span class="text-muted small">Nur lesend, es wird nichts geändert.</span>
+                <?php if ($bmvPruefung && !isset($bmvPruefung['fehler'])): ?>
+                <span class="text-muted small">
+                    Zuletzt geprüft: <?php echo htmlspecialchars(date('d.m.Y H:i', strtotime($bmvPruefung['zeitpunkt']))); ?>
+                    <?php echo $bmvNeuigkeiten === 0 ? '– keine neuen Daten.' : ''; ?>
+                </span>
+                <?php endif; ?>
+                <?php if ($bmvApi->istKonfiguriert()): ?>
+                <a href="einstellungen.php?bmv_pruefen=1" class="small">Jetzt prüfen</a>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -611,47 +612,5 @@ include 'includes/header.php';
         </button>
     </div>
 </form>
-
-<script>
-(function() {
-    var btn     = document.getElementById('btnBmvVereinSync');
-    var meldung = document.getElementById('bmvVereinSyncMeldung');
-    if (!btn) return;
-
-    function zeige(typ, text) {
-        meldung.className = 'alert alert-' + typ + ' mb-3';
-        meldung.textContent = text;
-    }
-
-    btn.addEventListener('click', function() {
-        btn.disabled = true;
-        var originalHtml = btn.innerHTML;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Synchronisiere…';
-        meldung.classList.add('d-none');
-
-        fetch('api/bmv_verein_sync.php', { method: 'POST' })
-            .then(function(r) { return r.json(); })
-            .then(function(d) {
-                if (!d.success) {
-                    zeige('danger', d.error || 'Synchronisation fehlgeschlagen.');
-                    return;
-                }
-                Object.keys(d.werte).forEach(function(key) {
-                    var el = document.getElementById(key);
-                    if (el && key !== 'bmv_letzte_sync_verein') el.value = d.werte[key];
-                });
-                zeige('success', 'Vereinsdaten wurden aus dem BMV-Datenservice übernommen und gespeichert.');
-            })
-            .catch(function() {
-                zeige('danger', 'Synchronisation fehlgeschlagen: keine Verbindung zum Server.');
-            })
-            .finally(function() {
-                btn.disabled = false;
-                btn.innerHTML = originalHtml;
-                meldung.classList.remove('d-none');
-            });
-    });
-})();
-</script>
 
 <?php include 'includes/footer.php'; ?>

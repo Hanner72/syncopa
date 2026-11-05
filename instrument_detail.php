@@ -196,6 +196,37 @@ include 'includes/header.php';
             </div>
         </div>
         <?php endif; ?>
+
+        <?php if (!empty($instrument['bmv_inventar_id'])): ?>
+        <!-- Herkunft: aus dem CSV-Export des BMV-Portals übernommen -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-cloud-download"></i> Aus dem BMV-Inventar</h5>
+            </div>
+            <div class="card-body small">
+                <p class="text-muted">
+                    Übernommen am <?php echo date('d.m.Y', strtotime($instrument['bmv_import_am'])); ?> aus dem Inventar-Export des BMV-Portals.
+                    Gepflegt wird das Instrument in Syncopa; an den BMV wird nichts zurückgeschickt.
+                </p>
+                <dl class="row mb-0">
+                    <dt class="col-sm-5">Bezeichnung im BMV</dt>
+                    <dd class="col-sm-7"><?php echo htmlspecialchars($instrument['bmv_bezeichnung'] ?? '–'); ?></dd>
+                    <?php if (!empty($instrument['lieferant'])): ?>
+                    <dt class="col-sm-5">Gekauft von</dt>
+                    <dd class="col-sm-7"><?php echo htmlspecialchars($instrument['lieferant']); ?></dd>
+                    <?php endif; ?>
+                    <?php if (!empty($instrument['bmv_aenderung'])): ?>
+                    <dt class="col-sm-5">Zuletzt im BMV geändert</dt>
+                    <dd class="col-sm-7"><?php echo htmlspecialchars(substr($instrument['bmv_aenderung'], 0, 10)); ?></dd>
+                    <?php endif; ?>
+                    <?php if (!empty($instrument['bmv_anmerkung'])): ?>
+                    <dt class="col-sm-5">Anmerkung im BMV</dt>
+                    <dd class="col-sm-7"><?php echo nl2br(htmlspecialchars($instrument['bmv_anmerkung'])); ?></dd>
+                    <?php endif; ?>
+                </dl>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
     
     <div class="col-lg-8">

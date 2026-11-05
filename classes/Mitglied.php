@@ -44,11 +44,13 @@ class Mitglied {
         $whereClause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
         
         $sql = "SELECT m.*, {$registerNameSelect},
-                (SELECT COUNT(*) FROM mitglied_instrumente mi WHERE mi.mitglied_id = m.id) as instrumente_anzahl,
-                (SELECT GROUP_CONCAT(it.name ORDER BY mi2.hauptinstrument DESC SEPARATOR ', ')
+                (SELECT COUNT(*) FROM mitglied_instrumente mi WHERE mi.mitglied_id = m.id
+                    AND (mi.bis_datum IS NULL OR mi.bis_datum >= CURDATE())) as instrumente_anzahl,
+                (SELECT GROUP_CONCAT(DISTINCT it.name ORDER BY mi2.hauptinstrument DESC SEPARATOR ', ')
                  FROM mitglied_instrumente mi2
                  JOIN instrument_typen it ON mi2.instrument_typ_id = it.id
-                 WHERE mi2.mitglied_id = m.id) as instrumente_liste
+                 WHERE mi2.mitglied_id = m.id
+                   AND (mi2.bis_datum IS NULL OR mi2.bis_datum >= CURDATE())) as instrumente_liste
                 FROM mitglieder m
                 LEFT JOIN register r ON m.register_id = r.id
                 {$joinFormation}

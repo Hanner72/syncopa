@@ -21,11 +21,18 @@ include 'includes/header.php';
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h2"><i class="bi bi-diagram-3"></i> Instrumente</h1>
-    <?php if (Session::checkPermission('instrumente', 'schreiben')): ?>
-    <a href="instrument_bearbeiten.php" class="btn btn-primary">
-        <i class="bi bi-plus-circle"></i> Neues Instrument
-    </a>
-    <?php endif; ?>
+    <div class="d-flex gap-2">
+        <?php if (Session::isAdmin()): ?>
+        <a href="bmv_daten.php?bereich=inventar" class="btn btn-outline-secondary" title="Inventar aus dem CSV-Export des BMV-Portals übernehmen">
+            <i class="bi bi-cloud-download"></i> <span class="d-none d-md-inline">Aus BMV importieren</span>
+        </a>
+        <?php endif; ?>
+        <?php if (Session::checkPermission('instrumente', 'schreiben')): ?>
+        <a href="instrument_bearbeiten.php" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Neues Instrument
+        </a>
+        <?php endif; ?>
+    </div>
 </div>
 
 <div class="card mb-4">
@@ -77,7 +84,12 @@ include 'includes/header.php';
             <tbody>
                 <?php foreach ($instrumente as $instr): ?>
                 <tr>
-                    <td><strong><?php echo htmlspecialchars($instr['inventar_nummer']); ?></strong></td>
+                    <td>
+                        <strong><?php echo htmlspecialchars($instr['inventar_nummer']); ?></strong>
+                        <?php if (!empty($instr['bmv_inventar_id'])): ?>
+                        <i class="bi bi-cloud-check text-primary ms-1" data-bs-toggle="tooltip" title="Aus dem BMV-Inventar übernommen (<?php echo htmlspecialchars($instr['bmv_bezeichnung'] ?? ''); ?>)"></i>
+                        <?php endif; ?>
+                    </td>
                     <td>
                         <?php echo htmlspecialchars($instr['instrument_name']); ?>
                         <?php if ($instr['register_name']): ?>

@@ -49,7 +49,7 @@ $pages = [
     'instrumente' => ['instrumente', 'instrument_detail', 'instrument_bearbeiten'],
     'uniformen' => ['uniformen', 'uniform_detail', 'uniform_bearbeiten', 'uniform_mitglied', 'uniform_kleidungsstuecke', 'uniform_kategorien'],
     'finanzen' => ['finanzen', 'transaktion_bearbeiten', 'beitraege_verwalten'],
-    'admin' => ['benutzer', 'benutzer_bearbeiten', 'rollen', 'rolle_bearbeiten', 'einstellungen', 'berechtigungen_bearbeiten'],
+    'admin' => ['benutzer', 'benutzer_bearbeiten', 'rollen', 'rolle_bearbeiten', 'einstellungen', 'bmv_daten', 'berechtigungen_bearbeiten'],
     'formationen' => ['formationen', 'formation_bearbeiten', 'formation_mitglieder'],
     'fest'  => [
         'feste', 'fest_bearbeiten', 'fest_detail',
@@ -344,6 +344,21 @@ function isActive($page, $pages, $current) {
             color: var(--text-primary);
         }
         .card-body { padding: 16px; }
+
+        /* REITER (nav-tabs) – Bootstrap-Standardfarben an das Theme anpassen, sonst ist der aktive
+           Reiter im Dark Mode fast schwarz und beim Überfahren erscheint ein harter Rahmen */
+        .nav-tabs {
+            --bs-nav-tabs-border-color: var(--border);
+            --bs-nav-tabs-link-hover-border-color: transparent transparent var(--border);
+            --bs-nav-tabs-link-active-color: var(--text-primary);
+            --bs-nav-tabs-link-active-bg: var(--bg-card);
+            --bs-nav-tabs-link-active-border-color: var(--border) var(--border) var(--bg-card);
+            --bs-nav-link-color: var(--c-primary);
+            --bs-nav-link-hover-color: var(--c-primary-light);
+        }
+        [data-theme="dark"] .nav-tabs { --bs-nav-link-color: #7fa8d6; --bs-nav-link-hover-color: #a9c6e6; }
+        .nav-tabs .nav-link.active { font-weight: 600; }
+        .card-header-tabs { margin-bottom: -13px; }
         
         /* STAT CARDS - Modernes Design mit linkem Farbrand */
         .stat-card {
@@ -589,6 +604,9 @@ function isActive($page, $pages, $current) {
                     <li><a class="nav-link <?php echo isActive('mitglieder', $pages, $currentPage); ?>" href="mitglieder.php">
                         <i class="bi bi-people"></i> Mitglieder
                     </a></li>
+                    <li><a class="nav-link <?php echo $currentPage === 'ehrungen' ? 'active' : ''; ?>" href="ehrungen.php">
+                        <i class="bi bi-award"></i> Ehrungen
+                    </a></li>
                     <?php endif; ?>
                     <?php if (Session::checkPermission('ausrueckungen', 'lesen')): ?>
                     <li><a class="nav-link <?php echo $currentPage === 'kalender' ? 'active' : ''; ?>" href="kalender.php">
@@ -687,6 +705,15 @@ function isActive($page, $pages, $current) {
                     <li><a class="nav-link <?php echo $currentPage === 'einstellungen' ? 'active' : ''; ?>" href="einstellungen.php">
                         <i class="bi bi-gear"></i> Einstellungen
                     </a></li>
+                    <?php if ((new BmvApi())->istKonfiguriert()):
+                        $bmvNavNeu = BmvDaten::anzahlNeuigkeiten(BmvDaten::letztePruefung()); ?>
+                    <li><a class="nav-link <?php echo $currentPage === 'bmv_daten' ? 'active' : ''; ?>" href="bmv_daten.php">
+                        <i class="bi bi-cloud-download"></i> BMV Daten holen
+                        <?php if ($bmvNavNeu > 0): ?>
+                        <span class="badge bg-warning text-dark ms-1" title="Neue Daten im BMV"><?php echo $bmvNavNeu; ?></span>
+                        <?php endif; ?>
+                    </a></li>
+                    <?php endif; ?>
                 </ul>
             </div>
             <?php endif; ?>

@@ -80,7 +80,12 @@ include 'includes/header.php';
             <tbody>
                 <?php foreach ($noten as $note): ?>
                 <tr>
-                    <td><small><?php echo htmlspecialchars($note['archiv_nummer']); ?></small></td>
+                    <td>
+                        <small><?php echo htmlspecialchars($note['archiv_nummer']); ?></small>
+                        <?php if (!empty($note['bmv_noten_id'])): ?>
+                        <i class="bi bi-cloud-check text-primary ms-1" data-bs-toggle="tooltip" title="Aus dem BMV übernommen<?php echo $note['bmv_nummer'] ? ' (BMV-Nr. ' . htmlspecialchars($note['bmv_nummer']) . ')' : ''; ?>"></i>
+                        <?php endif; ?>
+                    </td>
                     <td>
                         <strong><?php echo htmlspecialchars($note['titel']); ?></strong>
                         <?php if ($note['untertitel']): ?>

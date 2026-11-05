@@ -1,5 +1,41 @@
 # Changelog
 
+## [2.6.0]
+
+### Hinzugefügt
+
+- Neuer Bereich „BMV Daten holen“ (unter System)
+  - Vereinsdaten, Mitglieder, Noten und Inventar aus dem BMV übernehmen
+  - Vorschau vor jeder Übernahme
+  - Hinweis in den Einstellungen, wenn es im BMV neue Daten gibt
+- Laufbahn beim Mitglied: Instrumente, Funktionen, Ehrungen, Prüfungen und Mitgliedsart
+  - kommen aus dem BMV und können selbst ergänzt werden
+  - eigene Einträge werden für die spätere Übertragung an den BMV vorgemerkt
+- Neue Seite „Ehrungen“ mit anstehenden und verliehenen Ehrungen
+  - Regeln einstellbar (welches Ehrenzeichen nach wie vielen Jahren)
+- Noten aus dem BMV übernehmen
+  - Syncopa vergibt eigene Archivnummern, die BMV-Nummer wird mitgespeichert
+- Vereinsinventar aus dem CSV-Export des BMV-Portals importieren (nur Instrumente)
+- Namen zu den BMV-Nummern (Ehrenzeichen, Funktionen, Instrumente …) selbst eintragen
+
+### Geändert
+
+- Syncopa schreibt nichts mehr in den BMV, Daten werden nur noch geholt
+- Einstellungen: BMV Zugangsdaten getrennt von der Übernahme der Daten
+- Gespielte Instrumente und Instrumente aus dem BMV sind eine gemeinsame Liste
+- BMV-Felder beim Mitglied in die normalen Abschnitte eingebaut, Freigaben unter „BMV-Details“
+- Mitglieder werden nicht mehr automatisch übernommen, stattdessen kommt ein Hinweis
+
+### Verbessert
+
+- Reiter im dunklen Design richtig dargestellt
+- Notensuche findet auch Archiv- und BMV-Nummer
+- Mitgliederliste zeigt nur aktuell gespielte Instrumente
+
+### Bugs
+
+- Wichtige Hinweise verschwinden nicht mehr nach 5 Sekunden
+
 ## [2.5.1]
 
 ### Verbessert
