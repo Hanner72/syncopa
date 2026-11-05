@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.6.1]
+
+### Hinzugefügt
+
+- Standardnamen für die BMV-Nummern: Funktionen, Instrumente, Prüfungen, Mitgliedsarten
+  - Ehrenzeichen für den Steirischen Blasmusikverband
+  - müssen nicht mehr selbst eingetragen werden
+
+### Verbessert
+
+- Bezeichnungen: Standardname wird grau angezeigt, ein eigener Eintrag hat Vorrang
+- Auswahllisten enthalten alle bekannten Funktionen, Prüfungen usw., auch wenn sie noch niemand im Verein hat
+
 ## [2.6.0]
 
 ### Hinzugefügt

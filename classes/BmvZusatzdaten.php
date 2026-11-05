@@ -421,15 +421,51 @@ class BmvZusatzdaten {
     // Bezeichnungen
     // ------------------------------------------------------------------------------------------------
 
-    /** Alle Bezeichnungen: [art => [code => name]] */
+    /**
+     * Alle Bezeichnungen: [art => [code => name]]. Eigene Einträge des Vereins haben Vorrang, sonst gilt der
+     * Standardname aus includes/bmv_bezeichnungen_standard.php (Ehrenzeichen nur für das eigene BMV-Land).
+     */
     public static function bezeichnungen(): array {
         if (self::$bezeichnungen === null) {
-            self::$bezeichnungen = [];
-            foreach (Database::getInstance()->fetchAll("SELECT art, code, name FROM bmv_bezeichnungen ORDER BY art, code") as $r) {
-                self::$bezeichnungen[$r['art']][(int)$r['code']] = $r['name'];
+            $liste = self::standardBezeichnungen();
+            foreach (self::eigeneBezeichnungen() as $art => $codes) {
+                foreach ($codes as $code => $name) {
+                    if ($name !== '' || !isset($liste[$art][$code])) {
+                        $liste[$art][$code] = $name;
+                    }
+                }
             }
+            foreach ($liste as &$codes) {
+                ksort($codes);
+            }
+            self::$bezeichnungen = $liste;
         }
         return self::$bezeichnungen;
+    }
+
+    /** Nur die vom Verein eingetragenen bzw. beim Holen gefundenen Bezeichnungen: [art => [code => name]] */
+    public static function eigeneBezeichnungen(): array {
+        $liste = [];
+        foreach (Database::getInstance()->fetchAll("SELECT art, code, name FROM bmv_bezeichnungen ORDER BY art, code") as $r) {
+            $liste[$r['art']][(int)$r['code']] = $r['name'];
+        }
+        return $liste;
+    }
+
+    /** Standardnamen, die mit Syncopa ausgeliefert werden: [art => [code => name]] */
+    public static function standardBezeichnungen(): array {
+        $datei = __DIR__ . '/../includes/bmv_bezeichnungen_standard.php';
+        if (!is_file($datei)) {
+            return [];
+        }
+        $standard = require $datei;
+        $land = Database::getInstance()->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = 'bmv_land'");
+        $land = strtoupper(trim((string)($land['wert'] ?? '')));
+        $liste = $standard['alle'] ?? [];
+        foreach ($standard['land'][$land] ?? [] as $art => $codes) {
+            $liste[$art] = ($liste[$art] ?? []) + $codes;
+        }
+        return $liste;
     }
 
     /** Name zu einer BMV-Nummer, sonst z. B. „Ehrenzeichen Nr. 31“ */

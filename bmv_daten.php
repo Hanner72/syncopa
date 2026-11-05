@@ -161,7 +161,9 @@ if ($bereich === 'bezeichnungen') {
     ) as $r) {
         $verwendung[$r['art']][(int)$r['code']] = ($verwendung[$r['art']][(int)$r['code']] ?? 0) + (int)$r['anzahl'];
     }
-    $bezeichnungen = BmvZusatzdaten::bezeichnungen();
+    $bezeichnungen = BmvZusatzdaten::bezeichnungen();          // gilt (eigene, sonst Standard)
+    $eigeneBezeichnungen = BmvZusatzdaten::eigeneBezeichnungen();
+    $standardBezeichnungen = BmvZusatzdaten::standardBezeichnungen();
     $instrumentZuordnung = BmvZusatzdaten::instrumentZuordnung();
     $instrumentTypen = Database::getInstance()->fetchAll(
         "SELECT it.id, it.name, it.bmv_automatisch, r.name AS register_name FROM instrument_typen it
@@ -505,8 +507,9 @@ document.getElementById('notenSuche')?.addEventListener('input', function () {
 <?php elseif ($bereich === 'bezeichnungen'): ?>
 <div class="alert alert-permanent alert-secondary small">
     <i class="bi bi-tags"></i>
-    Der BMV liefert zu Ehrungen, Funktionen usw. nur Nummern. Hier trägst du einmal die Namen dazu ein, so wie sie im BMV
-    angezeigt werden. Ohne Namen erscheint z. B. „Ehrenzeichen Nr. 31“. Einige Namen sind aus den Prüfungsurkunden vorbefüllt.
+    Der BMV liefert zu Ehrungen, Funktionen usw. nur Nummern. Syncopa bringt für die bekannten Nummern Standardnamen mit
+    (grau im leeren Feld) – trägst du selbst etwas ein, gilt dein Name. Ohne Namen erscheint z. B. „Ehrenzeichen Nr. 31“.
+    Einige Namen sind aus den Prüfungsurkunden vorbefüllt.
     Bei den Instrumenten wählst du zusätzlich, welches Syncopa-Instrument dazugehört – so kommen BMV- und eigene Instrumente
     in einer Liste zusammen. Mehrere BMV-Nummern dürfen dasselbe Syncopa-Instrument haben.
 </div>
@@ -538,7 +541,9 @@ document.getElementById('notenSuche')?.addEventListener('input', function () {
                         <td>
                             <input type="text" class="form-control form-control-sm" maxlength="150"
                                    name="bezeichnung[<?php echo $art; ?>][<?php echo (int)$code; ?>]"
-                                   value="<?php echo htmlspecialchars($bezeichnungen[$art][$code] ?? ''); ?>">
+                                   value="<?php echo htmlspecialchars($eigeneBezeichnungen[$art][$code] ?? ''); ?>"
+                                   placeholder="<?php echo htmlspecialchars($standardBezeichnungen[$art][$code] ?? ''); ?>"
+                                   <?php if (!empty($standardBezeichnungen[$art][$code])): ?>title="Standardname: <?php echo htmlspecialchars($standardBezeichnungen[$art][$code]); ?> – gilt, solange das Feld leer ist"<?php endif; ?>>
                         </td>
                         <?php if ($istInstrument): ?>
                         <td>
