@@ -20,11 +20,13 @@ class Noten {
         }
 
         if (!empty($filter['search'])) {
-            $where[] = "(n.titel LIKE ? OR n.komponist LIKE ? OR n.arrangeur LIKE ?)";
+            $where[] = "(n.titel LIKE ? OR n.komponist LIKE ? OR n.arrangeur LIKE ? OR n.archiv_nummer LIKE ? OR n.bmv_nummer = ?)";
             $searchTerm = "%{$filter['search']}%";
             $params[] = $searchTerm;
             $params[] = $searchTerm;
             $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = trim($filter['search']);
         }
 
         if (!empty($filter['genre'])) {

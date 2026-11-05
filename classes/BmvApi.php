@@ -1,6 +1,7 @@
 <?php
 // classes/BmvApi.php
-// BMV-Datenservice (ÖBV): Zugriff per HTTP Basic Auth, Zugangsdaten aus den Einstellungen
+// BMV-Datenservice (ÖBV): Zugriff per HTTP Basic Auth, Zugangsdaten aus den Einstellungen.
+// Nur lesend: Syncopa holt Daten aus dem BMV, schreibt aber nie etwas dorthin (nur GET-Anfragen).
 
 class BmvApi {
     private bool $aktiv;
@@ -37,6 +38,15 @@ class BmvApi {
             && $this->vereinNr !== '' && $this->passwort !== '';
     }
 
+    /**
+     * Ob Syncopa in den BMV schreiben darf. Derzeit nicht: Einträge aus dem BMV sind in Syncopa gesperrt,
+     * eigene Einträge werden mit sync_status 'neu' vorgemerkt. Sobald das Schreiben gebaut ist, wird hier
+     * umgestellt (und die vorgemerkten Einträge werden über BmvZusatzdaten::zuBmv() übertragen).
+     */
+    public static function kannSchreiben(): bool {
+        return false;
+    }
+
     /** Vereinskennung LAND-BEZIRK-VEREIN, Verein mit führenden Nullen auf 3 Stellen */
     public function getVereinskennung(): string {
         return $this->land . '-' . $this->bezirk . '-' . str_pad($this->vereinNr, 3, '0', STR_PAD_LEFT);
@@ -49,7 +59,7 @@ class BmvApi {
 
     /** GET-Anfrage, liefert die Antwort als Array. Wirft RuntimeException mit verständlicher Meldung. */
     public function get(string $pfad): array {
-        [$code, $body, $err, $header] = $this->anfrage('GET', $this->baseUrl . $pfad, $this->kopfzeilen(false));
+        [$code, $body, $err, $header] = $this->anfrage($this->baseUrl . $pfad, $this->kopfzeilen());
         $this->pruefeAntwort($code, $body, $err, $header);
         $data = json_decode($body, true);
         if (!is_array($data)) {
@@ -58,61 +68,11 @@ class BmvApi {
         return $data;
     }
 
-    /** PUT-Anfrage mit JSON-Körper. Wirft RuntimeException bei Fehlern. */
-    public function put(string $pfad, array $daten): void {
-        $json = json_encode($daten, JSON_UNESCAPED_UNICODE);
-        [$code, $body, $err, $header] = $this->anfrage('PUT', $this->baseUrl . $pfad, $this->kopfzeilen(true), $json);
-        $this->pruefeAntwort($code, $body, $err, $header);
-    }
-
-    /** POST-Anfrage mit JSON-Körper, liefert die Antwort (den angelegten Datensatz) als Array. */
-    public function post(string $pfad, array $daten): array {
-        $json = json_encode($daten, JSON_UNESCAPED_UNICODE);
-        [$code, $body, $err, $header] = $this->anfrage('POST', $this->baseUrl . $pfad, $this->kopfzeilen(true), $json);
-        $this->pruefeAntwort($code, $body, $err, $header);
-        $antwort = json_decode($body, true);
-        if (!is_array($antwort)) {
-            throw new RuntimeException('Unerwartete Antwort vom BMV-Datenservice.');
-        }
-        return $antwort;
-    }
-
-    /** Legt einen neuen Musiker im BMV an und liefert dessen BMV-ID (m_NR). */
-    public function musikerErstellen(array $daten): string {
-        $antwort = $this->post('/api/Musiker', $daten);
-        $mNr = (string)($antwort['m_NR'] ?? '');
-        if ($mNr === '') {
-            throw new RuntimeException('Der BMV-Datenservice hat keine Musiker-ID zurückgegeben.');
-        }
-        return $mNr;
-    }
-
-    /**
-     * Schreibt geänderte Felder in den BMV-Datensatz des Vereins.
-     * Der vollständige Datensatz wird vorher geladen, damit nicht verwaltete Felder erhalten bleiben.
-     */
-    public function vereinsdatenAktualisieren(int $nr, array $aenderungen): void {
-        $pfad    = '/api/KAPELLE/' . $nr;
-        $aktuell = $this->get($pfad);
-        $this->put($pfad, array_merge($aktuell, $aenderungen));
-    }
-
-    /** Schreibt geänderte Felder in den BMV-Datensatz eines Musikers (Datensatz wird vorher vollständig geladen). */
-    public function musikerAktualisieren(string $mNr, array $aenderungen): void {
-        $pfad    = '/api/Musiker/' . rawurlencode($mNr);
-        $aktuell = $this->get($pfad);
-        $this->put($pfad, array_merge($aktuell, $aenderungen));
-    }
-
-    private function kopfzeilen(bool $mitJson): array {
-        $zeilen = [
+    private function kopfzeilen(): array {
+        return [
             'Authorization: Basic ' . base64_encode($this->getLogin() . ':' . $this->passwort),
             'Accept: application/json',
         ];
-        if ($mitJson) {
-            $zeilen[] = 'Content-Type: application/json';
-        }
-        return $zeilen;
     }
 
     private function pruefeAntwort(int $code, $body, string $err, array $header = []): void {
@@ -159,17 +119,17 @@ class BmvApi {
     }
 
     /**
-     * Führt die HTTP-Anfrage aus: cURL wenn vorhanden, sonst allow_url_fopen (wie bei den Updates).
+     * Führt eine GET-Anfrage aus (andere Methoden gibt es bewusst nicht): cURL wenn vorhanden, sonst allow_url_fopen (wie bei den Updates).
      * Liefert zusätzlich die Antwort-Header, da die eigentliche Fehlerursache (z.B. bei einem nackten
      * 403 ohne Antworttext) manchmal nur dort steht.
      */
-    private function anfrage(string $methode, string $url, array $kopfzeilen, ?string $body = null): array {
+    private function anfrage(string $url, array $kopfzeilen): array {
         if (function_exists('curl_init')) {
             $antwortHeader = [];
             $ch = curl_init($url);
             $optionen = [
                 CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_CUSTOMREQUEST  => $methode,
+                CURLOPT_HTTPGET        => true,
                 CURLOPT_HTTPHEADER     => $kopfzeilen,
                 CURLOPT_TIMEOUT        => 30,
                 CURLOPT_HEADERFUNCTION => function ($curl, $zeile) use (&$antwortHeader) {
@@ -178,9 +138,6 @@ class BmvApi {
                     return strlen($zeile);
                 },
             ];
-            if ($body !== null) {
-                $optionen[CURLOPT_POSTFIELDS] = $body;
-            }
             curl_setopt_array($ch, $optionen);
             $antwort = curl_exec($ch);
             $code    = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -189,10 +146,7 @@ class BmvApi {
             return [$code, $antwort, $err, $antwortHeader];
         }
         if (ini_get('allow_url_fopen')) {
-            $http = ['method' => $methode, 'header' => implode("\r\n", $kopfzeilen), 'timeout' => 30, 'ignore_errors' => true];
-            if ($body !== null) {
-                $http['content'] = $body;
-            }
+            $http = ['method' => 'GET', 'header' => implode("\r\n", $kopfzeilen), 'timeout' => 30, 'ignore_errors' => true];
             $ctx      = stream_context_create(['http' => $http]);
             $antwort  = @file_get_contents($url, false, $ctx);
             $code     = 0;
@@ -202,6 +156,33 @@ class BmvApi {
             return [$code, $antwort, $antwort === false ? 'Keine Verbindung' : '', $http_response_header ?? []];
         }
         return [0, false, 'Weder cURL noch allow_url_fopen verfügbar', []];
+    }
+
+    /** Bezeichnungen der Vereinsfelder (Einstellungsschlüssel => Anzeigename) */
+    public const VEREIN_FELDER = [
+        'verein_name'           => 'Vereinsname',
+        'verein_kontaktperson'  => 'Kontaktperson',
+        'verein_adresse'        => 'Straße',
+        'verein_plz'            => 'PLZ',
+        'verein_ort'            => 'Ort',
+        'verein_gemeinde'       => 'Gemeinde',
+        'verein_email'          => 'E-Mail',
+        'verein_telefon'        => 'Telefon',
+        'verein_website'        => 'Website',
+        'verein_zvr_nr'         => 'ZVR-Nummer',
+        'verein_gruendungsjahr' => 'Gründungsjahr',
+        'verein_kontoname'      => 'Kontobezeichnung',
+        'verein_iban'           => 'IBAN',
+        'verein_bic'            => 'BIC',
+    ];
+
+    /** Holt den KAPELLE-Datensatz des eigenen Vereins. Wirft RuntimeException, wenn er nicht gefunden wird. */
+    public function eigenenVereinHolen(): array {
+        $verein = $this->findeEigenenVerein($this->get('/api/KAPELLE'));
+        if ($verein === null) {
+            throw new RuntimeException('Der Verein ' . $this->getVereinskennung() . ' wurde im BMV-Datenservice nicht gefunden.');
+        }
+        return $verein;
     }
 
     /** Sucht den eigenen Verein in der KAPELLE-Liste (Land, Bezirk, Vereinsnummer). */
@@ -238,42 +219,5 @@ class BmvApi {
             'verein_iban'          => $t($v['iban'] ?? null),
             'verein_bic'           => $t($v['bic'] ?? null),
         ];
-    }
-
-    /**
-     * Übersetzt geänderte Einstellungen (verein_*) zurück in KAPELLE-Felder.
-     * Kontaktperson wird in Vorname und Zuname aufgeteilt, der Titel bleibt unverändert.
-     */
-    public static function einstellungenZuVereinsdaten(array $werte): array {
-        $feldZuordnung = [
-            'verein_name'           => 'vereinsname',
-            'verein_adresse'        => 'strasse',
-            'verein_plz'            => 'pltz',
-            'verein_ort'            => 'ort',
-            'verein_gemeinde'       => 'gemeinde',
-            'verein_email'          => 'email',
-            'verein_telefon'        => 'telefon',
-            'verein_website'        => 'homepage',
-            'verein_zvr_nr'         => 'zvrNr',
-            'verein_kontoname'      => 'kontoBez',
-            'verein_iban'           => 'iban',
-            'verein_bic'            => 'bic',
-        ];
-        $daten = [];
-        foreach ($feldZuordnung as $schluessel => $feld) {
-            if (array_key_exists($schluessel, $werte)) {
-                $daten[$feld] = trim((string)$werte[$schluessel]);
-            }
-        }
-        if (array_key_exists('verein_gruendungsjahr', $werte)) {
-            $jahr = trim((string)$werte['verein_gruendungsjahr']);
-            $daten['gruendungsJahr'] = $jahr === '' ? null : (int)$jahr;
-        }
-        if (array_key_exists('verein_kontaktperson', $werte)) {
-            $teile = preg_split('/\s+/', trim((string)$werte['verein_kontaktperson']), -1, PREG_SPLIT_NO_EMPTY);
-            $daten['vorname'] = array_shift($teile) ?? '';
-            $daten['zuname']  = implode(' ', $teile);
-        }
-        return $daten;
     }
 }

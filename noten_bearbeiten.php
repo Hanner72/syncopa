@@ -275,6 +275,33 @@ include 'includes/header.php';
                 </div>
             </div>
         </form>
+
+        <?php if (!empty($note['bmv_noten_id'])): ?>
+        <!-- Herkunft: aus dem BMV übernommen -->
+        <div class="card mt-3">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-cloud-download"></i> Aus dem BMV übernommen</h5></div>
+            <div class="card-body small">
+                <p class="text-muted">
+                    Übernommen am <?php echo date('d.m.Y', strtotime($note['bmv_import_am'])); ?> aus dem Notenarchiv im BMV.
+                    Gepflegt wird das Stück in Syncopa; an den BMV wird nichts zurückgeschickt.
+                </p>
+                <dl class="row mb-0">
+                    <dt class="col-sm-5">BMV-Nr.</dt>
+                    <dd class="col-sm-7"><?php echo htmlspecialchars($note['bmv_nummer'] ?? '–'); ?></dd>
+                    <dt class="col-sm-5">Notenmaterial laut BMV</dt>
+                    <dd class="col-sm-7"><?php echo $note['bmv_notenmaterial'] ? 'vorhanden' : 'nicht vorhanden'; ?></dd>
+                    <?php if (!empty($note['bmv_letzte_auffuehrung'])): ?>
+                    <dt class="col-sm-5">Letzte Aufführung (BMV)</dt>
+                    <dd class="col-sm-7"><?php echo date('d.m.Y', strtotime($note['bmv_letzte_auffuehrung'])); ?></dd>
+                    <?php endif; ?>
+                    <?php if (!empty($note['bmv_anmerkung'])): ?>
+                    <dt class="col-sm-5">Anmerkung im BMV</dt>
+                    <dd class="col-sm-7"><?php echo nl2br(htmlspecialchars($note['bmv_anmerkung'])); ?></dd>
+                    <?php endif; ?>
+                </dl>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
     
     <!-- Rechte Spalte: PDF-Upload -->

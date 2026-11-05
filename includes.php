@@ -14,6 +14,11 @@ require_once __DIR__ . '/classes/Uniform.php';
 require_once __DIR__ . '/classes/Nummernkreis.php';
 require_once __DIR__ . '/classes/BmvApi.php';
 require_once __DIR__ . '/classes/BmvMitgliederSync.php';
+require_once __DIR__ . '/classes/BmvDaten.php';
+require_once __DIR__ . '/classes/BmvZusatzdaten.php';
+require_once __DIR__ . '/classes/Ehrungen.php';
+require_once __DIR__ . '/classes/BmvInventar.php';
+require_once __DIR__ . '/classes/BmvNoten.php';
 
 // Migration: Mehrfachrollen-Pivot-Tabelle
 (function() {
@@ -586,4 +591,112 @@ require_once __DIR__ . '/classes/FestAbrechnung.php';
             $db->execute($sql);
         } catch (\Throwable $e) { /* bereits vorhanden */ }
     }
+})();
+
+// BMV-Zusatzdaten je Mitglied (Funktionen, Ehrungen, Instrumente, Prüfungen, Mitgliedsarten),
+// Bezeichnungen zu den BMV-Nummern und Regeln für anstehende Ehrungen
+(function() {
+    $db = Database::getInstance();
+    $db->execute("CREATE TABLE IF NOT EXISTS bmv_mitglied_daten (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        bmv_eintrag_id VARCHAR(36) NOT NULL,
+        mitglied_id INT NOT NULL,
+        art VARCHAR(20) NOT NULL,
+        code INT NULL,
+        bereich_code INT NULL,
+        instrument_code INT NULL,
+        von DATE NULL,
+        bis DATE NULL,
+        stimme VARCHAR(50) NULL,
+        ergebnis VARCHAR(255) NULL,
+        ergebnistext TEXT NULL,
+        bemerkung VARCHAR(255) NULL,
+        bmv_status VARCHAR(10) NULL,
+        bmv_aenderung VARCHAR(50) NULL,
+        UNIQUE KEY uk_bmv_eintrag (art, bmv_eintrag_id),
+        KEY idx_mitglied_art (mitglied_id, art),
+        CONSTRAINT fk_bmv_daten_mitglied FOREIGN KEY (mitglied_id) REFERENCES mitglieder(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $db->execute("CREATE TABLE IF NOT EXISTS bmv_bezeichnungen (
+        art VARCHAR(20) NOT NULL,
+        code INT NOT NULL,
+        name VARCHAR(150) NOT NULL DEFAULT '',
+        PRIMARY KEY (art, code)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $db->execute("CREATE TABLE IF NOT EXISTS ehrungsregeln (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        ehrung_code INT NOT NULL,
+        jahre INT NOT NULL,
+        aktiv TINYINT(1) NOT NULL DEFAULT 1,
+        UNIQUE KEY uk_ehrung (ehrung_code)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // Eigene Einträge (nicht aus dem BMV) und Vorbereitung für das spätere Schreiben in den BMV:
+    // bmv_eintrag_id leer = nur in Syncopa; sync_status 'neu' = muss später an den BMV übertragen werden
+    $spalte = function (string $tabelle, string $name) use ($db): bool {
+        return (int)($db->fetchOne(
+            "SELECT COUNT(*) AS c FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?",
+            [$tabelle, $name]
+        )['c'] ?? 0) > 0;
+    };
+    if (!$spalte('bmv_mitglied_daten', 'sync_status')) {
+        $db->execute("ALTER TABLE bmv_mitglied_daten
+            MODIFY bmv_eintrag_id VARCHAR(36) NULL,
+            ADD COLUMN sync_status VARCHAR(20) NULL,
+            ADD COLUMN erstellt_am DATETIME NULL");
+    }
+    if (!$spalte('mitglied_instrumente', 'bmv_eintrag_id')) {
+        $db->execute("ALTER TABLE mitglied_instrumente
+            ADD COLUMN bmv_eintrag_id VARCHAR(36) NULL,
+            ADD COLUMN stimme VARCHAR(50) NULL,
+            ADD COLUMN sync_status VARCHAR(20) NULL,
+            ADD COLUMN bmv_aenderung VARCHAR(50) NULL,
+            ADD UNIQUE KEY uk_mi_bmv_eintrag (bmv_eintrag_id)");
+        // Instrumente lagen bisher zusätzlich in bmv_mitglied_daten; sie werden jetzt in mitglied_instrumente geführt
+        // und beim nächsten „BMV Daten holen“ dort neu übernommen. Bestehende eigene Einträge: für den BMV vormerken.
+        $db->execute("DELETE FROM bmv_mitglied_daten WHERE art = 'instrument'");
+        $db->execute("UPDATE mitglied_instrumente SET sync_status = 'neu' WHERE bmv_eintrag_id IS NULL");
+    }
+    // BMV-Instrumentnummer je Eintrag; welche Syncopa-Instrumentart zu einer BMV-Nummer gehört, steht bei der Bezeichnung
+    if (!$spalte('mitglied_instrumente', 'bmv_code')) {
+        $db->execute("ALTER TABLE mitglied_instrumente ADD COLUMN bmv_code INT NULL");
+    }
+    if (!$spalte('bmv_bezeichnungen', 'instrument_typ_id')) {
+        $db->execute("ALTER TABLE bmv_bezeichnungen ADD COLUMN instrument_typ_id INT NULL");
+    }
+    // Beim Holen automatisch angelegte Instrumentarten (dürfen nach dem Umzuordnen wieder entfernt werden)
+    if (!$spalte('instrument_typen', 'bmv_automatisch')) {
+        $db->execute("ALTER TABLE instrument_typen ADD COLUMN bmv_automatisch TINYINT(1) NOT NULL DEFAULT 0");
+    }
+
+    // Vereinsinventar aus dem CSV-Export des BMV-Portals (nur Herkunftsangaben; das Inventar wird danach in Syncopa gepflegt)
+    if (!$spalte('instrumente', 'bmv_inventar_id')) {
+        $db->execute("ALTER TABLE instrumente
+            ADD COLUMN bmv_inventar_id VARCHAR(36) NULL,
+            ADD COLUMN bmv_bezeichnung VARCHAR(150) NULL,
+            ADD COLUMN bmv_anmerkung TEXT NULL,
+            ADD COLUMN bmv_aenderung VARCHAR(50) NULL,
+            ADD COLUMN bmv_import_am DATETIME NULL,
+            ADD COLUMN lieferant VARCHAR(150) NULL,
+            ADD UNIQUE KEY uk_bmv_inventar (bmv_inventar_id)");
+    }
+    // Noten aus dem BMV (einmalig übernommen, danach in Syncopa gepflegt; BMV-Nummer nur als Zusatzinfo)
+    if (!$spalte('noten', 'bmv_noten_id')) {
+        $db->execute("ALTER TABLE noten
+            ADD COLUMN bmv_noten_id VARCHAR(36) NULL,
+            ADD COLUMN bmv_nummer VARCHAR(20) NULL,
+            ADD COLUMN bmv_notenmaterial TINYINT(1) NULL,
+            ADD COLUMN bmv_letzte_auffuehrung DATE NULL,
+            ADD COLUMN bmv_anmerkung TEXT NULL,
+            ADD COLUMN bmv_aenderung VARCHAR(50) NULL,
+            ADD COLUMN bmv_import_am DATETIME NULL,
+            ADD UNIQUE KEY uk_bmv_noten (bmv_noten_id)");
+    }
+    // Welche Syncopa-Instrumentart zu einer BMV-Inventarbezeichnung gehört (z. B. „B-Bariton“ => Bariton)
+    $db->execute("CREATE TABLE IF NOT EXISTS bmv_inventar_zuordnung (
+        bezeichnung VARCHAR(150) NOT NULL PRIMARY KEY,
+        instrument_typ_id INT NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 })();

@@ -7,8 +7,6 @@ Session::requireLogin();
 
 $mitgliedObj = new Mitglied();
 $db = Database::getInstance();
-$bmvApi = new BmvApi();
-$bmvKonfiguriert = $bmvApi->istKonfiguriert();
 
 $id = $_GET['id'] ?? null;
 $isEdit = !empty($id);
@@ -107,57 +105,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data['foto'] = null;
         }
 
-        // Entscheidend ist, ob das Mitglied bereits eine BMV-ID hat – unabhängig davon, ob es sich
-        // um ein neues oder ein bestehendes (aber noch nicht im BMV angelegtes) Mitglied handelt.
-        // Solange Änderungen nicht übertragen sind (Flag), werden beim nächsten Speichern alle Felder gesendet.
+        // BMV-Felder werden nur in Syncopa gespeichert – an den BMV wird nichts gesendet.
+        // Beim nächsten „BMV Daten holen“ werden sie wieder mit dem BMV-Stand überschrieben.
         $data['bmv_nicht_uebertragen'] = 0;
-        $nurLokal = isset($_POST['nur_lokal']) || !$bmvKonfiguriert;
-
-        if (!empty($mitglied['bmv_id'])) {
-            // Bereits im BMV vorhanden: Änderungen übertragen oder bewusst nur lokal speichern
-            $offen = !empty($mitglied['bmv_nicht_uebertragen']);
-            $aenderungen = $offen
-                ? BmvMitgliederSync::komplettZuBmv($data)
-                : BmvMitgliederSync::aenderungenZuBmv($mitglied, $data);
-
-            if ($nurLokal) {
-                $data['bmv_nicht_uebertragen'] = ($offen || BmvMitgliederSync::aenderungenZuBmv($mitglied, $data)) ? 1 : 0;
-            } elseif ($aenderungen) {
-                try {
-                    $bmvApi->musikerAktualisieren($mitglied['bmv_id'], $aenderungen);
-                } catch (RuntimeException $e) {
-                    throw new Exception('Nicht gespeichert, da der BMV-Datenservice die Änderung nicht übernommen hat: ' . $e->getMessage());
-                }
-            }
-        } else {
-            // Noch nicht im BMV (neu oder bestehend, aber noch nie gesendet): anlegen oder nur lokal
-            if ($nurLokal) {
-                $data['bmv_nicht_uebertragen'] = 1;
-            } else {
-                $vereinZeile = $db->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = 'bmv_verein_nr'");
-                $vereinNr = $vereinZeile ? (int)$vereinZeile['wert'] : 0;
-                if ($vereinNr <= 0) {
-                    throw new Exception('Das Mitglied kann erst im BMV angelegt werden, nachdem einmal „Mit BMV synchronisieren" in den Einstellungen ausgeführt wurde. Verwende stattdessen „Nur lokal speichern".');
-                }
-                // Pflichtfelder des BMV-Formulars (gelb markiert): Vorname, Zuname, Geburtsdatum, Geschlecht.
-                // Der BMV kennt nur männlich/weiblich, kein „divers".
-                $fehlendeFelder = [];
-                if (empty($data['vorname']))  $fehlendeFelder[] = 'Vorname';
-                if (empty($data['nachname'])) $fehlendeFelder[] = 'Nachname';
-                if (empty($data['geburtsdatum'])) $fehlendeFelder[] = 'Geburtsdatum';
-                if (!in_array($data['geschlecht'] ?? '', ['m', 'w'], true)) $fehlendeFelder[] = 'Geschlecht (männlich oder weiblich)';
-                if ($fehlendeFelder) {
-                    throw new Exception('Der BMV verlangt beim Anlegen folgende Pflichtfelder: ' . implode(', ', $fehlendeFelder)
-                        . '. Bitte ausfüllen oder „Nur lokal speichern" verwenden.');
-                }
-                try {
-                    $data['bmv_id'] = $bmvApi->musikerErstellen(BmvMitgliederSync::neuAnlageZuBmv($data, $vereinNr));
-                    $data['bmv_abgeglichen_am'] = date('Y-m-d H:i:s');
-                } catch (RuntimeException $e) {
-                    throw new Exception('Nicht gespeichert, da der BMV-Datenservice das Mitglied nicht anlegen konnte: ' . $e->getMessage());
-                }
-            }
-        }
 
         if ($fotoTmp !== null) {
             $data['foto'] = Mitglied::fotoSpeichern($fotoTmp);
@@ -176,20 +126,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     [$formRegId, $id, $activeFormationId]
                 );
             }
-            if (!empty($data['bmv_nicht_uebertragen'])) {
-                Session::setFlashMessage('warning', 'Nur lokal gespeichert: noch nicht im BMV gespeichert.');
-            } elseif (!empty($data['bmv_id']) && empty($mitglied['bmv_id'])) {
-                Session::setFlashMessage('success', 'Mitglied erfolgreich aktualisiert und im BMV angelegt');
-            } else {
-                Session::setFlashMessage('success', 'Mitglied erfolgreich aktualisiert');
-            }
+            Session::setFlashMessage('success', 'Mitglied erfolgreich aktualisiert');
         } else {
             $id = $mitgliedObj->create($data);
-            if (!empty($data['bmv_nicht_uebertragen'])) {
-                Session::setFlashMessage('warning', 'Mitglied erstellt – nur lokal, noch nicht im BMV gespeichert.');
-            } else {
-                Session::setFlashMessage('success', 'Mitglied erfolgreich erstellt' . (!empty($data['bmv_id']) ? ' und im BMV angelegt' : ''));
-            }
+            Session::setFlashMessage('success', 'Mitglied erfolgreich erstellt');
         }
         header('Location: mitglied_detail.php?id=' . $id);
         exit;
@@ -210,12 +150,6 @@ include 'includes/header.php';
     </a>
 </div>
 
-<?php if ($isEdit && !empty($mitglied['bmv_nicht_uebertragen'])): ?>
-<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i>
-    <strong>Nicht im BMV gespeichert:</strong> Die Änderungen sind nur in Syncopa gespeichert. Beim nächsten Speichern werden alle BMV-Felder übertragen.
-</div>
-<?php endif; ?>
-
 <?php if (isset($error)): ?>
 <div class="alert alert-danger">
     <i class="bi bi-exclamation-triangle"></i> <?php echo htmlspecialchars($error); ?>
@@ -231,6 +165,24 @@ include 'includes/header.php';
                     <h5 class="mb-0">Stammdaten</h5>
                 </div>
                 <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="bmv_anrede" class="form-label">Anrede</label>
+                            <input type="text" class="form-control" id="bmv_anrede" name="bmv_anrede"
+                                   value="<?php echo htmlspecialchars($mitglied['bmv_anrede'] ?? ''); ?>">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="bmv_titel" class="form-label">Titel</label>
+                            <input type="text" class="form-control" id="bmv_titel" name="bmv_titel"
+                                   value="<?php echo htmlspecialchars($mitglied['bmv_titel'] ?? ''); ?>">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="bmv_titeln" class="form-label">Titel nachgestellt</label>
+                            <input type="text" class="form-control" id="bmv_titeln" name="bmv_titeln"
+                                   value="<?php echo htmlspecialchars($mitglied['bmv_titeln'] ?? ''); ?>">
+                        </div>
+                    </div>
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="vorname" class="form-label">Vorname *</label>
@@ -260,9 +212,6 @@ include 'includes/header.php';
                             <label for="geburtsdatum" class="form-label">Geburtsdatum</label>
                             <input type="date" class="form-control" id="geburtsdatum" name="geburtsdatum"
                                    value="<?php echo htmlspecialchars($mitglied['geburtsdatum'] ?? ''); ?>">
-                            <?php if ($bmvKonfiguriert && empty($mitglied['bmv_id'])): ?>
-                            <div class="form-text">Für die BMV-Anlage erforderlich.</div>
-                            <?php endif; ?>
                         </div>
 
                         <div class="col-md-4 mb-3">
@@ -272,12 +221,22 @@ include 'includes/header.php';
                                 <option value="m" <?php echo ($mitglied['geschlecht'] ?? '') === 'm' ? 'selected' : ''; ?>>Männlich</option>
                                 <option value="w" <?php echo ($mitglied['geschlecht'] ?? '') === 'w' ? 'selected' : ''; ?>>Weiblich</option>
                             </select>
-                            <?php if ($bmvKonfiguriert && empty($mitglied['bmv_id'])): ?>
-                            <div class="form-text">Für die BMV-Anlage erforderlich – der BMV kennt nur männlich/weiblich.</div>
-                            <?php endif; ?>
                         </div>
                     </div>
                     
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="bmv_beruf" class="form-label">Beruf</label>
+                            <input type="text" class="form-control" id="bmv_beruf" name="bmv_beruf"
+                                   value="<?php echo htmlspecialchars($mitglied['bmv_beruf'] ?? ''); ?>">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="bmv_firma" class="form-label">Firma</label>
+                            <input type="text" class="form-control" id="bmv_firma" name="bmv_firma"
+                                   value="<?php echo htmlspecialchars($mitglied['bmv_firma'] ?? ''); ?>">
+                        </div>
+                    </div>
+
                     <div class="row">
                         <div class="col-md-12 mb-3">
                             <label for="strasse" class="form-label">Straße</label>
@@ -328,10 +287,35 @@ include 'includes/header.php';
                         </div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label for="email" class="form-label">E-Mail</label>
-                        <input type="email" class="form-control" id="email" name="email" 
-                               value="<?php echo htmlspecialchars($mitglied['email'] ?? ''); ?>">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="bmv_telefon2" class="form-label">Telefon 2</label>
+                            <input type="tel" class="form-control" id="bmv_telefon2" name="bmv_telefon2"
+                                   value="<?php echo htmlspecialchars($mitglied['bmv_telefon2'] ?? ''); ?>">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="bmv_telefon_firma" class="form-label">Telefon Firma</label>
+                            <input type="tel" class="form-control" id="bmv_telefon_firma" name="bmv_telefon_firma"
+                                   value="<?php echo htmlspecialchars($mitglied['bmv_telefon_firma'] ?? ''); ?>">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="bmv_fax" class="form-label">Fax</label>
+                            <input type="tel" class="form-control" id="bmv_fax" name="bmv_fax"
+                                   value="<?php echo htmlspecialchars($mitglied['bmv_fax'] ?? ''); ?>">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">E-Mail</label>
+                            <input type="email" class="form-control" id="email" name="email"
+                                   value="<?php echo htmlspecialchars($mitglied['email'] ?? ''); ?>">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="bmv_email2" class="form-label">E-Mail 2</label>
+                            <input type="email" class="form-control" id="bmv_email2" name="bmv_email2"
+                                   value="<?php echo htmlspecialchars($mitglied['bmv_email2'] ?? ''); ?>">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -342,13 +326,36 @@ include 'includes/header.php';
                     <h5 class="mb-0">Notizen</h5>
                 </div>
                 <div class="card-body">
-                    <textarea class="form-control" id="notizen" name="notizen" rows="4"><?php echo htmlspecialchars($mitglied['notizen'] ?? ''); ?></textarea>
+                    <textarea class="form-control mb-3" id="notizen" name="notizen" rows="4"><?php echo htmlspecialchars($mitglied['notizen'] ?? ''); ?></textarea>
+                    <label for="bmv_bemerkung" class="form-label">Bemerkung (BMV)</label>
+                    <textarea class="form-control" id="bmv_bemerkung" name="bmv_bemerkung" rows="2"><?php echo htmlspecialchars($mitglied['bmv_bemerkung'] ?? ''); ?></textarea>
                 </div>
             </div>
         </div>
         
-        <!-- Vereinsdaten -->
+        <!-- Foto + Vereinsdaten -->
         <div class="col-lg-4">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">Foto</h5>
+                </div>
+                <div class="card-body text-center">
+                    <?php if (!empty($mitglied['foto']) || !empty($mitglied['bmv_foto'])): ?>
+                    <img src="api/mitglied_foto.php?id=<?php echo (int)$mitglied['id']; ?>&amp;v=<?php echo strtotime($mitglied['aktualisiert_am']); ?>" alt="Foto"
+                         class="rounded border mb-2" style="width:128px;height:128px;object-fit:cover">
+                    <div class="form-check small d-inline-block mb-2">
+                        <input class="form-check-input" type="checkbox" id="foto_entfernen" name="foto_entfernen">
+                        <label class="form-check-label" for="foto_entfernen">Foto entfernen</label>
+                    </div>
+                    <?php else: ?>
+                    <div class="bg-light rounded border d-flex align-items-center justify-content-center mb-2 mx-auto"
+                         style="width:128px;height:128px"><i class="bi bi-person fs-1 text-muted"></i></div>
+                    <?php endif; ?>
+                    <input type="file" class="form-control form-control-sm" id="foto" name="foto" accept="image/png,image/jpeg,image/gif,image/webp">
+                    <div class="form-text">Wird quadratisch auf 128×128 Pixel zugeschnitten (max. 5 MB).</div>
+                </div>
+            </div>
+
             <div class="card mb-3">
                 <div class="card-header">
                     <h5 class="mb-0">Vereinsdaten</h5>
@@ -412,6 +419,12 @@ include 'includes/header.php';
                             <option value="ueberpruefen" <?php echo ($mitglied['status'] ?? '') === 'ueberpruefen' ? 'selected' : ''; ?>>Überprüfen</option>
                         </select>
                     </div>
+
+                    <div class="mb-3">
+                        <label for="bmv_kategorien" class="form-label">Kategorien (BMV)</label>
+                        <input type="text" class="form-control" id="bmv_kategorien" name="bmv_kategorien"
+                               value="<?php echo htmlspecialchars($mitglied['bmv_kategorien'] ?? ''); ?>">
+                    </div>
                 </div>
             </div>
             
@@ -437,53 +450,19 @@ include 'includes/header.php';
     </div>
     
     <div class="card mt-3">
-        <div class="card-header"><h5 class="mb-0"><i class="bi bi-cloud"></i> BMV-Daten</h5></div>
+        <div class="card-header p-0">
+            <button class="btn btn-link w-100 text-start text-decoration-none d-flex justify-content-between align-items-center px-3 py-2 collapsed"
+                    type="button" data-bs-toggle="collapse" data-bs-target="#bmvDetails" aria-expanded="false" aria-controls="bmvDetails">
+                <span class="h5 mb-0"><i class="bi bi-cloud"></i> BMV-Details</span>
+                <i class="bi bi-chevron-down"></i>
+            </button>
+        </div>
+        <div class="collapse" id="bmvDetails">
         <div class="card-body">
             <p class="text-muted small">
-                Diese Felder entsprechen dem BMV-Datenservice. Änderungen werden beim Speichern an den BMV übertragen,
-                sofern das Mitglied zugeordnet ist und Zugangsdaten eingetragen sind.
+                Änderungen werden nur in Syncopa gespeichert, nicht im BMV. Bei Mitgliedern aus dem BMV werden sie
+                beim nächsten „BMV Daten holen“ wieder mit dem BMV-Stand überschrieben.
             </p>
-            <div class="row mb-3">
-                <div class="col-md-3 text-center">
-                    <?php if (!empty($mitglied['foto']) || !empty($mitglied['bmv_foto'])): ?>
-                    <img src="api/mitglied_foto.php?id=<?php echo (int)$mitglied['id']; ?>&amp;v=<?php echo strtotime($mitglied['aktualisiert_am']); ?>" alt="Foto"
-                         class="rounded border mb-2" style="width:128px;height:128px;object-fit:cover">
-                    <div class="form-check small">
-                        <input class="form-check-input" type="checkbox" id="foto_entfernen" name="foto_entfernen">
-                        <label class="form-check-label" for="foto_entfernen">Foto entfernen</label>
-                    </div>
-                    <?php else: ?>
-                    <div class="bg-light rounded border d-flex align-items-center justify-content-center mb-2"
-                         style="width:128px;height:128px;margin:auto"><i class="bi bi-person fs-1 text-muted"></i></div>
-                    <?php endif; ?>
-                </div>
-                <div class="col-md-9">
-                    <label for="foto" class="form-label">Foto hochladen</label>
-                    <input type="file" class="form-control" id="foto" name="foto" accept="image/png,image/jpeg,image/gif,image/webp">
-                    <div class="form-text">Wird quadratisch auf 128×128 Pixel zugeschnitten und im BMV-Format gespeichert (max. 5 MB).</div>
-                </div>
-            </div>
-            <div class="row">
-                <?php
-                $bmvTextfelder = [
-                    'bmv_anrede' => 'Anrede', 'bmv_titel' => 'Titel', 'bmv_titeln' => 'Titel nachgestellt',
-                    'bmv_telefon2' => 'Telefon 2', 'bmv_fax' => 'Fax', 'bmv_telefon_firma' => 'Telefon Firma',
-                    'bmv_email2' => 'E-Mail 2', 'bmv_beruf' => 'Beruf', 'bmv_firma' => 'Firma',
-                    'bmv_kategorien' => 'Kategorien',
-                ];
-                foreach ($bmvTextfelder as $feld => $label): ?>
-                <div class="col-md-6 mb-3">
-                    <label for="<?php echo $feld; ?>" class="form-label"><?php echo $label; ?></label>
-                    <input type="text" class="form-control" id="<?php echo $feld; ?>" name="<?php echo $feld; ?>"
-                           value="<?php echo htmlspecialchars($mitglied[$feld] ?? ''); ?>">
-                </div>
-                <?php endforeach; ?>
-                <div class="col-12 mb-3">
-                    <label for="bmv_bemerkung" class="form-label">Bemerkung (BMV)</label>
-                    <textarea class="form-control" id="bmv_bemerkung" name="bmv_bemerkung" rows="2"><?php echo htmlspecialchars($mitglied['bmv_bemerkung'] ?? ''); ?></textarea>
-                </div>
-            </div>
-
             <h6>Datenschutz-Freigaben (BMV)</h6>
             <div class="row mb-3">
                 <?php
@@ -515,10 +494,11 @@ include 'includes/header.php';
                 <dt class="col-sm-3">Verein-ID (BMV)</dt>
                 <dd class="col-sm-9"><?php echo htmlspecialchars((string)($mitglied['bmv_verein_id'] ?? '–')); ?></dd>
                 <dt class="col-sm-3">Letzte Änderung (BMV)</dt>
-                <dd class="col-sm-9"><?php echo htmlspecialchars($mitglied['bmv_aenderung'] ?? '–'); ?></dd>
+                <dd class="col-sm-9"><?php echo !empty($mitglied['bmv_aenderung']) ? date('d.m.Y H:i', strtotime($mitglied['bmv_aenderung'])) : '–'; ?></dd>
                 <dt class="col-sm-3">Angelegt von (BMV)</dt>
                 <dd class="col-sm-9"><?php echo htmlspecialchars($mitglied['bmv_pcanmeldename'] ?? '–'); ?></dd>
             </dl>
+        </div>
         </div>
     </div>
 
@@ -527,29 +507,9 @@ include 'includes/header.php';
             <i class="bi bi-x"></i> Abbrechen
         </a>
         <div class="d-flex gap-2">
-            <?php if (!empty($mitglied['bmv_id'])): ?>
-            <!-- Mitglied ist bereits im BMV: Änderungen werden normal übertragen, oder bewusst nur lokal -->
-            <button type="submit" name="nur_lokal" value="1" class="btn btn-outline-warning"
-                    title="Speichert nur in Syncopa. Die Änderung wird als „nicht im BMV gespeichert" markiert.">
-                <i class="bi bi-hdd"></i> Nur lokal speichern
-            </button>
-            <button type="submit" class="btn btn-primary">
-                <i class="bi bi-save"></i> Aktualisieren
-            </button>
-            <?php elseif ($bmvKonfiguriert): ?>
-            <!-- Mitglied ist noch nicht im BMV: anlegen/verknüpfen oder bewusst nur lokal -->
-            <button type="submit" name="nur_lokal" value="1" class="btn btn-outline-warning"
-                    title="Speichert nur in Syncopa, ohne das Mitglied an den BMV zu senden.">
-                <i class="bi bi-hdd"></i> Nur lokal speichern
-            </button>
-            <button type="submit" class="btn btn-primary">
-                <i class="bi bi-cloud-check"></i> <?php echo $isEdit ? 'Ändern' : 'Speichern'; ?> und an BMV senden
-            </button>
-            <?php else: ?>
             <button type="submit" class="btn btn-primary">
                 <i class="bi bi-save"></i> <?php echo $isEdit ? 'Aktualisieren' : 'Erstellen'; ?>
             </button>
-            <?php endif; ?>
         </div>
     </div>
 </form>

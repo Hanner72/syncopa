@@ -6,10 +6,6 @@ require_once 'includes.php';
 Session::requireLogin();
 Session::requirePermission('mitglieder', 'lesen');
 
-// Mitglieder automatisch mit dem BMV abgleichen, wenn das Intervall abgelaufen ist (siehe Einstellungen).
-// Macht nichts, falls BMV nicht aktiv/konfiguriert ist oder das Intervall noch nicht erreicht wurde.
-BmvMitgliederSync::automatischSynchronisierenFallsFaellig();
-
 $mitglied = new Mitglied();
 $db = Database::getInstance();
 
@@ -138,9 +134,6 @@ include 'includes/header.php';
                             if (empty($m['bmv_id']) && !empty($m['bmv_abgeglichen_am'])):
                             ?>
                             <br><span class="badge bg-warning text-dark" title="Beim Abgleich mit dem BMV-Datenservice nicht gefunden">nicht im BMV</span>
-                            <?php endif; ?>
-                            <?php if (!empty($m['bmv_nicht_uebertragen'])): ?>
-                            <br><span class="badge bg-danger" title="Änderungen sind nur in Syncopa gespeichert">nicht im BMV gespeichert</span>
                             <?php endif; ?>
                         </td>
                         <td>

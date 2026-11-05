@@ -1161,6 +1161,57 @@ CREATE TABLE IF NOT EXISTS `notenbuch_noten` (
   CONSTRAINT `notenbuch_noten_ibfk_2` FOREIGN KEY (`noten_id`)     REFERENCES `noten` (`id`)       ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- --------------------------------------------------------
+-- BMV-Zusatzdaten je Mitglied, Bezeichnungen zu BMV-Nummern, Ehrungsregeln
+-- --------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS `bmv_mitglied_daten` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `bmv_eintrag_id` varchar(36) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `mitglied_id` int NOT NULL,
+  `art` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `code` int DEFAULT NULL,
+  `bereich_code` int DEFAULT NULL,
+  `instrument_code` int DEFAULT NULL,
+  `von` date DEFAULT NULL,
+  `bis` date DEFAULT NULL,
+  `stimme` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `ergebnis` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `ergebnistext` text COLLATE utf8mb4_unicode_ci,
+  `bemerkung` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `bmv_status` varchar(10) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `bmv_aenderung` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `sync_status` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `erstellt_am` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_bmv_eintrag` (`art`,`bmv_eintrag_id`),
+  KEY `idx_mitglied_art` (`mitglied_id`,`art`),
+  CONSTRAINT `fk_bmv_daten_mitglied` FOREIGN KEY (`mitglied_id`) REFERENCES `mitglieder` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `bmv_bezeichnungen` (
+  `art` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `code` int NOT NULL,
+  `name` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `instrument_typ_id` int DEFAULT NULL,
+  PRIMARY KEY (`art`,`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `bmv_inventar_zuordnung` (
+  `bezeichnung` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `instrument_typ_id` int NOT NULL,
+  PRIMARY KEY (`bezeichnung`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `ehrungsregeln` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `ehrung_code` int NOT NULL,
+  `jahre` int NOT NULL,
+  `aktiv` tinyint(1) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_ehrung` (`ehrung_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
