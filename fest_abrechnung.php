@@ -130,13 +130,23 @@ include 'includes/header.php';
     <div class="col-6 col-md-3 mb-2">
         <div class="card stat-card border-secondary h-100">
             <div class="card-body">
-                <div>
-                    <h6>Deckungsgrad</h6>
-                    <?php $deckung = $summary['ausgaben'] > 0 ? round($summary['einnahmen'] / $summary['ausgaben'] * 100) : 0; ?>
-                    <h2><?php echo $deckung; ?> %</h2>
-                    <small class="text-muted">Einnahmen / Ausgaben</small>
+                <?php
+                // Kostendeckung = Einnahmen ÷ Ausgaben, Gewinnspanne = Ergebnis ÷ Einnahmen
+                $kostendeckung = $summary['ausgaben'] > 0 ? round($summary['einnahmen'] / $summary['ausgaben'] * 100) : null;
+                $gewinnspanne  = $summary['einnahmen'] > 0 ? round($summary['ergebnis'] / $summary['einnahmen'] * 100) : null;
+                ?>
+                <div class="d-flex gap-4 w-100">
+                    <div title="Einnahmen ÷ Ausgaben. Ab 100 % sind alle Kosten gedeckt.">
+                        <h6>Kostendeckung</h6>
+                        <h2><?php echo $kostendeckung !== null ? $kostendeckung . ' %' : '–'; ?></h2>
+                        <small class="text-muted">Einnahmen ÷ Ausgaben</small>
+                    </div>
+                    <div title="Ergebnis ÷ Einnahmen. So viel bleibt von jedem eingenommenen Euro übrig.">
+                        <h6>Gewinnspanne</h6>
+                        <h2 class="<?php echo $gewinnspanne !== null && $gewinnspanne < 0 ? 'text-danger' : ''; ?>"><?php echo $gewinnspanne !== null ? $gewinnspanne . ' %' : '–'; ?></h2>
+                        <small class="text-muted">Ergebnis ÷ Einnahmen</small>
+                    </div>
                 </div>
-                <i class="bi bi-pie-chart stat-icon text-secondary"></i>
             </div>
         </div>
     </div>

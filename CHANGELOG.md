@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.8.5]
+
+### Geändert
+
+- Festverwaltung, Abrechnung: „Deckungsgrad“ heißt jetzt „Kostendeckung“ (Einnahmen ÷ Ausgaben)
+
+### Hinzugefügt
+
+- Festverwaltung, Abrechnung: neue Kennzahl „Gewinnspanne“ (Ergebnis ÷ Einnahmen)
+  - zeigt, wie viel von jedem eingenommenen Euro übrig bleibt
+
 ## [2.8.4]
 
 ### Hinzugefügt
