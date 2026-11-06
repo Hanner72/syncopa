@@ -88,14 +88,12 @@ include 'includes/header.php';
                     <dt class="col-sm-5">Mitgliedsnr.:</dt>
                     <dd class="col-sm-7"><strong><?php echo htmlspecialchars($mitglied['mitgliedsnummer']); ?></strong></dd>
                     
-                    <dt class="col-sm-5">Status:</dt>
+                    <dt class="col-sm-5">Mitgliedsart:</dt>
                     <dd class="col-sm-7">
-                        <?php
-                        $statusColors = ['aktiv' => 'success', 'passiv' => 'warning', 'ausgetreten' => 'secondary', 'ehrenmitglied' => 'primary', 'ueberpruefen' => 'info'];
-                        $statusLabels = ['ueberpruefen' => 'Überprüfen'];
-                        $color = $statusColors[$mitglied['status']] ?? 'secondary';
-                        ?>
-                        <span class="badge bg-<?php echo $color; ?>"><?php echo $statusLabels[$mitglied['status']] ?? ucfirst($mitglied['status']); ?></span>
+                        <?php echo Mitgliedsart::badge($mitglied['mitgliedsart_code']); ?>
+                        <?php if ($mitglied['mitgliedsart_code'] !== null && ($artSeit = Mitgliedsart::seit((int)$mitglied['id']))): ?>
+                        <br><small class="text-muted">seit <?php echo date('d.m.Y', strtotime($artSeit)); ?></small>
+                        <?php endif; ?>
                     </dd>
                     
                     <?php if ($mitglied['geburtsdatum']): ?>

@@ -19,6 +19,7 @@ require_once __DIR__ . '/classes/BmvZusatzdaten.php';
 require_once __DIR__ . '/classes/Ehrungen.php';
 require_once __DIR__ . '/classes/BmvInventar.php';
 require_once __DIR__ . '/classes/BmvNoten.php';
+require_once __DIR__ . '/classes/Mitgliedsart.php';
 
 // Migration: Mehrfachrollen-Pivot-Tabelle
 (function() {
@@ -694,6 +695,22 @@ require_once __DIR__ . '/classes/FestAbrechnung.php';
             ADD COLUMN bmv_import_am DATETIME NULL,
             ADD UNIQUE KEY uk_bmv_noten (bmv_noten_id)");
     }
+    // Mitgliedsarten (ersetzen den früheren Mitgliedsstatus): Katalog mit Eigenschaften, aktuelle Art je Mitglied
+    $db->execute("CREATE TABLE IF NOT EXISTS mitgliedsarten (
+        code INT NOT NULL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        aktiv TINYINT(1) NOT NULL DEFAULT 1,
+        beitragspflichtig TINYINT(1) NOT NULL DEFAULT 0,
+        beitrag DECIMAL(10,2) NULL,
+        farbe VARCHAR(20) NOT NULL DEFAULT 'secondary',
+        sortierung INT NOT NULL DEFAULT 100
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    if (!$spalte('mitglieder', 'mitgliedsart_code')) {
+        $db->execute("ALTER TABLE mitglieder ADD COLUMN mitgliedsart_code INT NULL, ADD KEY idx_mitgliedsart (mitgliedsart_code)");
+    }
+    Mitgliedsart::einmaligUebernehmen();
+    Mitgliedsart::aktualisierenFallsNoetig(); // einmal am Tag: laufende Zeiträume ändern sich mit dem Datum
+
     // Welche Syncopa-Instrumentart zu einer BMV-Inventarbezeichnung gehört (z. B. „B-Bariton“ => Bariton)
     $db->execute("CREATE TABLE IF NOT EXISTS bmv_inventar_zuordnung (
         bezeichnung VARCHAR(150) NOT NULL PRIMARY KEY,

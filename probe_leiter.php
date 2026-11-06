@@ -67,7 +67,7 @@ function probeLiveStats(Database $db, int $sessionId, int $notenId, ?int $format
             "SELECT m.id as mitglied_id, m.vorname, m.nachname
              FROM mitglied_formationen mf
              JOIN mitglieder m ON mf.mitglied_id = m.id
-             WHERE mf.formation_id = ? AND m.status = 'aktiv'
+             WHERE mf.formation_id = ? AND m.mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1)
              ORDER BY m.nachname, m.vorname",
             [$formationId]
         );

@@ -122,6 +122,7 @@ class BmvZusatzdaten {
             $db->rollback();
             throw $e;
         }
+        Mitgliedsart::aktualisieren();
         return $vergleich;
     }
 
@@ -435,9 +436,14 @@ class BmvZusatzdaten {
                     }
                 }
             }
+            // Mitgliedsarten: der Katalog unter Stammdaten ist maßgeblich
+            foreach (Database::getInstance()->fetchAll("SELECT code, name FROM mitgliedsarten") as $r) {
+                $liste['mitgliedsart'][(int)$r['code']] = $r['name'];
+            }
             foreach ($liste as &$codes) {
                 ksort($codes);
             }
+            unset($codes);
             self::$bezeichnungen = $liste;
         }
         return self::$bezeichnungen;
@@ -483,6 +489,9 @@ class BmvZusatzdaten {
 
     /** Auswahlliste für eigene Einträge: [code => name], benannte alphabetisch, unbenannte („Nr. X“) am Ende */
     public static function auswahl(string $art): array {
+        if ($art === 'mitgliedsart') {
+            return array_map(fn($r) => $r['name'], Mitgliedsart::alle());
+        }
         $liste = [];
         foreach (self::bezeichnungen()[$art] ?? [] as $code => $name) {
             $liste[$code] = $name !== '' ? $name : self::name($art, $code);
@@ -610,14 +619,19 @@ class BmvZusatzdaten {
                 "UPDATE bmv_mitglied_daten SET " . implode(', ', array_map(fn($s) => "$s = ?", array_keys($daten))) . ", sync_status = ? WHERE id = ?",
                 array_merge(array_values($daten), [$syncStatus, $alt['id']])
             );
-            return (int)$alt['id'];
+            $id = (int)$alt['id'];
+        } else {
+            $db->execute(
+                "INSERT INTO bmv_mitglied_daten (art, mitglied_id, " . implode(', ', array_keys($daten)) . ", sync_status, erstellt_am)
+                 VALUES (?, ?, " . implode(', ', array_fill(0, count($daten), '?')) . ", 'neu', NOW())",
+                array_merge([$art, $mitgliedId], array_values($daten))
+            );
+            $id = (int)$db->lastInsertId();
         }
-        $db->execute(
-            "INSERT INTO bmv_mitglied_daten (art, mitglied_id, " . implode(', ', array_keys($daten)) . ", sync_status, erstellt_am)
-             VALUES (?, ?, " . implode(', ', array_fill(0, count($daten), '?')) . ", 'neu', NOW())",
-            array_merge([$art, $mitgliedId], array_values($daten))
-        );
-        return (int)$db->lastInsertId();
+        if ($art === 'mitgliedsart') {
+            Mitgliedsart::aktualisieren($mitgliedId);
+        }
+        return $id;
     }
 
     private static function instrumentSpeichern(int $mitgliedId, array $e, ?array $alt, callable $datum, callable $text): int {
@@ -676,6 +690,9 @@ class BmvZusatzdaten {
         }
         $tabelle = $art === 'instrument' ? 'mitglied_instrumente' : 'bmv_mitglied_daten';
         Database::getInstance()->execute("DELETE FROM $tabelle WHERE id = ?", [$id]);
+        if ($art === 'mitgliedsart') {
+            Mitgliedsart::aktualisieren($mitgliedId);
+        }
     }
 
     /** Anzahl eigener Einträge, die noch an den BMV übertragen werden müssen: [art => anzahl, 'gesamt' => n] */

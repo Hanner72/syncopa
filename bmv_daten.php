@@ -511,7 +511,8 @@ document.getElementById('notenSuche')?.addEventListener('input', function () {
     (grau im leeren Feld) – trägst du selbst etwas ein, gilt dein Name. Ohne Namen erscheint z. B. „Ehrenzeichen Nr. 31“.
     Einige Namen sind aus den Prüfungsurkunden vorbefüllt.
     Bei den Instrumenten wählst du zusätzlich, welches Syncopa-Instrument dazugehört – so kommen BMV- und eigene Instrumente
-    in einer Liste zusammen. Mehrere BMV-Nummern dürfen dasselbe Syncopa-Instrument haben.
+    in einer Liste zusammen. Mehrere BMV-Nummern dürfen dasselbe Syncopa-Instrument haben.<br>
+    Mitgliedsarten pflegst du unter <a href="stammdaten.php?tab=mitgliedsarten">Stammdaten → Mitgliedsarten</a>.
 </div>
 <?php if (!$verwendung): ?>
 <div class="alert alert-permanent alert-info">Noch keine Daten vorhanden. Bitte zuerst unter <a href="bmv_daten.php?bereich=mitglieder">Mitglieder</a> übernehmen.</div>
@@ -520,6 +521,7 @@ document.getElementById('notenSuche')?.addEventListener('input', function () {
     <input type="hidden" name="aktion" value="bezeichnungen_speichern">
     <div class="row">
     <?php foreach (BmvZusatzdaten::BEZEICHNUNG_ARTEN as $art => $titel):
+        if ($art === 'mitgliedsart') continue; // eigener Katalog unter Stammdaten → Mitgliedsarten
         $codes = array_keys(($verwendung[$art] ?? []) + ($bezeichnungen[$art] ?? []));
         if (!$codes) continue;
         sort($codes);
@@ -576,7 +578,7 @@ document.getElementById('notenSuche')?.addEventListener('input', function () {
             <div class="row g-2">
                 <div class="col-md-4">
                     <select class="form-select" name="neu_art">
-                        <?php foreach (BmvZusatzdaten::BEZEICHNUNG_ARTEN as $art => $titel): ?>
+                        <?php foreach (BmvZusatzdaten::BEZEICHNUNG_ARTEN as $art => $titel): if ($art === 'mitgliedsart') continue; ?>
                         <option value="<?php echo $art; ?>"><?php echo $titel; ?></option>
                         <?php endforeach; ?>
                     </select>

@@ -305,12 +305,12 @@ class Ausrueckung {
                     SELECT ?, m.id, 'keine_antwort'
                     FROM mitglieder m
                     JOIN mitglied_formationen mf ON mf.mitglied_id = m.id
-                    WHERE m.status = 'aktiv' AND mf.formation_id = ?";
+                    WHERE m.mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1) AND mf.formation_id = ?";
             return $this->db->execute($sql, [$ausrueckungId, $formationId]);
         }
         $sql = "INSERT INTO anwesenheit (ausrueckung_id, mitglied_id, status)
                 SELECT ?, id, 'keine_antwort'
-                FROM mitglieder WHERE status = 'aktiv'";
+                FROM mitglieder WHERE mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1)";
         return $this->db->execute($sql, [$ausrueckungId]);
     }
     

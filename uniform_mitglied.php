@@ -254,10 +254,8 @@ include 'includes/header.php';
                         <td><strong><?php echo htmlspecialchars($mitglied['mitgliedsnummer']); ?></strong></td>
                     </tr>
                     <tr>
-                        <td>Status:</td>
-                        <td><span class="badge bg-<?php echo $mitglied['status'] === 'aktiv' ? 'success' : 'secondary'; ?>">
-                            <?php echo ucfirst($mitglied['status']); ?>
-                        </span></td>
+                        <td>Mitgliedsart:</td>
+                        <td><?php echo Mitgliedsart::badge($mitglied['mitgliedsart_code']); ?></td>
                     </tr>
                 </table>
             </div>
