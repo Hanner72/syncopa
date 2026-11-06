@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.8.1]
+
+### Hinzugefügt
+
+- Animierte Vorstellung von Syncopa für Vorführungen (eigene Seite, nicht in der App verlinkt)
+  - 19 Kapitel mit Bildschirmfotos eines erfundenen Beispielvereins
+  - abspielbar wie ein Video, mit Kapitelauswahl, Tempo und Vollbild
+
 ## [2.8.0]
 
 ### Hinzugefügt
