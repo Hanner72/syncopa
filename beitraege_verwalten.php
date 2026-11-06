@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_beitraege'])
     $generierungsJahr = $_POST['jahr'];
     
     // Wer zahlt und wie viel, steht bei der Mitgliedsart (Stammdaten → Mitgliedsarten)
-    $pflichtArten = array_filter(Mitgliedsart::alle(), fn($a) => $a['beitragspflichtig']);
+    $pflichtArten = array_filter(Mitgliedsart::alle(), fn($a) => $a['beitragspflichtig'] && !$a['gast']);
     if (empty($pflichtArten)) {
         Session::setFlashMessage('danger', 'Keine Mitgliedsart ist beitragspflichtig. Bitte unter Stammdaten → Mitgliedsarten festlegen.');
         header('Location: beitraege_verwalten.php');

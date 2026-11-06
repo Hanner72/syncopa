@@ -152,7 +152,7 @@ class Uniform {
         $sql = "SELECT m.id, m.vorname, m.nachname, m.mitgliedsnummer,
                 (SELECT COUNT(*) FROM uniform_zuweisungen uz WHERE uz.mitglied_id = m.id) as anzahl_teile
                 FROM mitglieder m
-                WHERE m.mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1)
+                WHERE m.mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1 AND gast = 0)
                 ORDER BY m.nachname, m.vorname";
         return $this->db->fetchAll($sql);
     }
@@ -290,7 +290,7 @@ class Uniform {
         $stats['mitglieder_mit_uniform'] = $result['anzahl'];
         
         // Aktive Mitglieder gesamt
-        $sql = "SELECT COUNT(*) as anzahl FROM mitglieder WHERE mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1)";
+        $sql = "SELECT COUNT(*) as anzahl FROM mitglieder WHERE mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1 AND gast = 0)";
         $result = $this->db->fetchOne($sql);
         $stats['mitglieder_aktiv'] = $result['anzahl'];
         

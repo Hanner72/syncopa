@@ -435,7 +435,7 @@ include 'includes/header.php';
                             <?php if ($isEdit): ?>
                             <?php echo $artSeit ? 'Seit ' . date('d.m.Y', strtotime($artSeit)) . '. ' : ''; ?>Den ganzen Verlauf siehst du beim Mitglied im Reiter „Mitgliedsart“.
                             <?php else: ?>
-                            Gilt ab dem Eintrittsdatum.
+                            Gilt ab dem Eintrittsdatum. Für Gastmusiker/innen die Gast-Mitgliedsart wählen und sie danach ihrer Formation zuordnen.
                             <?php endif; ?>
                         </div>
                     </div>

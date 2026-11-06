@@ -81,7 +81,7 @@ class BmvMitgliederSync {
     public static function vorschau(BmvApi $api, ?array $bmvMusiker = null): array {
         $bmvMusiker = $bmvMusiker ?? self::alleMusiker($api);
         $lokal = Database::getInstance()->fetchAll(
-            "SELECT id, mitgliedsnummer, " . implode(', ', self::alleSpalten()) . " FROM mitglieder"
+            "SELECT id, mitgliedsnummer, mitgliedsart_code, " . implode(', ', self::alleSpalten()) . " FROM mitglieder"
         );
         $lokalNachLokalId = array_column($lokal, null, 'id');
 
@@ -133,7 +133,8 @@ class BmvMitgliederSync {
 
         $nichtImBmv = [];
         foreach ($lokal as $l) {
-            if (empty($zugeordnet[$l['id']]) && empty($l['bmv_id'])) {
+            // Gastmusiker sind keine Vereinsmitglieder und fehlen im BMV absichtlich
+            if (empty($zugeordnet[$l['id']]) && empty($l['bmv_id']) && !Mitgliedsart::istGast($l['mitgliedsart_code'])) {
                 $nichtImBmv[] = [
                     'lokal_id'        => $l['id'],
                     'mitgliedsnummer' => $l['mitgliedsnummer'],

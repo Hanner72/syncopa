@@ -94,6 +94,9 @@ include 'includes/header.php';
                         <?php if ($mitglied['mitgliedsart_code'] !== null && ($artSeit = Mitgliedsart::seit((int)$mitglied['id']))): ?>
                         <br><small class="text-muted">seit <?php echo date('d.m.Y', strtotime($artSeit)); ?></small>
                         <?php endif; ?>
+                        <?php if (Mitgliedsart::istGast($mitglied['mitgliedsart_code'])): ?>
+                        <br><small class="text-muted">Gast – kein Vereinsmitglied, spielt in den zugeordneten Formationen mit, wird nicht an den BMV übertragen.</small>
+                        <?php endif; ?>
                     </dd>
                     
                     <?php if ($mitglied['geburtsdatum']): ?>

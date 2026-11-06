@@ -613,6 +613,10 @@ class BmvZusatzdaten {
             throw new RuntimeException('Das Bis-Datum liegt vor dem Von-Datum.');
         }
         $syncStatus = ($alt && !empty($alt['bmv_eintrag_id'])) ? 'geaendert' : 'neu';
+        // Eine Gast-Mitgliedsart (kein Vereinsmitglied) wird nie an den BMV übertragen
+        if ($art === 'mitgliedsart' && Mitgliedsart::istGast($code)) {
+            $syncStatus = null;
+        }
 
         if ($alt) {
             $db->execute(
@@ -623,8 +627,8 @@ class BmvZusatzdaten {
         } else {
             $db->execute(
                 "INSERT INTO bmv_mitglied_daten (art, mitglied_id, " . implode(', ', array_keys($daten)) . ", sync_status, erstellt_am)
-                 VALUES (?, ?, " . implode(', ', array_fill(0, count($daten), '?')) . ", 'neu', NOW())",
-                array_merge([$art, $mitgliedId], array_values($daten))
+                 VALUES (?, ?, " . implode(', ', array_fill(0, count($daten), '?')) . ", ?, NOW())",
+                array_merge([$art, $mitgliedId], array_values($daten), [$syncStatus])
             );
             $id = (int)$db->lastInsertId();
         }
@@ -699,16 +703,19 @@ class BmvZusatzdaten {
     public static function offeneUebertragungen(): array {
         $db = Database::getInstance();
         $ergebnis = array_fill_keys(array_keys(self::ARTEN), 0);
-        foreach ($db->fetchAll("SELECT art, COUNT(*) AS n FROM bmv_mitglied_daten WHERE sync_status IS NOT NULL GROUP BY art") as $r) {
+        // Gastmusiker (Mitgliedsart mit „Gast“) werden nie an den BMV übertragen
+        $keinGast = "mitglied_id NOT IN (SELECT id FROM mitglieder WHERE mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE gast = 1))";
+        foreach ($db->fetchAll("SELECT art, COUNT(*) AS n FROM bmv_mitglied_daten WHERE sync_status IS NOT NULL AND $keinGast GROUP BY art") as $r) {
             $ergebnis[$r['art']] = (int)$r['n'];
         }
-        $ergebnis['instrument'] = (int)$db->fetchOne("SELECT COUNT(*) AS n FROM mitglied_instrumente WHERE sync_status IS NOT NULL")['n'];
+        $ergebnis['instrument'] = (int)$db->fetchOne("SELECT COUNT(*) AS n FROM mitglied_instrumente WHERE sync_status IS NOT NULL AND $keinGast")['n'];
         $ergebnis['gesamt'] = array_sum($ergebnis);
         return $ergebnis;
     }
 
     /**
      * Für das spätere Schreiben in den BMV: ein Eintrag aus Syncopa als BMV-Datensatz (Gegenstück zu zeile()).
+     * Einträge von Gastmusikern (Mitgliedsart::istGast) dürfen nicht übertragen werden.
      * $mNr ist die BMV-ID des Mitglieds, $vereinNr die BMV-Vereinsnummer (Einstellung bmv_verein_nr).
      */
     public static function zuBmv(string $art, array $z, string $mNr, int $vereinNr): array {
