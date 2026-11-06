@@ -383,6 +383,18 @@ sudo crontab -e
 # Hinzufügen: 0 2 * * * /usr/local/bin/syncopa-backup.sh
 ```
 
+> **E-Mail-Programm:** Sichern Sie zusätzlich die Datei `config.mailkey.php`. Damit sind die Postfach-Passwörter verschlüsselt. Geht sie verloren, müssen alle Postfach-Passwörter neu eingetragen werden.
+
+### 7.5 Spamfilter für das E-Mail-Programm (Cronjob)
+
+Der Spamfilter prüft neue Nachrichten, sobald jemand ein Postfach öffnet. Damit Junk-E-Mail auch aussortiert wird, wenn niemand hineinschaut, und der Filter laufend dazulernt, richten Sie einen Cronjob ein (alle 5 Minuten als Webserver-Benutzer):
+
+```bash
+echo '*/5 * * * * www-data /usr/bin/php /var/www/html/syncopa/cron/mail_spamfilter.php >/dev/null 2>&1' | sudo tee /etc/cron.d/syncopa-mailspam
+```
+
+Unter Windows (XAMPP/Laragon) geht das über die Aufgabenplanung mit `php.exe cron\mail_spamfilter.php`. Zum Testen: `php cron/mail_spamfilter.php -v`.
+
 ---
 
 ## ❓ Hilfe bei Problemen

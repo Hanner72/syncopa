@@ -9,6 +9,13 @@ class ICalendar {
     private $calendarName = 'Musikverein Ausrückungen';
     private $calendarDescription = 'Alle Ausrückungen und Termine des Musikvereins';
     private $productId = '-//Musikverein Verwaltung//Ausrueckungen//DE';
+
+    /**
+     * Setzt den Kalender-Namen (z.B. für kombinierten Export)
+     */
+    public function setCalendarName($name) {
+        $this->calendarName = $name;
+    }
     
     /**
      * Fügt ein Event zum Kalender hinzu

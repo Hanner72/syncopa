@@ -9,17 +9,22 @@ Session::requirePermission('mitglieder', 'lesen');
 $mitglied = new Mitglied();
 $db = Database::getInstance();
 
-// Filter verarbeiten
-$filter = [];
-if (!empty($_GET['status'])) {
-    $filter['status'] = $_GET['status'];
+// Filter verarbeiten – Mitgliedsart und Register werden für die Sitzung gemerkt, damit sie nach dem Öffnen eines
+// Mitglieds und dem Zurückkehren (auch über das Menü) erhalten bleiben. „✕“ (reset) setzt sie zurück.
+// Suchbegriff, Tabellenseite und Sortierung merkt sich die Tabelle selbst (DataTables stateSave, sessionStorage).
+if (isset($_GET['reset'])) {
+    unset($_SESSION['mitglieder_filter']);
+} elseif (isset($_GET['mitgliedsart']) || isset($_GET['register'])) {
+    $_SESSION['mitglieder_filter'] = ['mitgliedsart' => (string)($_GET['mitgliedsart'] ?? 'mitglieder'), 'register' => (string)($_GET['register'] ?? '')];
 }
-if (!empty($_GET['register'])) {
-    $filter['register'] = $_GET['register'];
+$gemerkt = $_SESSION['mitglieder_filter'] ?? [];
+$filterArt = $gemerkt['mitgliedsart'] ?? 'mitglieder'; // ohne Auswahl nur aktuelle Mitglieder
+$filterRegister = $gemerkt['register'] ?? '';
+$filter = ['mitgliedsart' => $filterArt];
+if ($filterRegister !== '') {
+    $filter['register'] = $filterRegister;
 }
-if (!empty($_GET['search'])) {
-    $filter['search'] = $_GET['search'];
-}
+// Die Suche filtert sofort in der Tabelle (ohne Neuladen), daher hier kein Suchfilter
 
 $mitglieder = $mitglied->getAll($filter);
 
@@ -28,8 +33,9 @@ $register = $db->fetchAll("SELECT * FROM register ORDER BY sortierung");
 
 // Statistiken für Charts
 $stats = $mitglied->getStatistik();
-$statusLabels = array_column($stats['status'] ?? [], 'status');
-$statusData = array_column($stats['status'] ?? [], 'anzahl');
+$artLabels = array_column($stats['mitgliedsart'] ?? [], 'name');
+$artData = array_column($stats['mitgliedsart'] ?? [], 'anzahl');
+$artFarben = array_column($stats['mitgliedsart'] ?? [], 'farbe');
 $registerLabels = array_column($stats['register'] ?? [], 'name');
 $registerData = array_column($stats['register'] ?? [], 'anzahl');
 
@@ -50,22 +56,25 @@ include 'includes/header.php';
 <!-- Filter -->
 <div class="card mb-4">
     <div class="card-body">
-        <form method="GET" class="row g-3">
-            <div class="col-md-4">
+        <form method="GET" class="row g-3" id="mitgliederFilter">
+            <div class="col-md-5">
                 <label for="search" class="form-label">Suche</label>
-                <input type="text" class="form-control" id="search" name="search" 
-                       placeholder="Name oder Mitgliedsnummer" 
-                       value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>">
+                <input type="search" class="form-control" id="search" autocomplete="off"
+                       placeholder="Name, Nummer, Instrument, Kontakt …">
             </div>
             
             <div class="col-md-3">
-                <label for="status" class="form-label">Status</label>
-                <select class="form-select" id="status" name="status">
-                    <option value="">Alle</option>
-                    <option value="aktiv" <?php echo ($_GET['status'] ?? '') === 'aktiv' ? 'selected' : ''; ?>>Aktiv</option>
-                    <option value="passiv" <?php echo ($_GET['status'] ?? '') === 'passiv' ? 'selected' : ''; ?>>Passiv</option>
-                    <option value="ausgetreten" <?php echo ($_GET['status'] ?? '') === 'ausgetreten' ? 'selected' : ''; ?>>Ausgetreten</option>
-                    <option value="ehrenmitglied" <?php echo ($_GET['status'] ?? '') === 'ehrenmitglied' ? 'selected' : ''; ?>>Ehrenmitglied</option>
+                <label for="mitgliedsart" class="form-label">Mitgliedsart</label>
+                <select class="form-select" id="mitgliedsart" name="mitgliedsart">
+                    <?php
+                    $artOptionen = ['mitglieder' => 'Alle aktuellen Mitglieder', 'aktiv' => 'Nur aktive (spielen mit)'];
+                    foreach (Mitgliedsart::alle() as $code => $a) $artOptionen[(string)$code] = $a['name'];
+                    $artOptionen['gast'] = 'Alle Gäste (kein Vereinsmitglied)';
+                    $artOptionen['ausgetreten'] = 'Ausgetreten';
+                    $artOptionen['alle'] = 'Alle (auch ausgetretene)';
+                    foreach ($artOptionen as $wert => $text): ?>
+                    <option value="<?php echo htmlspecialchars($wert); ?>" <?php echo (string)$filterArt === (string)$wert ? 'selected' : ''; ?>><?php echo htmlspecialchars($text); ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
             
@@ -74,19 +83,16 @@ include 'includes/header.php';
                 <select class="form-select" id="register" name="register">
                     <option value="">Alle Register</option>
                     <?php foreach ($register as $reg): ?>
-                    <option value="<?php echo $reg['id']; ?>" <?php echo ($_GET['register'] ?? '') == $reg['id'] ? 'selected' : ''; ?>>
+                    <option value="<?php echo $reg['id']; ?>" <?php echo $filterRegister == $reg['id'] ? 'selected' : ''; ?>>
                         <?php echo htmlspecialchars($reg['name']); ?>
                     </option>
                     <?php endforeach; ?>
                 </select>
             </div>
             
-            <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary me-2">
-                    <i class="bi bi-search"></i> Filtern
-                </button>
-                <a href="mitglieder.php" class="btn btn-secondary">
-                    <i class="bi bi-x"></i>
+            <div class="col-md-1 d-flex align-items-end">
+                <a href="mitglieder.php?reset=1" class="btn btn-outline-secondary" title="Filter zurücksetzen" id="filterZuruecksetzen">
+                    <i class="bi bi-x-lg"></i>
                 </a>
             </div>
         </form>
@@ -105,7 +111,7 @@ include 'includes/header.php';
                         <th>Register</th>
                         <th>Instrumente</th>
                         <th>Kontakt</th>
-                        <th>Status</th>
+                        <th>Mitgliedsart</th>
                         <th class="text-end no-print">Aktionen</th>
                     </tr>
                 </thead>
@@ -116,13 +122,24 @@ include 'includes/header.php';
                             <strong><?php echo htmlspecialchars($m['mitgliedsnummer']); ?></strong>
                         </td>
                         <td>
-                            <?php 
-                            echo htmlspecialchars($m['nachname'] . ' ' . $m['vorname']); 
+                            <?php if (!empty($m['foto']) || !empty($m['bmv_foto'])):
+                                $fotoUrl = 'api/mitglied_foto.php?id=' . (int)$m['id'] . '&v=' . strtotime($m['aktualisiert_am']);
+                            ?>
+                            <img src="<?php echo $fotoUrl; ?>" alt="" class="rounded me-2 align-middle"
+                                 style="width:40px;height:40px;object-fit:cover"
+                                 data-bs-toggle="tooltip" data-bs-placement="right" data-bs-html="true"
+                                 data-bs-title="<img src='<?php echo $fotoUrl; ?>' style='width:220px;height:220px;object-fit:cover' class='rounded'>">
+                            <?php endif; ?>
+                            <?php
+                            echo htmlspecialchars($m['nachname'] . ' ' . $m['vorname']);
                             if ($m['geburtsdatum']) {
                                 $alter = date_diff(date_create($m['geburtsdatum']), date_create('today'))->y;
                                 echo "<br><small class='text-muted'>{$alter} Jahre</small>";
                             }
+                            if (empty($m['bmv_id']) && !empty($m['bmv_abgeglichen_am'])):
                             ?>
+                            <br><span class="badge bg-warning text-dark" title="Beim Abgleich mit dem BMV-Datenservice nicht gefunden">nicht im BMV</span>
+                            <?php endif; ?>
                         </td>
                         <td>
                             <?php if ($m['register_name']): ?>
@@ -157,18 +174,7 @@ include 'includes/header.php';
                             <?php endif; ?>
                         </td>
                         <td>
-                            <?php
-                            $statusColors = [
-                                'aktiv' => 'success',
-                                'passiv' => 'warning',
-                                'ausgetreten' => 'secondary',
-                                'ehrenmitglied' => 'primary'
-                            ];
-                            $color = $statusColors[$m['status']] ?? 'secondary';
-                            ?>
-                            <span class="badge bg-<?php echo $color; ?>">
-                                <?php echo ucfirst($m['status']); ?>
-                            </span>
+                            <?php echo Mitgliedsart::badge($m['mitgliedsart_code']); ?>
                         </td>
                         <td class="text-end no-print">
                             <a href="mitglied_detail.php?id=<?php echo $m['id']; ?>" 
@@ -202,7 +208,7 @@ include 'includes/header.php';
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <i class="bi bi-bar-chart me-2"></i>Nach Status
+                <i class="bi bi-bar-chart me-2"></i>Nach Mitgliedsart
             </div>
             <div class="card-body">
                 <div class="chart-container">
@@ -229,24 +235,41 @@ include 'includes/header.php';
 
 <script>
 $(document).ready(function() {
-    $('#mitgliederTable').DataTable({
+    // Ohne eigenes Suchfeld der Tabelle – gesucht wird über das Feld oben, sofort beim Tippen
+    // stateSave: Suchbegriff, Seite, Sortierung und Zeilenanzahl bleiben für die Sitzung erhalten (stateDuration -1 = sessionStorage)
+    const tabelle = $('#mitgliederTable').DataTable({
+        stateSave: true,
+        stateDuration: -1,
         order: [[1, 'asc']],
         columnDefs: [
             { targets: -1, orderable: false }
-        ]
+        ],
+        dom: '<"row align-items-center mb-2"<"col-auto"l>><"table-responsive"t><"row align-items-center mt-2"<"col-sm-5"i><"col-sm-7"p>>'
     });
+    const suche = document.getElementById('search');
+    suche.value = tabelle.search(); // gemerkten Suchbegriff anzeigen
+    suche.addEventListener('input', () => tabelle.search(suche.value).draw());
+    document.getElementById('filterZuruecksetzen').addEventListener('click', () => tabelle.state.clear());
+    suche.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+
+    // Auswahlfelder filtern sofort (Seite lädt mit den neuen Filtern neu, die Suche bleibt erhalten)
+    document.querySelectorAll('#mitgliederFilter select').forEach(feld =>
+        feld.addEventListener('change', () => document.getElementById('mitgliederFilter').submit()));
     
     // Bootstrap Tooltips initialisieren
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
+        return new bootstrap.Tooltip(tooltipTriggerEl, { html: true });
     });
 });
 
 // Charts initialisieren
 document.addEventListener('DOMContentLoaded', function() {
-    const statusLabels = <?php echo json_encode($statusLabels); ?>;
-    const statusData = <?php echo json_encode($statusData); ?>;
+    const statusLabels = <?php echo json_encode($artLabels); ?>;
+    const statusData = <?php echo json_encode($artData); ?>;
+    // Farben wie die Abzeichen der Mitgliedsarten
+    const farbe = n => getComputedStyle(document.documentElement).getPropertyValue('--bs-' + n).trim() || '#8fa1b3';
+    const statusFarben = <?php echo json_encode($artFarben); ?>.map(farbe);
     const registerLabels = <?php echo json_encode($registerLabels); ?>;
     const registerData = <?php echo json_encode($registerData); ?>;
     
@@ -256,11 +279,11 @@ document.addEventListener('DOMContentLoaded', function() {
         new Chart(statusCtx, {
             type: 'bar',
             data: {
-                labels: statusLabels.map(s => s.charAt(0).toUpperCase() + s.slice(1)),
+                labels: statusLabels,
                 datasets: [{
                     label: 'Mitglieder',
                     data: statusData,
-                    backgroundColor: ['#5b8a72', '#c9a227', '#8fa1b3', '#4f6d7a'],
+                    backgroundColor: statusFarben,
                     borderWidth: 0
                 }]
             },

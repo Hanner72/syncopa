@@ -26,12 +26,18 @@ if ($isEdit) {
 
 // Instrumententypen und Mitglieder laden
 $typen = $instrumentObj->getTypen();
-$mitglieder = $db->fetchAll("SELECT id, mitgliedsnummer, vorname, nachname FROM mitglieder WHERE status = 'aktiv' ORDER BY nachname, vorname");
+$mitglieder = $db->fetchAll("SELECT id, mitgliedsnummer, vorname, nachname FROM mitglieder WHERE mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1) ORDER BY nachname, vorname");
+
+// Nummernkreis
+require_once __DIR__ . '/classes/Nummernkreis.php';
+$nkObj = new Nummernkreis();
+$naechsteInventarNummer = $nkObj->naechsteNummer('instrumente');
 
 // Formular verarbeiten
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $inventarNr = trim($_POST['inventar_nummer'] ?? '');
     $data = [
-        'inventar_nummer' => $_POST['inventar_nummer'],
+        'inventar_nummer'  => $inventarNr !== '' ? $inventarNr : $nkObj->naechsteNummer('instrumente'),
         'instrument_typ_id' => $_POST['instrument_typ_id'],
         'hersteller' => $_POST['hersteller'] ?? null,
         'modell' => $_POST['modell'] ?? null,
@@ -103,9 +109,14 @@ include 'includes/header.php';
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="inventar_nummer" class="form-label">Inventarnummer *</label>
+                            <label for="inventar_nummer" class="form-label">Inventarnummer<?php echo $isEdit ? ' *' : ''; ?></label>
                             <input type="text" class="form-control" id="inventar_nummer" name="inventar_nummer" 
-                                   value="<?php echo htmlspecialchars($instrument['inventar_nummer'] ?? ''); ?>" required>
+                                   value="<?php echo htmlspecialchars($instrument['inventar_nummer'] ?? ''); ?>"
+                                   placeholder="<?php echo htmlspecialchars($naechsteInventarNummer); ?>"
+                                   <?php echo $isEdit ? 'required' : ''; ?>>
+                            <?php if (!$isEdit): ?>
+                            <small class="text-muted">Leer lassen für automatische Vergabe (nächste: <strong><?php echo htmlspecialchars($naechsteInventarNummer); ?></strong>)</small>
+                            <?php endif; ?>
                         </div>
                         
                         <div class="col-md-6 mb-3">
@@ -268,7 +279,7 @@ include 'includes/header.php';
         </div>
     </div>
     
-    <div class="d-flex justify-content-between mt-3">
+    <div class="d-flex justify-content-between mt-3 page-actions-sticky">
         <a href="instrumente.php" class="btn btn-secondary">
             <i class="bi bi-x"></i> Abbrechen
         </a>

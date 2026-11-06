@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Syncopa – Dokumentation</title>
+  <meta name="description" content="Benutzerhandbuch für die Syncopa Musikvereinsverwaltung">
+
+  <!-- Docsify Theme -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify-themeable@0/dist/css/theme-simple.css">
+
+  <!-- Custom Styles -->
+  <style>
+    :root {
+      --theme-color: #4a6fa5;
+      --sidebar-width: 280px;
+      --sidebar-background: #f8f9fa;
+      --base-font-size: 15px;
+      --sidebar-nav-link-color: #333;
+      --sidebar-nav-link-color--active: #4a6fa5;
+    }
+
+    .app-name-link img {
+      /* height: 40px; */
+      margin-right: 8px;
+    }
+
+    .sidebar .app-name {
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+
+    /* Screenshot Platzhalter */
+    .screenshot-hint {
+      background: #e9ecef;
+      border: 2px dashed #adb5bd;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      color: #6c757d;
+      font-size: 0.9em;
+      margin: 16px 0;
+    }
+
+    .screenshot-hint::before {
+      content: "📸 ";
+      font-size: 1.5em;
+    }
+
+    /* Tip / Warning / Info Boxen */
+    .tip, .warning, .info {
+      border-left: 4px solid;
+      padding: 12px 16px;
+      border-radius: 0 6px 6px 0;
+      margin: 16px 0;
+    }
+    .tip    { border-color: #28a745; background: #d4edda; }
+    .warning{ border-color: #ffc107; background: #fff3cd; }
+    .info   { border-color: #17a2b8; background: #d1ecf1; }
+
+    /* Rollenbadges */
+    .badge-admin     { background:#dc3545; color:#fff; padding:2px 7px; border-radius:12px; font-size:.8em; }
+    .badge-obmann    { background:#6610f2; color:#fff; padding:2px 7px; border-radius:12px; font-size:.8em; }
+    .badge-kassier   { background:#fd7e14; color:#fff; padding:2px 7px; border-radius:12px; font-size:.8em; }
+    .badge-schriftf  { background:#20c997; color:#fff; padding:2px 7px; border-radius:12px; font-size:.8em; }
+    .badge-user      { background:#6c757d; color:#fff; padding:2px 7px; border-radius:12px; font-size:.8em; }
+  </style>
+</head>
+<body>
+  <div id="app">Dokumentation wird geladen...</div>
+
+  <script>
+    window.$docsify = {
+      name: '<img src="../assets/logo_full.png" alt="Syncopa" style="padding: 12px 0;"><br>⬆️ zurück zur App',
+      nameLink: '/',
+      repo: '',
+      loadSidebar: true,
+      loadNavbar: true,
+      subMaxLevel: 3,
+      auto2top: true,
+      search: {
+        placeholder: 'Suchen...',
+        noData: 'Keine Ergebnisse',
+        depth: 4
+      },
+      pagination: {
+        previousText: '← Zurück',
+        nextText: 'Weiter →',
+        crossChapter: true
+      },
+      copyCode: {
+        buttonText: 'Kopieren',
+        errorText: 'Fehler',
+        successText: 'Kopiert!'
+      },
+      themeColor: '#4a6fa5',
+      notFoundPage: '404.md',
+
+      plugins: [
+        function(hook) {
+          hook.mounted(function() {
+            // Ermittelt automatisch den Pfad eine Ebene über /docs/
+            var appUrl = window.location.pathname.replace(/\/docs\/?.*$/, '/');
+            var nav = document.querySelector('.app-nav ul');
+            if (nav) {
+              var li = document.createElement('li');
+              li.innerHTML = '<a href="' + appUrl + '">🏠 Zur App</a>';
+              nav.prepend(li);
+            }
+          });
+        }
+      ]
+    };
+  </script>
+
+  <!-- Docsify Core -->
+  <script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/docsify.min.js"></script>
+
+  <!-- Plugins -->
+  <script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/plugins/search.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify-copy-code@2/dist/docsify-copy-code.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify-pagination/dist/docsify-pagination.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-php.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-sql.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-bash.min.js"></script>
+</body>
+</html>

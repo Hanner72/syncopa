@@ -21,31 +21,22 @@ $jahr = $_GET['jahr'] ?? date('Y');
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_beitraege'])) {
     $generierungsJahr = $_POST['jahr'];
     
-    // Welche Status zahlen?
-    $beitragspflichtige_status = [];
-    if (($settings['beitrag_aktiv'] ?? '1') == '1') $beitragspflichtige_status[] = "'aktiv'";
-    if (($settings['beitrag_passiv'] ?? '0') == '1') $beitragspflichtige_status[] = "'passiv'";
-    if (($settings['beitrag_ehrenmitglied'] ?? '0') == '1') $beitragspflichtige_status[] = "'ehrenmitglied'";
-    if (($settings['beitrag_ausgetreten'] ?? '0') == '1') $beitragspflichtige_status[] = "'ausgetreten'";
-    
-    if (empty($beitragspflichtige_status)) {
-        Session::setFlashMessage('danger', 'Keine beitragspflichtigen Status definiert. Bitte in Einstellungen konfigurieren.');
+    // Wer zahlt und wie viel, steht bei der Mitgliedsart (Stammdaten → Mitgliedsarten)
+    $pflichtArten = array_filter(Mitgliedsart::alle(), fn($a) => $a['beitragspflichtig'] && !$a['gast']);
+    if (empty($pflichtArten)) {
+        Session::setFlashMessage('danger', 'Keine Mitgliedsart ist beitragspflichtig. Bitte unter Stammdaten → Mitgliedsarten festlegen.');
         header('Location: beitraege_verwalten.php');
         exit;
     }
-    
-    $statusList = implode(',', $beitragspflichtige_status);
-    
+
     try {
-        // Mitglieder holen die Beiträge zahlen müssen
-        $mitglieder = $db->fetchAll("
-            SELECT * FROM mitglieder 
-            WHERE status IN ($statusList)
-            ORDER BY nachname, vorname
-        ");
-        
+        // Aktuelle Mitglieder mit beitragspflichtiger Mitgliedsart
+        $mitglieder = $db->fetchAll(
+            "SELECT * FROM mitglieder WHERE mitgliedsart_code IN (" . implode(',', array_map('intval', array_keys($pflichtArten))) . ")
+             ORDER BY nachname, vorname"
+        );
+
         $standardBeitrag = floatval($settings['mitgliedsbeitrag_jahr'] ?? 120);
-        $passivBeitrag = floatval($settings['beitrag_passiv_betrag'] ?? 60);
         $generiert = 0;
         $bereits_vorhanden = 0;
         
@@ -54,10 +45,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_beitraege'])
             $exists = $db->fetchOne("SELECT id FROM beitraege WHERE mitglied_id = ? AND jahr = ?", [$m['id'], $generierungsJahr]);
             
             if (!$exists) {
-                // Betrag je nach Status
-                $betrag = ($m['status'] === 'passiv' && ($settings['beitrag_passiv'] ?? '0') == '1') 
-                    ? $passivBeitrag 
-                    : $standardBeitrag;
+                // Betrag der Mitgliedsart, sonst der Standardbeitrag
+                $artBetrag = $pflichtArten[(int)$m['mitgliedsart_code']]['beitrag'] ?? null;
+                $betrag = $artBetrag !== null ? (float)$artBetrag : $standardBeitrag;
                 
                 $db->execute(
                     "INSERT INTO beitraege (mitglied_id, jahr, betrag, bezahlt, erstellt_am) VALUES (?, ?, ?, 0, NOW())",
@@ -98,7 +88,7 @@ if (isset($_GET['bezahlt']) && isset($_GET['beitrag_id'])) {
 
 // Alle Beiträge des Jahres laden
 $beitraege = $db->fetchAll("
-    SELECT b.*, m.vorname, m.nachname, m.mitgliedsnummer, m.status, m.email
+    SELECT b.*, m.vorname, m.nachname, m.mitgliedsnummer, m.mitgliedsart_code, m.email
     FROM beitraege b
     JOIN mitglieder m ON b.mitglied_id = m.id
     WHERE b.jahr = ?
@@ -218,7 +208,7 @@ include 'includes/header.php';
         Klicke auf "Beiträge generieren" um automatisch für alle beitragspflichtigen Mitglieder Beiträge zu erstellen.
         <br>
         <small class="text-muted">
-            Beitragspflichtige Status können in den <a href="einstellungen.php">Einstellungen</a> konfiguriert werden.
+            Welche Mitgliedsarten zahlen und wie viel, legst du unter <a href="stammdaten.php?tab=mitgliedsarten">Stammdaten → Mitgliedsarten</a> fest.
         </small>
     </p>
 </div>
@@ -236,7 +226,7 @@ include 'includes/header.php';
                     <tr>
                         <th>Mitgliedsnr.</th>
                         <th>Name</th>
-                        <th>Status</th>
+                        <th>Mitgliedsart</th>
                         <th>Betrag</th>
                         <th>Bezahlt</th>
                         <th>Bezahlt am</th>
@@ -252,11 +242,7 @@ include 'includes/header.php';
                             <strong><?php echo htmlspecialchars($b['nachname'] . ' ' . $b['vorname']); ?></strong>
                         </td>
                         <td>
-                            <?php
-                            $statusColors = ['aktiv' => 'success', 'passiv' => 'warning', 'ehrenmitglied' => 'primary', 'ausgetreten' => 'secondary'];
-                            $color = $statusColors[$b['status']] ?? 'secondary';
-                            ?>
-                            <span class="badge bg-<?php echo $color; ?>"><?php echo ucfirst($b['status']); ?></span>
+                            <?php echo Mitgliedsart::badge($b['mitgliedsart_code']); ?>
                         </td>
                         <td><strong>€ <?php echo number_format($b['betrag'], 2, ',', '.'); ?></strong></td>
                         <td>
