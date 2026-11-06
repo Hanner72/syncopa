@@ -946,6 +946,7 @@ CREATE TABLE IF NOT EXISTS `fest_vertraege` (
   `auftritt_zeit`   TIME NULL,
   `honorar`         DECIMAL(10,2) NULL,
   `zahlungsstatus`  ENUM('offen','teilweise','bezahlt','storniert') NOT NULL DEFAULT 'offen',
+  `bezahlt_betrag` decimal(10,2) DEFAULT NULL,
   `zahlungsdatum`   DATE NULL,
   `dokument_pfad`   VARCHAR(255) NULL,
   `dokument_name`   VARCHAR(255) NULL,

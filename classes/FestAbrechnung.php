@@ -59,7 +59,7 @@ class FestAbrechnung {
     /** Verträge mit Honorar (= Ausgaben) */
     public function getVertragsAusgaben(int $festId): array {
         $sql = "SELECT * FROM fest_vertraege
-                WHERE fest_id = ? AND honorar IS NOT NULL AND honorar > 0
+                WHERE fest_id = ? AND honorar IS NOT NULL AND honorar > 0 AND zahlungsstatus <> 'storniert'
                 ORDER BY auftritt_datum, band_name";
         return $this->db->fetchAll($sql, [$festId]);
     }
@@ -91,6 +91,7 @@ class FestAbrechnung {
             'einkauf_summe'     => array_sum(array_column($einkauf,   'preis_gesamt')),
             'bestellt_summe'    => $bestelltSumme,
             'bestellt_anzahl'   => count($bestellt),
+            'honorar_offen'     => array_sum(array_map(fn($v) => FestVertrag::offenerBetrag($v), $vertraege)),
             'vertrags_summe'    => array_sum(array_column($vertraege, 'honorar')),
             'manuelle_einnahmen'=> array_sum(array_map(fn($p) => $p['typ'] === 'einnahme' ? (float)$p['betrag'] : 0, $posten)),
             'manuelle_ausgaben' => array_sum(array_map(fn($p) => $p['typ'] === 'ausgabe'  ? (float)$p['betrag'] : 0, $posten)),

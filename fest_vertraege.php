@@ -117,6 +117,9 @@ include 'includes/header.php';
                     </td>
                     <td>
                         <span class="badge bg-<?php echo $zl['badge']; ?>"><?php echo $zl['label']; ?></span>
+                        <?php if ($v['zahlungsstatus'] === 'teilweise' && $v['bezahlt_betrag'] !== null): ?>
+                        <div class="small text-muted"><?php echo number_format($v['bezahlt_betrag'], 2, ',', '.'); ?> € bezahlt · <?php echo number_format(FestVertrag::offenerBetrag($v), 2, ',', '.'); ?> € offen</div>
+                        <?php endif; ?>
                         <?php if ($v['zahlungsdatum']): ?>
                         <div class="small text-muted"><?php echo date('d.m.Y', strtotime($v['zahlungsdatum'])); ?></div>
                         <?php endif; ?>
