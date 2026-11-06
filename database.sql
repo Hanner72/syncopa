@@ -1197,6 +1197,17 @@ CREATE TABLE IF NOT EXISTS `bmv_bezeichnungen` (
   PRIMARY KEY (`art`,`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `mitgliedsarten` (
+  `code` int NOT NULL,
+  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `aktiv` tinyint(1) NOT NULL DEFAULT '1',
+  `beitragspflichtig` tinyint(1) NOT NULL DEFAULT '0',
+  `beitrag` decimal(10,2) DEFAULT NULL,
+  `farbe` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'secondary',
+  `sortierung` int NOT NULL DEFAULT '100',
+  PRIMARY KEY (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS `bmv_inventar_zuordnung` (
   `bezeichnung` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
   `instrument_typ_id` int NOT NULL,

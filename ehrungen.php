@@ -42,7 +42,7 @@ if ($bereich === 'anstehend') {
         "SELECT DISTINCT YEAR(von) AS jahr FROM bmv_mitglied_daten WHERE art = 'ehrung' AND von IS NOT NULL ORDER BY jahr DESC"
     ), 'jahr');
     $jahr = isset($_GET['jahr']) && $_GET['jahr'] !== '' ? (int)$_GET['jahr'] : null;
-    $sql = "SELECT d.*, m.vorname, m.nachname, m.status FROM bmv_mitglied_daten d
+    $sql = "SELECT d.*, m.vorname, m.nachname, m.mitgliedsart_code FROM bmv_mitglied_daten d
             JOIN mitglieder m ON m.id = d.mitglied_id WHERE d.art = 'ehrung'";
     $params = [];
     if ($jahr) {
@@ -163,7 +163,7 @@ include 'includes/header.php';
                 <td class="ps-3"><?php echo $e['von'] ? date('d.m.Y', strtotime($e['von'])) : '–'; ?></td>
                 <td>
                     <a href="mitglied_detail.php?id=<?php echo (int)$e['mitglied_id']; ?>"><?php echo htmlspecialchars($e['nachname'] . ' ' . $e['vorname']); ?></a>
-                    <?php if ($e['status'] === 'ausgetreten'): ?><span class="badge bg-secondary ms-1">ausgetreten</span><?php endif; ?>
+                    <?php if ($e['mitgliedsart_code'] === null): ?><span class="badge bg-secondary ms-1">ausgetreten</span><?php endif; ?>
                 </td>
                 <td><?php echo htmlspecialchars(BmvZusatzdaten::name('ehrung', $e['code'])); ?></td>
                 <td class="pe-3 text-muted small"><?php echo htmlspecialchars($e['bemerkung'] ?? ''); ?></td>

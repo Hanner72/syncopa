@@ -19,7 +19,7 @@ Die Übersichtstabelle zeigt alle Mitglieder mit folgenden Informationen:
 | Name | Vor- und Nachname, Alter |
 | Register | Musikalisches Register (z.B. Trompete, Klarinette) |
 | Instrumente | welche(s) Instrument(e) spielt(e) das Mitglied |
-| Status | `aktiv`, `passiv`, `ausgetreten`, `ehrenmitglied` |
+| Mitgliedsart | z. B. aktives Mitglied, unterstützendes Mitglied, MusikschülerIn – ohne laufende Mitgliedsart: ausgetreten |
 | Kontakt | Mail-Adresse und Tel.-Nr. |
 | Aktionen | Anzeigen · Bearbeiten · Löschen |
 
@@ -30,7 +30,7 @@ Die Übersichtstabelle zeigt alle Mitglieder mit folgenden Informationen:
 ### Filtern & Suchen
 
 - **Suchfeld:** Freitext-Suche über Name, E-Mail, Mitgliedsnummer
-- **Statusfilter:** Nur aktive / nur inaktive / alle anzeigen
+- **Mitgliedsart:** Alle aktuellen Mitglieder (Standard), nur aktive, eine bestimmte Mitgliedsart, ausgetretene oder alle
 - **Registerfilter:** Nach musikalischem Register filtern
 
 ---
@@ -82,7 +82,7 @@ Die Übersichtstabelle zeigt alle Mitglieder mit folgenden Informationen:
 | Eintrittsdatum | Datum des Vereinseintritts (nur beim Anlegen) |
 | Register | Musikalisches Register (aus Stammdaten). Gilt als **Standard**, wenn keine formationsspezifische Angabe hinterlegt ist |
 | Register in `<Formation>` | Nur sichtbar, wenn oben in der Kopfzeile eine Formation aktiv ist. Überschreibt das Standard-Register **nur für diese eine Formation** (z.B. spielt jemand in der Stammkapelle Trompete, in der Jugendkapelle aber noch Flügelhorn) |
-| Status | aktiv / passiv / ausgetreten / ehrenmitglied |
+| Mitgliedsart | Beim Anlegen: gilt ab dem Eintrittsdatum. Beim Bearbeiten: andere Art oder „Ausgetreten“ wählen und das Datum angeben, ab dem sie gilt. Den Verlauf zeigt der Reiter **Mitgliedsart** beim Mitglied. Welche Arten es gibt, ob sie als aktiv zählen und wer Beitrag zahlt, steht unter Stammdaten → Mitgliedsarten |
 | Notizen | Interne Anmerkungen |
 
 > 💡 **Tipp:** Das formationsspezifische Register erscheint nur beim **Bearbeiten** eines bestehenden Mitglieds und nur, wenn oben eine Formation ausgewählt ist. Mehr zum Formations-Konzept: → [Formationen](formationen.md)

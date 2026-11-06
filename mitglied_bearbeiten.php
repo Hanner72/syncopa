@@ -64,7 +64,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'mobil' => $_POST['mobil'] ?? null,
         'email' => $_POST['email'] ?? null,
         'register_id' => $_POST['register_id'] ?? null,
-        'status' => $_POST['status'] ?? 'aktiv',
         'notizen' => $_POST['notizen'] ?? null
     ];
     foreach (['bmv_anrede', 'bmv_titel', 'bmv_titeln', 'bmv_telefon2', 'bmv_fax', 'bmv_telefon_firma',
@@ -113,7 +112,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data['foto'] = Mitglied::fotoSpeichern($fotoTmp);
         }
 
+        // Mitgliedsart (ersetzt den früheren Status)
+        $artWahl = (string)($_POST['mitgliedsart'] ?? '');
+        $artAb = $_POST['mitgliedsart_ab'] ?? date('Y-m-d');
+
         if ($isEdit) {
+            Mitgliedsart::aendern((int)$id, $artWahl, $artAb);
             $mitgliedObj->update($id, $data);
             if ($alteFotoDatei && $alteFotoDatei !== $data['foto']) {
                 Mitglied::fotoLoeschen($alteFotoDatei);
@@ -129,6 +133,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             Session::setFlashMessage('success', 'Mitglied erfolgreich aktualisiert');
         } else {
             $id = $mitgliedObj->create($data);
+            if (ctype_digit($artWahl)) {
+                Mitgliedsart::setzen((int)$id, (int)$artWahl, $data['eintritt_datum'] ?: date('Y-m-d'));
+            }
             Session::setFlashMessage('success', 'Mitglied erfolgreich erstellt');
         }
         header('Location: mitglied_detail.php?id=' . $id);
@@ -409,16 +416,40 @@ include 'includes/header.php';
                     </div>
                     <?php endif; ?>
                     
+                    <?php
+                    $artAktuell = $isEdit ? ($mitglied['mitgliedsart_code'] !== null ? (string)(int)$mitglied['mitgliedsart_code'] : 'ausgetreten')
+                        : (string)(array_key_first(array_filter(Mitgliedsart::alle(), fn($a) => $a['aktiv'])) ?? '');
+                    $artSeit = $isEdit && $mitglied['mitgliedsart_code'] !== null ? Mitgliedsart::seit((int)$id) : null;
+                    ?>
                     <div class="mb-3">
-                        <label for="status" class="form-label">Status</label>
-                        <select class="form-select" id="status" name="status">
-                            <option value="aktiv" <?php echo ($mitglied['status'] ?? 'aktiv') === 'aktiv' ? 'selected' : ''; ?>>Aktiv</option>
-                            <option value="passiv" <?php echo ($mitglied['status'] ?? '') === 'passiv' ? 'selected' : ''; ?>>Passiv</option>
-                            <option value="ausgetreten" <?php echo ($mitglied['status'] ?? '') === 'ausgetreten' ? 'selected' : ''; ?>>Ausgetreten</option>
-                            <option value="ehrenmitglied" <?php echo ($mitglied['status'] ?? '') === 'ehrenmitglied' ? 'selected' : ''; ?>>Ehrenmitglied</option>
-                            <option value="ueberpruefen" <?php echo ($mitglied['status'] ?? '') === 'ueberpruefen' ? 'selected' : ''; ?>>Überprüfen</option>
+                        <label for="mitgliedsart" class="form-label">Mitgliedsart<?php echo $isEdit ? '' : ' *'; ?></label>
+                        <select class="form-select" id="mitgliedsart" name="mitgliedsart" data-aktuell="<?php echo htmlspecialchars($artAktuell); ?>">
+                            <?php foreach (Mitgliedsart::alle() as $code => $a): ?>
+                            <option value="<?php echo $code; ?>" <?php echo $artAktuell === (string)$code ? 'selected' : ''; ?>><?php echo htmlspecialchars($a['name']); ?></option>
+                            <?php endforeach; ?>
+                            <?php if ($isEdit): ?>
+                            <option value="ausgetreten" <?php echo $artAktuell === 'ausgetreten' ? 'selected' : ''; ?>>Ausgetreten</option>
+                            <?php endif; ?>
                         </select>
+                        <div class="form-text">
+                            <?php if ($isEdit): ?>
+                            <?php echo $artSeit ? 'Seit ' . date('d.m.Y', strtotime($artSeit)) . '. ' : ''; ?>Den ganzen Verlauf siehst du beim Mitglied im Reiter „Mitgliedsart“.
+                            <?php else: ?>
+                            Gilt ab dem Eintrittsdatum.
+                            <?php endif; ?>
+                        </div>
                     </div>
+                    <?php if ($isEdit): ?>
+                    <div class="mb-3 d-none" id="mitgliedsartAbFeld">
+                        <label for="mitgliedsart_ab" class="form-label">Neue Mitgliedsart gilt ab</label>
+                        <input type="date" class="form-control" id="mitgliedsart_ab" name="mitgliedsart_ab" value="<?php echo date('Y-m-d'); ?>">
+                    </div>
+                    <script>
+                    document.getElementById('mitgliedsart').addEventListener('change', function () {
+                        document.getElementById('mitgliedsartAbFeld').classList.toggle('d-none', this.value === this.dataset.aktuell);
+                    });
+                    </script>
+                    <?php endif; ?>
 
                     <div class="mb-3">
                         <label for="bmv_kategorien" class="form-label">Kategorien (BMV)</label>

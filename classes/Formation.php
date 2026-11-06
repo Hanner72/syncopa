@@ -127,7 +127,7 @@ class Formation {
         $sql = "SELECT m.*, r.name as register_name
                 FROM mitglieder m
                 LEFT JOIN register r ON m.register_id = r.id
-                WHERE m.status = 'aktiv'
+                WHERE m.mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1)
                   AND m.id NOT IN (
                       SELECT mitglied_id FROM mitglied_formationen WHERE formation_id = ?
                   )

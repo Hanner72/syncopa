@@ -23,9 +23,18 @@ class Mitglied {
             array_unshift($params, $formationId);
         }
 
-        if (!empty($filter['status'])) {
-            $where[] = "m.status = ?";
-            $params[] = $filter['status'];
+        // Mitgliedsart: 'mitglieder' = alle aktuellen (ohne ausgetretene), 'aktiv' = zählt als aktiv,
+        // 'ausgetreten' = keine laufende Mitgliedsart, Zahl = genau diese Mitgliedsart, 'alle' bzw. leer = ohne Filter
+        $art = (string)($filter['mitgliedsart'] ?? '');
+        if ($art === 'mitglieder') {
+            $where[] = "m.mitgliedsart_code IS NOT NULL";
+        } elseif ($art === 'aktiv') {
+            $where[] = "m.mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1)";
+        } elseif ($art === 'ausgetreten') {
+            $where[] = "m.mitgliedsart_code IS NULL";
+        } elseif (ctype_digit($art)) {
+            $where[] = "m.mitgliedsart_code = ?";
+            $params[] = (int)$art;
         }
 
         if (!empty($filter['register'])) {
@@ -166,8 +175,9 @@ class Mitglied {
         $sql = "UPDATE mitglieder SET
                 vorname = ?, nachname = ?, geburtsdatum = ?, geschlecht = ?,
                 strasse = ?, plz = ?, ort = ?, land = ?, telefon = ?, mobil = ?, email = ?,
-                register_id = ?, status = ?, notizen = ?
+                register_id = ?, notizen = ?
                 WHERE id = ?";
+        // Der frühere Status wird nicht mehr gepflegt – maßgeblich ist die Mitgliedsart (siehe Mitgliedsart)
 
         $params = [
             $data['vorname'],
@@ -182,7 +192,6 @@ class Mitglied {
             $data['mobil'] ?? null,
             $data['email'] ?? null,
             $data['register_id'] ?? null,
-            $data['status'] ?? 'aktiv',
             $data['notizen'] ?? null,
             $id
         ];
@@ -242,7 +251,8 @@ class Mitglied {
         $joinF2 = $formationId ? "JOIN mitglied_formationen mf_s ON mf_s.mitglied_id = m.id AND mf_s.formation_id = {$formationId}" : '';
 
         // Gesamtanzahl
-        $sql = "SELECT COUNT(*) as total FROM mitglieder m {$joinF} WHERE m.status = 'aktiv'";
+        $aktiv = "m.mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1)";
+        $sql = "SELECT COUNT(*) as total FROM mitglieder m {$joinF} WHERE {$aktiv}";
         $result = $this->db->fetchOne($sql);
         $stats['total'] = $result['total'];
 
@@ -250,29 +260,34 @@ class Mitglied {
         if ($formationId) {
             $sql = "SELECT r.name, COUNT(mf_s.mitglied_id) as anzahl
                     FROM register r
-                    LEFT JOIN mitglieder m ON r.id = m.register_id AND m.status = 'aktiv'
+                    LEFT JOIN mitglieder m ON r.id = m.register_id AND {$aktiv}
                     LEFT JOIN mitglied_formationen mf_s ON mf_s.mitglied_id = m.id AND mf_s.formation_id = {$formationId}
                     GROUP BY r.id, r.name
                     ORDER BY r.sortierung";
         } else {
             $sql = "SELECT r.name, COUNT(m.id) as anzahl
                     FROM register r
-                    LEFT JOIN mitglieder m ON r.id = m.register_id AND m.status = 'aktiv'
+                    LEFT JOIN mitglieder m ON r.id = m.register_id AND {$aktiv}
                     GROUP BY r.id, r.name
                     ORDER BY r.sortierung";
         }
         $stats['register'] = $this->db->fetchAll($sql);
 
-        // Nach Status
-        $sql = "SELECT m.status, COUNT(*) as anzahl
+        // Nach Mitgliedsart (ohne ausgetretene)
+        $sql = "SELECT m.mitgliedsart_code AS code, COUNT(*) as anzahl
                 FROM mitglieder m {$joinF2}
-                GROUP BY m.status";
-        $stats['status'] = $this->db->fetchAll($sql);
+                WHERE m.mitgliedsart_code IS NOT NULL
+                GROUP BY m.mitgliedsart_code";
+        $stats['mitgliedsart'] = [];
+        foreach ($this->db->fetchAll($sql) as $r) {
+            $stats['mitgliedsart'][] = ['name' => Mitgliedsart::name((int)$r['code']), 'anzahl' => (int)$r['anzahl'],
+                'farbe' => Mitgliedsart::alle()[(int)$r['code']]['farbe'] ?? 'secondary'];
+        }
 
         // Durchschnittsalter
         $sql = "SELECT AVG(YEAR(CURDATE()) - YEAR(m.geburtsdatum)) as durchschnittsalter
                 FROM mitglieder m {$joinF}
-                WHERE m.status = 'aktiv' AND m.geburtsdatum IS NOT NULL";
+                WHERE {$aktiv} AND m.geburtsdatum IS NOT NULL";
         $result = $this->db->fetchOne($sql);
         $stats['durchschnittsalter'] = round($result['durchschnittsalter'] ?? 0);
 

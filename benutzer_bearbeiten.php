@@ -18,9 +18,9 @@ $rollen = $db->fetchAll("SELECT * FROM rollen WHERE aktiv = 1 ORDER BY sortierun
 
 // Alle Mitglieder für die Verknüpfung laden
 $mitglieder = $db->fetchAll("
-    SELECT id, mitgliedsnummer, vorname, nachname, status 
-    FROM mitglieder 
-    WHERE status IN ('aktiv', 'passiv')
+    SELECT id, mitgliedsnummer, vorname, nachname, mitgliedsart_code
+    FROM mitglieder
+    WHERE mitgliedsart_code IS NOT NULL
     ORDER BY nachname, vorname
 ");
 
@@ -174,7 +174,7 @@ include 'includes/header.php';
                             <?php echo ($benutzer['mitglied_id'] ?? '') == $mitglied['id'] ? 'selected' : ''; ?>>
                         <?php echo htmlspecialchars($mitglied['nachname'] . ' ' . $mitglied['vorname']); ?>
                         (<?php echo htmlspecialchars($mitglied['mitgliedsnummer']); ?>)
-                        - <?php echo ucfirst($mitglied['status']); ?>
+                        - <?php echo htmlspecialchars(Mitgliedsart::name($mitglied['mitgliedsart_code'] !== null ? (int)$mitglied['mitgliedsart_code'] : null)); ?>
                     </option>
                     <?php endforeach; ?>
                 </select>

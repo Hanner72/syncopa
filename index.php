@@ -32,7 +32,7 @@ $sql = "SELECT m.vorname, m.nachname, m.geburtsdatum,
         DAY(m.geburtsdatum) as tag, MONTH(m.geburtsdatum) as monat
         FROM mitglieder m
         {$joinFormation}
-        WHERE m.status = 'aktiv'
+        WHERE m.mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1)
         AND MONTH(m.geburtsdatum) BETWEEN MONTH(CURDATE()) AND MONTH(CURDATE()) + 1
         ORDER BY MONTH(m.geburtsdatum), DAY(m.geburtsdatum)";
 $geburtstage = $db->fetchAll($sql, $paramsGeb);

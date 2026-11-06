@@ -26,7 +26,7 @@ if ($isEdit) {
 
 // Instrumententypen und Mitglieder laden
 $typen = $instrumentObj->getTypen();
-$mitglieder = $db->fetchAll("SELECT id, mitgliedsnummer, vorname, nachname FROM mitglieder WHERE status = 'aktiv' ORDER BY nachname, vorname");
+$mitglieder = $db->fetchAll("SELECT id, mitgliedsnummer, vorname, nachname FROM mitglieder WHERE mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1) ORDER BY nachname, vorname");
 
 // Nummernkreis
 require_once __DIR__ . '/classes/Nummernkreis.php';

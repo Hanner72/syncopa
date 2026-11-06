@@ -73,7 +73,7 @@ class FestMitarbeiter {
     public function getFreieMitglieder(int $festId): array {
         $sql = "SELECT id, vorname, nachname, mitgliedsnummer
                 FROM mitglieder
-                WHERE status = 'aktiv'
+                WHERE mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1)
                 AND id NOT IN (
                     SELECT mitglied_id FROM fest_mitarbeiter
                     WHERE fest_id = ? AND mitglied_id IS NOT NULL

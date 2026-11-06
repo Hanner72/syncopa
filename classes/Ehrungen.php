@@ -185,7 +185,7 @@ class Ehrungen {
         }
 
         $liste = [];
-        foreach ($db->fetchAll("SELECT id, vorname, nachname, mitgliedsnummer, status FROM mitglieder WHERE status <> 'ausgetreten'") as $m) {
+        foreach ($db->fetchAll("SELECT id, vorname, nachname, mitgliedsnummer, mitgliedsart_code FROM mitglieder WHERE mitgliedsart_code IS NOT NULL") as $m) {
             $d = $daten[(int)$m['id']] ?? [];
             $info = self::fuerMitglied((int)$m['id'], ['ehrung' => $d['ehrung'] ?? [], 'mitgliedsart' => $d['mitgliedsart'] ?? []], $regeln, $gezaehlt);
             foreach ($info['anstehend'] as $a) {

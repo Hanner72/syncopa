@@ -11,9 +11,9 @@ $db = Database::getInstance();
 
 // Filter verarbeiten
 $filter = [];
-if (!empty($_GET['status'])) {
-    $filter['status'] = $_GET['status'];
-}
+// Mitgliedsart (ersetzt den früheren Status); ohne Auswahl werden nur aktuelle Mitglieder gezeigt
+$filterArt = $_GET['mitgliedsart'] ?? 'mitglieder';
+$filter['mitgliedsart'] = $filterArt;
 if (!empty($_GET['register'])) {
     $filter['register'] = $_GET['register'];
 }
@@ -28,8 +28,9 @@ $register = $db->fetchAll("SELECT * FROM register ORDER BY sortierung");
 
 // Statistiken für Charts
 $stats = $mitglied->getStatistik();
-$statusLabels = array_column($stats['status'] ?? [], 'status');
-$statusData = array_column($stats['status'] ?? [], 'anzahl');
+$artLabels = array_column($stats['mitgliedsart'] ?? [], 'name');
+$artData = array_column($stats['mitgliedsart'] ?? [], 'anzahl');
+$artFarben = array_column($stats['mitgliedsart'] ?? [], 'farbe');
 $registerLabels = array_column($stats['register'] ?? [], 'name');
 $registerData = array_column($stats['register'] ?? [], 'anzahl');
 
@@ -59,14 +60,16 @@ include 'includes/header.php';
             </div>
             
             <div class="col-md-3">
-                <label for="status" class="form-label">Status</label>
-                <select class="form-select" id="status" name="status">
-                    <option value="">Alle</option>
-                    <option value="aktiv" <?php echo ($_GET['status'] ?? '') === 'aktiv' ? 'selected' : ''; ?>>Aktiv</option>
-                    <option value="passiv" <?php echo ($_GET['status'] ?? '') === 'passiv' ? 'selected' : ''; ?>>Passiv</option>
-                    <option value="ausgetreten" <?php echo ($_GET['status'] ?? '') === 'ausgetreten' ? 'selected' : ''; ?>>Ausgetreten</option>
-                    <option value="ehrenmitglied" <?php echo ($_GET['status'] ?? '') === 'ehrenmitglied' ? 'selected' : ''; ?>>Ehrenmitglied</option>
-                    <option value="ueberpruefen" <?php echo ($_GET['status'] ?? '') === 'ueberpruefen' ? 'selected' : ''; ?>>Überprüfen</option>
+                <label for="mitgliedsart" class="form-label">Mitgliedsart</label>
+                <select class="form-select" id="mitgliedsart" name="mitgliedsart">
+                    <?php
+                    $artOptionen = ['mitglieder' => 'Alle aktuellen Mitglieder', 'aktiv' => 'Nur aktive (spielen mit)'];
+                    foreach (Mitgliedsart::alle() as $code => $a) $artOptionen[(string)$code] = $a['name'];
+                    $artOptionen['ausgetreten'] = 'Ausgetreten';
+                    $artOptionen['alle'] = 'Alle (auch ausgetretene)';
+                    foreach ($artOptionen as $wert => $text): ?>
+                    <option value="<?php echo htmlspecialchars($wert); ?>" <?php echo (string)$filterArt === (string)$wert ? 'selected' : ''; ?>><?php echo htmlspecialchars($text); ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
             
@@ -106,7 +109,7 @@ include 'includes/header.php';
                         <th>Register</th>
                         <th>Instrumente</th>
                         <th>Kontakt</th>
-                        <th>Status</th>
+                        <th>Mitgliedsart</th>
                         <th class="text-end no-print">Aktionen</th>
                     </tr>
                 </thead>
@@ -169,20 +172,7 @@ include 'includes/header.php';
                             <?php endif; ?>
                         </td>
                         <td>
-                            <?php
-                            $statusColors = [
-                                'aktiv' => 'success',
-                                'passiv' => 'warning',
-                                'ausgetreten' => 'secondary',
-                                'ehrenmitglied' => 'primary',
-                                'ueberpruefen' => 'info'
-                            ];
-                            $statusLabels = ['ueberpruefen' => 'Überprüfen'];
-                            $color = $statusColors[$m['status']] ?? 'secondary';
-                            ?>
-                            <span class="badge bg-<?php echo $color; ?>">
-                                <?php echo $statusLabels[$m['status']] ?? ucfirst($m['status']); ?>
-                            </span>
+                            <?php echo Mitgliedsart::badge($m['mitgliedsart_code']); ?>
                         </td>
                         <td class="text-end no-print">
                             <a href="mitglied_detail.php?id=<?php echo $m['id']; ?>" 
@@ -216,7 +206,7 @@ include 'includes/header.php';
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <i class="bi bi-bar-chart me-2"></i>Nach Status
+                <i class="bi bi-bar-chart me-2"></i>Nach Mitgliedsart
             </div>
             <div class="card-body">
                 <div class="chart-container">
@@ -259,8 +249,11 @@ $(document).ready(function() {
 
 // Charts initialisieren
 document.addEventListener('DOMContentLoaded', function() {
-    const statusLabels = <?php echo json_encode($statusLabels); ?>;
-    const statusData = <?php echo json_encode($statusData); ?>;
+    const statusLabels = <?php echo json_encode($artLabels); ?>;
+    const statusData = <?php echo json_encode($artData); ?>;
+    // Farben wie die Abzeichen der Mitgliedsarten
+    const farbe = n => getComputedStyle(document.documentElement).getPropertyValue('--bs-' + n).trim() || '#8fa1b3';
+    const statusFarben = <?php echo json_encode($artFarben); ?>.map(farbe);
     const registerLabels = <?php echo json_encode($registerLabels); ?>;
     const registerData = <?php echo json_encode($registerData); ?>;
     
@@ -270,11 +263,11 @@ document.addEventListener('DOMContentLoaded', function() {
         new Chart(statusCtx, {
             type: 'bar',
             data: {
-                labels: statusLabels.map(s => s.charAt(0).toUpperCase() + s.slice(1)),
+                labels: statusLabels,
                 datasets: [{
                     label: 'Mitglieder',
                     data: statusData,
-                    backgroundColor: ['#5b8a72', '#c9a227', '#8fa1b3', '#4f6d7a'],
+                    backgroundColor: statusFarben,
                     borderWidth: 0
                 }]
             },

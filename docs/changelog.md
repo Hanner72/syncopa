@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.7.0]
+
+### Hinzugefügt
+
+- Mitgliedsarten unter Stammdaten (z. B. aktives Mitglied, unterstützendes Mitglied, MusikschülerIn, Ehrenmitglied)
+  - je Art: zählt als aktiv, beitragspflichtig, eigener Beitrag, Farbe
+  - eigene Arten möglich, die Nummer lässt sich später auf die BMV-Nummer ändern
+- Mitgliedsart beim Anlegen und Bearbeiten eines Mitglieds wählen, mit Datum „gilt ab“
+
+### Geändert
+
+- Die Mitgliedsart ersetzt den bisherigen Status (aktiv, passiv, ausgetreten …) überall in Syncopa
+  - kommt aus dem BMV oder wird selbst eingetragen, funktioniert auch ohne BMV
+  - ohne laufende Mitgliedsart gilt ein Mitglied als ausgetreten
+- Mitgliederliste zeigt standardmäßig nur aktuelle Mitglieder
+- Mitgliedsbeiträge richten sich nach der Mitgliedsart, in den Einstellungen bleiben Standardbeitrag und Fälligkeit
+- Bisherige Beitragseinstellungen und Status werden beim Update automatisch übernommen
+
 ## [2.6.1]
 
 ### Hinzugefügt

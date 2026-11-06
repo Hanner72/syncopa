@@ -1,5 +1,5 @@
 <?php
-// stammdaten.php - Verwaltung von Registern, Ausrückungstypen, Instrumententypen
+// stammdaten.php - Verwaltung von Registern, Ausrückungstypen, Instrumententypen, Mitgliedsarten
 require_once 'config.php';
 require_once 'includes.php';
 
@@ -17,6 +17,29 @@ $error = null;
 $success = null;
 
 // ===================== VERARBEITUNG =====================
+
+// Mitgliedsarten verarbeiten (ersetzen den früheren Mitgliedsstatus, siehe classes/Mitgliedsart.php)
+if (in_array($action, ['mitgliedsarten_speichern', 'mitgliedsart_loeschen'], true)) {
+    try {
+        if ($action === 'mitgliedsart_loeschen') {
+            Mitgliedsart::loeschen((int)($_POST['code'] ?? 0));
+            Session::setFlashMessage('success', 'Mitgliedsart gelöscht.');
+        } else {
+            foreach ($_POST['art'] ?? [] as $alterCode => $e) {
+                Mitgliedsart::speichern($e, (int)$alterCode);
+            }
+            $neu = $_POST['neu'] ?? [];
+            if (trim((string)($neu['name'] ?? '')) !== '') {
+                Mitgliedsart::speichern($neu);
+            }
+            Session::setFlashMessage('success', 'Mitgliedsarten gespeichert.');
+        }
+    } catch (RuntimeException $e) {
+        Session::setFlashMessage('danger', $e->getMessage());
+    }
+    header('Location: stammdaten.php?tab=mitgliedsarten');
+    exit;
+}
 
 // Register verarbeiten
 if ($action === 'register_save') {
@@ -206,6 +229,11 @@ include 'includes/header.php';
     <li class="nav-item">
         <a class="nav-link <?php echo $tab === 'ausrueckungstypen' ? 'active' : ''; ?>" href="?tab=ausrueckungstypen">
             <i class="bi bi-calendar-event"></i> Ausrückungstypen
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?php echo $tab === 'mitgliedsarten' ? 'active' : ''; ?>" href="?tab=mitgliedsarten">
+            <i class="bi bi-person-vcard"></i> Mitgliedsarten
         </a>
     </li>
     <li class="nav-item">
@@ -459,6 +487,93 @@ include 'includes/header.php';
         </div>
     </div>
 </div>
+
+<?php elseif ($tab === 'mitgliedsarten'):
+    $arten = Mitgliedsart::alle();
+    $anzahl = Mitgliedsart::anzahlJeArt();
+    $farbAuswahl = function (string $name, string $wert) {
+        $html = '<select class="form-select form-select-sm" name="' . $name . '">';
+        foreach (Mitgliedsart::FARBEN as $f => $text) {
+            $html .= '<option value="' . $f . '"' . ($f === $wert ? ' selected' : '') . '>' . $text . '</option>';
+        }
+        return $html . '</select>';
+    };
+?>
+<!-- ==================== MITGLIEDSARTEN ==================== -->
+<div class="alert alert-permanent alert-secondary small">
+    <i class="bi bi-info-circle"></i>
+    Die Mitgliedsart ersetzt den früheren Status (aktiv, passiv …). Welche Art ein Mitglied gerade hat, steht beim Mitglied
+    im Reiter <strong>Mitgliedsart</strong> – aus dem BMV oder selbst eingetragen. Ohne laufende Mitgliedsart gilt ein Mitglied als ausgetreten.<br>
+    <strong>Nr.</strong> ist die Nummer im BMV. Für Arten, die es im BMV (noch) nicht gibt, eine eigene Nummer ab <?php echo Mitgliedsart::EIGENE_NUMMERN_AB; ?>
+    verwenden; sie lässt sich später auf die BMV-Nummer ändern, alle Einträge werden mit umgestellt.
+</div>
+
+<form method="POST">
+    <input type="hidden" name="action" value="mitgliedsarten_speichern">
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-3" style="width:90px">Nr.</th>
+                        <th>Name</th>
+                        <th class="text-center" data-bs-toggle="tooltip" title="Erscheint bei Proben, Ausrückungen, Instrument- und Uniformausgabe, Festen und in der Statistik">Zählt als aktiv <i class="bi bi-question-circle text-muted"></i></th>
+                        <th class="text-center">Beitragspflichtig</th>
+                        <th style="width:130px" data-bs-toggle="tooltip" title="Leer = Standardbeitrag aus den Einstellungen">Beitrag € <i class="bi bi-question-circle text-muted"></i></th>
+                        <th style="width:130px">Farbe</th>
+                        <th style="width:90px">Reihenf.</th>
+                        <th class="text-end">Mitglieder</th>
+                        <th class="pe-3"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach ($arten as $code => $a): $f = "art[$code]"; ?>
+                <tr>
+                    <td class="ps-3"><input type="number" min="1" class="form-control form-control-sm" name="<?php echo $f; ?>[code]" value="<?php echo $code; ?>"></td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm" name="<?php echo $f; ?>[name]" value="<?php echo htmlspecialchars($a['name']); ?>" maxlength="100" required>
+                    </td>
+                    <td class="text-center"><input type="checkbox" class="form-check-input" name="<?php echo $f; ?>[aktiv]" value="1" <?php echo $a['aktiv'] ? 'checked' : ''; ?>></td>
+                    <td class="text-center"><input type="checkbox" class="form-check-input" name="<?php echo $f; ?>[beitragspflichtig]" value="1" <?php echo $a['beitragspflichtig'] ? 'checked' : ''; ?>></td>
+                    <td><input type="number" step="0.01" min="0" class="form-control form-control-sm" name="<?php echo $f; ?>[beitrag]" value="<?php echo $a['beitrag'] !== null ? htmlspecialchars($a['beitrag']) : ''; ?>" placeholder="Standard"></td>
+                    <td><?php echo $farbAuswahl($f . '[farbe]', $a['farbe']); ?></td>
+                    <td><input type="number" class="form-control form-control-sm" name="<?php echo $f; ?>[sortierung]" value="<?php echo (int)$a['sortierung']; ?>"></td>
+                    <td class="text-end">
+                        <?php echo Mitgliedsart::badge($code); ?>
+                        <span class="ms-1"><?php echo (int)($anzahl[$code] ?? 0); ?></span>
+                    </td>
+                    <td class="pe-3 text-end">
+                        <button type="submit" form="artLoeschen<?php echo $code; ?>" class="btn btn-sm btn-link text-danger p-0" title="Löschen"
+                                onclick="return confirm('Mitgliedsart „<?php echo htmlspecialchars(addslashes($a['name'])); ?>“ löschen?');"><i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+                <tr class="table-light">
+                    <td class="ps-3"><input type="number" min="1" class="form-control form-control-sm" name="neu[code]" placeholder="<?php echo Mitgliedsart::naechsteEigeneNummer(); ?>" value="<?php echo Mitgliedsart::naechsteEigeneNummer(); ?>"></td>
+                    <td><input type="text" class="form-control form-control-sm" name="neu[name]" maxlength="100" placeholder="Neue Mitgliedsart, z. B. Ehrenobmann"></td>
+                    <td class="text-center"><input type="checkbox" class="form-check-input" name="neu[aktiv]" value="1"></td>
+                    <td class="text-center"><input type="checkbox" class="form-check-input" name="neu[beitragspflichtig]" value="1"></td>
+                    <td><input type="number" step="0.01" min="0" class="form-control form-control-sm" name="neu[beitrag]" placeholder="Standard"></td>
+                    <td><?php echo $farbAuswahl('neu[farbe]', 'secondary'); ?></td>
+                    <td><input type="number" class="form-control form-control-sm" name="neu[sortierung]" value="100"></td>
+                    <td colspan="2" class="text-muted small pe-3">wird beim Speichern angelegt</td>
+                </tr>
+                </tbody>
+            </table>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex justify-content-end mt-3 page-actions-sticky">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Mitgliedsarten speichern</button>
+    </div>
+</form>
+<?php foreach ($arten as $code => $a): ?>
+<form method="POST" id="artLoeschen<?php echo $code; ?>" class="d-none">
+    <input type="hidden" name="action" value="mitgliedsart_loeschen">
+    <input type="hidden" name="code" value="<?php echo $code; ?>">
+</form>
+<?php endforeach; ?>
 
 <?php else: ?>
 <!-- ==================== NUMMERNKREISE ==================== -->

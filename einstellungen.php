@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($error)) {
         }
 
         // Checkboxen (die nicht in POST sind wenn nicht angeklickt)
-        $checkboxen = ['beitrag_aktiv', 'beitrag_passiv', 'beitrag_ehrenmitglied', 'beitrag_ausgetreten', 'telemetry_enabled', 'bmv_aktiv'];
+        $checkboxen = ['telemetry_enabled', 'bmv_aktiv'];
         foreach ($checkboxen as $checkbox) {
             $wert = isset($_POST[$checkbox]) ? '1' : '0';
             $db->execute(
@@ -260,74 +260,21 @@ include 'includes/header.php';
             <h5 class="mb-0">Mitgliedsbeiträge</h5>
         </div>
         <div class="card-body">
-            <div class="alert alert-info">
+            <div class="alert alert-permanent alert-info small">
                 <i class="bi bi-info-circle"></i>
-                <strong>Hinweis:</strong> Hier konfigurierst du die Mitgliedsbeiträge nach Status.
-                Unter <a href="beitraege_verwalten.php" class="alert-link">Beiträge verwalten</a> 
-                kannst du dann automatisch Beiträge für alle Mitglieder generieren.
+                Welche Mitglieder Beitrag zahlen und wie viel, steht bei der Mitgliedsart unter
+                <a href="stammdaten.php?tab=mitgliedsarten" class="alert-link">Stammdaten → Mitgliedsarten</a>.
+                Unter <a href="beitraege_verwalten.php" class="alert-link">Beiträge verwalten</a> erzeugst du dann die Beiträge eines Jahres.
             </div>
-            
-            <div class="mb-3">
-                <label for="mitgliedsbeitrag_jahr" class="form-label">
-                    Beitrag für aktive Mitglieder pro Jahr (€)
-                </label>
-                <input type="number" class="form-control" id="mitgliedsbeitrag_jahr" name="mitgliedsbeitrag_jahr" 
-                       step="0.01" value="<?php echo htmlspecialchars($settings['mitgliedsbeitrag_jahr'] ?? '120.00'); ?>">
-                <small class="text-muted">Dieser Betrag gilt für aktive Mitglieder (Standard)</small>
-            </div>
-            
-            <hr>
-            <h6>Beitragspflicht nach Mitgliederstatus</h6>
-            <p class="text-muted small">Wähle aus, welche Mitgliederkategorien Beiträge zahlen müssen:</p>
-            
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="beitrag_aktiv" name="beitrag_aktiv" 
-                               <?php echo ($settings['beitrag_aktiv'] ?? '1') ? 'checked' : ''; ?>>
-                        <label class="form-check-label" for="beitrag_aktiv">
-                            <strong>Aktive Mitglieder</strong>
-                        </label>
-                    </div>
-                    
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="beitrag_passiv" name="beitrag_passiv" 
-                               <?php echo ($settings['beitrag_passiv'] ?? '0') ? 'checked' : ''; ?>>
-                        <label class="form-check-label" for="beitrag_passiv">
-                            <strong>Passive Mitglieder</strong>
-                        </label>
-                    </div>
-                </div>
-                
-                <div class="col-md-6">
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="beitrag_ehrenmitglied" name="beitrag_ehrenmitglied" 
-                               <?php echo ($settings['beitrag_ehrenmitglied'] ?? '0') ? 'checked' : ''; ?>>
-                        <label class="form-check-label" for="beitrag_ehrenmitglied">
-                            <strong>Ehrenmitglieder</strong>
-                        </label>
-                    </div>
-                    
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="beitrag_ausgetreten" name="beitrag_ausgetreten" 
-                               <?php echo ($settings['beitrag_ausgetreten'] ?? '0') ? 'checked' : ''; ?>>
-                        <label class="form-check-label" for="beitrag_ausgetreten">
-                            <strong>Ausgetretene Mitglieder</strong>
-                        </label>
-                    </div>
-                </div>
-            </div>
-            
-            <hr>
-            
+
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label for="beitrag_passiv_betrag" class="form-label">Beitrag für Passive (€)</label>
-                    <input type="number" class="form-control" id="beitrag_passiv_betrag" name="beitrag_passiv_betrag" 
-                           step="0.01" value="<?php echo htmlspecialchars($settings['beitrag_passiv_betrag'] ?? '60.00'); ?>">
-                    <small class="text-muted">Falls abweichend vom Standardbeitrag</small>
+                    <label for="mitgliedsbeitrag_jahr" class="form-label">Standardbeitrag pro Jahr (€)</label>
+                    <input type="number" class="form-control" id="mitgliedsbeitrag_jahr" name="mitgliedsbeitrag_jahr"
+                           step="0.01" value="<?php echo htmlspecialchars($settings['mitgliedsbeitrag_jahr'] ?? '120.00'); ?>">
+                    <small class="text-muted">Gilt für beitragspflichtige Mitgliedsarten ohne eigenen Beitrag</small>
                 </div>
-                
+
                 <div class="col-md-6 mb-3">
                     <label for="beitrag_faelligkeit_monat" class="form-label">Fälligkeit im Monat</label>
                     <select class="form-select" id="beitrag_faelligkeit_monat" name="beitrag_faelligkeit_monat">

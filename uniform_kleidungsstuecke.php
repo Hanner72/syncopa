@@ -18,7 +18,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'fehlende_mitglieder' && isset($_G
         $mitglieder = $db->fetchAll(
             "SELECT m.id, m.vorname, m.nachname
              FROM mitglieder m
-             WHERE m.status = 'aktiv'
+             WHERE m.mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1)
                AND m.id NOT IN (
                    SELECT uz.mitglied_id
                    FROM uniform_zuweisungen uz
@@ -186,7 +186,7 @@ try {
 // Anzahl fehlender Mitglieder je Kleidungsstück
 $fehlendAnzahl = [];
 try {
-    $aktiveMitglieder = (int)$db->fetchOne("SELECT COUNT(*) as c FROM mitglieder WHERE status = 'aktiv'")['c'];
+    $aktiveMitglieder = (int)$db->fetchOne("SELECT COUNT(*) as c FROM mitglieder WHERE mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1)")['c'];
     $rows = $db->fetchAll(
         "SELECT kleidungsstueck_id, COUNT(DISTINCT mitglied_id) AS zugeteilt
          FROM uniform_zuweisungen
