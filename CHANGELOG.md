@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.8.2]
+
+### Hinzugefügt
+
+- Festverwaltung, Abrechnung: bestellte Einkäufe (noch nicht erhalten) werden eigens aufgelistet
+  - mit Hinweis „Noch nicht geliefert“ und Kennzeichen „bestellt“
+  - zählen als voraussichtliche Ausgaben mit, das Ergebnis heißt dann „Voraussichtliches Ergebnis“
+
+### Verbessert
+
+- Festverwaltung, Einkäufe: Klick auf den Status öffnet eine Auswahl „Status ändern auf …“ (Geplant, Bestellt, Erhalten, Storniert)
+
 ## [2.8.1]
 
 ### Hinzugefügt

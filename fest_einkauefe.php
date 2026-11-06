@@ -332,7 +332,24 @@ function renderEinkaufRow(array $e, array $statusLabels, int $festId, bool $show
         <td class="small"><?php echo $e['menge'] ? number_format((int)$e['menge'], 0, ',', '.') . ' ' . htmlspecialchars($e['einheit'] ?? '') : '–'; ?></td>
         <td><?php echo $e['preis_gesamt'] !== null ? number_format($e['preis_gesamt'], 2, ',', '.') . ' €' : '–'; ?></td>
         <?php echo $lf; ?>
-        <td><span class="badge bg-<?php echo $sl['badge']; ?>"><?php echo $sl['label']; ?></span></td>
+        <td>
+            <?php if (Session::checkPermission('fest', 'schreiben')): ?>
+            <div class="dropdown d-inline-block">
+                <button type="button" class="badge bg-<?php echo $sl['badge']; ?> border-0 dropdown-toggle einkauf-status-knopf"
+                        data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" title="Status ändern"><?php echo $sl['label']; ?></button>
+                <ul class="dropdown-menu shadow-sm">
+                    <li><h6 class="dropdown-header">Status ändern auf …</h6></li>
+                    <?php foreach ($statusLabels as $sv => $sOpt): ?>
+                    <li><a class="dropdown-item d-flex align-items-center gap-2 <?php echo $sv === $e['status'] ? 'active' : ''; ?>" href="#"
+                           data-einkauf-status="<?php echo $sv; ?>" data-id="<?php echo (int)$e['id']; ?>">
+                        <span class="badge bg-<?php echo $sOpt['badge']; ?>">&nbsp;</span><?php echo $sOpt['label']; ?></a></li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+            <?php else: ?>
+            <span class="badge bg-<?php echo $sl['badge']; ?>"><?php echo $sl['label']; ?></span>
+            <?php endif; ?>
+        </td>
         <td class="text-center">
             <?php if (Session::checkPermission('fest', 'schreiben')): ?>
             <button class="btn-vorlage-toggle"
@@ -367,6 +384,29 @@ function renderEinkaufRow(array $e, array $statusLabels, int $festId, bool $show
 
 <?php include 'includes/footer.php'; ?>
 <script>
+// Status eines Einkaufs über das Auswahlmenü am Status-Kennzeichen ändern
+var EINKAUF_STATUS = <?php echo json_encode($statusLabels, JSON_UNESCAPED_UNICODE); ?>;
+document.addEventListener('click', function (ev) {
+    var a = ev.target.closest('[data-einkauf-status]');
+    if (!a) return;
+    ev.preventDefault();
+    var neu = a.dataset.einkaufStatus, menue = a.closest('.dropdown'), knopf = menue.querySelector('.einkauf-status-knopf');
+    if (a.classList.contains('active')) return;
+    fetch('api/fest_einkauf_status.php', { method: 'POST', body: new URLSearchParams({ id: a.dataset.id, status: neu }) })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+            if (!d.success) { alert(d.error || 'Status konnte nicht geändert werden.'); return; }
+            var sl = EINKAUF_STATUS[neu];
+            knopf.className = 'badge bg-' + sl.badge + ' border-0 dropdown-toggle einkauf-status-knopf';
+            knopf.textContent = sl.label;
+            menue.querySelectorAll('[data-einkauf-status]').forEach(function (x) { x.classList.toggle('active', x === a); });
+            if (window.showToast) showToast('Status: ' + sl.label, 'success');
+            // Summen oben (Geplant/Bestellt/Erhalten) aktualisieren
+            setTimeout(function () { location.reload(); }, 500);
+        })
+        .catch(function () { alert('Status konnte nicht geändert werden.'); });
+});
+
 var festId    = <?php echo $festId; ?>;
 var STORE_KEY = 'einkauf_filter_<?php echo $festId; ?>';
 
