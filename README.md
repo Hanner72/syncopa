@@ -42,7 +42,7 @@ Telegram: https://t.me/hanner72
 | **Noten** | Digitaler Notenkatalog mit Archivnummern und PDF-Upload |
 | **Ausrückungen** | Termine, Anwesenheit und Programmplanung |
 | **Kalender** | Interaktiver Kalender mit iCal-Export |
-| **Finanzen** | Einnahmen, Ausgaben und Mitgliedsbeiträge |
+| **Kassabuch** | Konten, Buchungen mit Belegen, Mitgliedsbeiträge, Berichte für Kassaprüfung und Jahreshauptversammlung |
 | **Uniformen** | Trachtenverwaltung und Ausgabehistorie |
 | **Festverwaltung** | Stationen, Dienstplan, Einkäufe, Verträge, Abrechnung |
 | **E-Mail** | E-Mail-Programm für persönliche und Funktions-Postfächer, mit Spamfilter |
@@ -56,7 +56,7 @@ Telegram: https://t.me/hanner72
 - 🎺 **Instrumenteninventar** – Verleih, Wartung, Versicherungswerte
 - 🎼 **Notenarchiv** – PDF-Upload, Schwierigkeitsgrade, Archivnummern
 - 📅 **Kalender & Ausrückungen** – Termine, Anwesenheit, iCal-Export
-- 💰 **Finanzen** – Kassenbuch, Mitgliedsbeiträge, Berichte
+- 💰 **Kassabuch** – Konten mit Anfangsbestand, Belege, Einnahmen-Ausgaben-Rechnung, Vermögensübersicht, Prüfbericht, Jahresabschluss
 - 👔 **Uniformverwaltung** – Trachten, Größen, Ausgabe/Rückgabe
 - 🎪 **Festverwaltung** – vollständiges Modul zur Vereinsfest-Organisation
 - ✉️ **E-Mail** – Outlook-ähnliches Postfach für obmann@, kapellmeister@ usw., mit Adressbuch, Ordnern und Junk-Filter

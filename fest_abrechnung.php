@@ -18,6 +18,18 @@ $abrObj     = new FestAbrechnung();
 $stationObj = new FestStation();
 $stationen  = $stationObj->getByFest($festId);
 
+// POST: Fest-Abrechnung ins Kassabuch übernehmen
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'kassabuch' && Session::checkPermission('finanzen', 'schreiben')) {
+    try {
+        $r = Kassabuch::festUebernehmen($festId, (int)$_POST['konto_id'], (string)$_POST['datum']);
+        Session::setFlashMessage('success', 'Ins Kassabuch übernommen: Einnahmen ' . Kassabuch::euro($r['einnahmen']) . ', Ausgaben ' . Kassabuch::euro($r['ausgaben']) . '.');
+    } catch (RuntimeException $e) {
+        Session::setFlashMessage('danger', $e->getMessage());
+    }
+    header('Location: fest_abrechnung.php?fest_id=' . $festId);
+    exit;
+}
+
 // POST: Posten speichern / löschen
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && Session::checkPermission('fest', 'schreiben')) {
     $action = $_POST['action'] ?? '';
@@ -151,6 +163,36 @@ include 'includes/header.php';
         </div>
     </div>
 </div>
+
+<?php if (Session::checkPermission('finanzen', 'schreiben')):
+    $kbBuchungen = Database::getInstance()->fetchAll("SELECT f.typ, f.betrag, f.beleg_nummer, f.datum, k.name konto FROM finanzen f LEFT JOIN finanz_konten k ON k.id = f.konto_id WHERE f.fest_id = ? ORDER BY f.typ", [$festId]);
+    $kbKonten = Kassabuch::konten(true);
+?>
+<div class="card mb-4 no-print">
+    <div class="card-body d-flex flex-wrap align-items-center gap-3">
+        <div class="flex-grow-1" style="min-width:260px">
+            <div class="fw-semibold"><i class="bi bi-wallet2"></i> Kassabuch</div>
+            <?php if ($kbBuchungen): ?>
+            <div class="small">Übernommen:
+                <?php foreach ($kbBuchungen as $kb): ?>
+                <span class="badge bg-<?php echo $kb['typ'] === 'einnahme' ? 'success' : 'danger'; ?>"><?php echo htmlspecialchars($kb['beleg_nummer']); ?> · <?php echo $kb['typ'] === 'einnahme' ? 'Einnahmen' : 'Ausgaben'; ?> <?php echo Kassabuch::euro((float)$kb['betrag']); ?></span>
+                <?php endforeach; ?>
+                <span class="text-muted">(<?php echo htmlspecialchars($kbBuchungen[0]['konto'] ?? ''); ?>, <?php echo date('d.m.Y', strtotime($kbBuchungen[0]['datum'])); ?>)</span>
+            </div>
+            <?php endif; ?>
+            <div class="small text-muted">Übernimmt Einnahmen und Ausgaben als je eine Buchung. Bestellte Einkäufe und offene Honorare zählen nicht, solange kein Geld geflossen ist. Erneut übernehmen aktualisiert die Buchungen.</div>
+        </div>
+        <form method="POST" class="d-flex flex-wrap gap-2 align-items-center">
+            <input type="hidden" name="action" value="kassabuch">
+            <select name="konto_id" class="form-select form-select-sm w-auto" aria-label="Konto">
+                <?php foreach ($kbKonten as $k): ?><option value="<?php echo $k['id']; ?>" <?php echo $k['art'] === 'kassa' ? 'selected' : ''; ?>><?php echo htmlspecialchars($k['name']); ?></option><?php endforeach; ?>
+            </select>
+            <input type="date" name="datum" class="form-control form-control-sm w-auto" aria-label="Buchungsdatum" value="<?php echo htmlspecialchars($kbBuchungen[0]['datum'] ?? ($fest['datum_bis'] ?: $fest['datum_von'])); ?>">
+            <button class="btn btn-sm btn-primary"><i class="bi bi-box-arrow-in-down"></i> <?php echo $kbBuchungen ? 'Erneut übernehmen' : 'Ins Kassabuch übernehmen'; ?></button>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
 
 <div class="row">
 <!-- ═══ EINNAHMEN ══════════════════════════════════════════════════════════ -->

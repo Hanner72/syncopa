@@ -83,7 +83,13 @@ Es gibt **kein externes Migrationstool**. Neue Tabellen/Spalten werden als anony
 
 | Tabelle | Zweck |
 |---|---|
-| `finanzen` | Einnahmen/Ausgaben-Buchungen, optional `formation_id` |
+| `finanzen` | Buchungen des Kassabuchs: Einnahme, Ausgabe oder Umbuchung, mit Konto, Kategorie, Belegnummer und Belegdatei; Verweis auf Beitrag oder Fest |
+| `finanz_konten` | Konten (Kassa, Bank, Sparbuch …), optional einer Formation zugeordnet |
+| `finanz_anfangsbestaende` | Eingetragene Anfangsbestände je Konto und Jahr |
+| `finanz_kategorien` | Kategorien für Einnahmen und Ausgaben |
+| `finanz_budget` | Voranschlag je Jahr und Kategorie |
+| `finanz_kassasturz` | Protokolle der Bargeldzählung |
+| `finanz_abschluesse` | Jahresabschluss: Rechnungsprüfer, Feststellungen, Sperre |
 | `beitraege` | Jährlich generierte Mitgliedsbeiträge mit Bezahlt-Status |
 
 ## Festverwaltung

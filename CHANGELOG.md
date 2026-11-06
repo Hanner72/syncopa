@@ -1,5 +1,33 @@
 # Changelog
 
+## [2.9.0]
+
+### Hinzugefügt
+
+- Kassabuch mit Konten: beliebig viele (Handkassa, Girokonto, Sparbuch, Jugendkassa …)
+  - Handkassa und Girokonto als Vorlage angelegt
+  - Anfangsbestand je Jahr, danach wird automatisch weitergerechnet
+  - Kontoansicht mit laufendem Saldo wie ein Kontoauszug
+- Feste Kategorien mit Vorlage für Musikvereine, frei erweiterbar
+- Umbuchungen zwischen eigenen Konten (z. B. Bargeld aufs Girokonto)
+- Belegnummer automatisch je Jahr (Nummernkreis unter Stammdaten), Beleg als PDF oder Foto hochladen
+- Berichte zum Ausdrucken mit Vereinskopf
+  - Kassabuch (Journal), Einnahmen-Ausgaben-Rechnung mit Vorjahresvergleich, Vermögensübersicht
+  - Kassaprüfungsbericht mit Antrag auf Entlastung und Unterschriften
+  - Kassabericht für die Jahreshauptversammlung mit Grafik
+  - Belegliste mit fehlenden Nummern, Beitragsliste, Voranschlag / Soll-Ist
+- Kassasturz: Bargeld nach Scheinen und Münzen zählen, Vergleich mit dem Kassastand, Protokoll
+- Voranschlag (Budget) je Kategorie, Ist-Werte des Vorjahres übernehmbar
+- Jahresabschluss: Rechnungsprüfer und Feststellungen eintragen, Jahr sperren (nur Admin kann wieder öffnen)
+- CSV-Export aller Buchungen eines Jahres
+- Bezahlte Mitgliedsbeiträge werden automatisch ins Kassabuch gebucht
+- Fest-Abrechnung lässt sich ins Kassabuch übernehmen
+
+### Geändert
+
+- „Finanzen“ heißt jetzt „Kassabuch“; vorhandene Buchungen werden automatisch Handkassa (bar) oder Girokonto zugeordnet, bisherige Kategorien übernommen
+- Buchungen werden nur noch über das Formular gelöscht, nicht mehr über einen einfachen Link
+
 ## [2.8.5]
 
 ### Geändert

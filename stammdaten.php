@@ -122,7 +122,7 @@ if ($action === 'instrumenttyp_delete') {
 
 // Nummernkreise verarbeiten
 if ($action === 'nummernkreise_save') {
-    $typen = ['mitglieder', 'noten', 'instrumente'];
+    $typen = ['mitglieder', 'noten', 'instrumente', 'finanzen'];
     try {
         foreach ($typen as $typ) {
             $prefix  = trim($_POST['prefix_' . $typ]  ?? '');
@@ -173,13 +173,13 @@ $instrumentTypen = $db->fetchAll("SELECT it.*, r.name as register_name,
     ORDER BY r.sortierung, it.name");
 
 // Nummernkreise aus einstellungen laden
-$nkTypen = ['mitglieder', 'noten', 'instrumente'];
+$nkTypen = ['mitglieder', 'noten', 'instrumente', 'finanzen'];
 $nkConfig = [];
 foreach ($nkTypen as $typ) {
     $pRow = $db->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = ?", ['nummernkreis_' . $typ . '_prefix']);
     $sRow = $db->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = ?", ['nummernkreis_' . $typ . '_stellen']);
     $nkConfig[$typ] = [
-        'prefix'  => $pRow ? $pRow['wert'] : '',
+        'prefix'  => $pRow ? $pRow['wert'] : ($typ === 'finanzen' ? 'Y-' : ''),
         'stellen' => $sRow ? (int)$sRow['wert'] : 3,
     ];
 }
@@ -587,16 +587,19 @@ $nkBadgeClass = [
     'mitglieder' => 'bg-secondary',
     'noten'      => 'bg-primary',
     'instrumente'=> 'bg-warning text-dark',
+    'finanzen'   => 'bg-success',
 ];
 $nkLabel = [
     'mitglieder' => 'Mitglieder',
     'noten'      => 'Noten',
     'instrumente'=> 'Instrumente',
+    'finanzen'   => 'Belege (Kassabuch)',
 ];
 $nkIcon = [
     'mitglieder' => 'bi-people',
     'noten'      => 'bi-music-note-list',
     'instrumente'=> 'bi-trumpet',
+    'finanzen'   => 'bi-receipt',
 ];
 ?>
 <form method="POST">
