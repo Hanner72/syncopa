@@ -314,8 +314,9 @@ Ein bereits erfasster Posten lässt sich über das Stift-Symbol bearbeiten oder 
 |---|---|
 | Einnahmen | Summe aller Einnahmen |
 | Ausgaben | Summe aller Ausgaben (inkl. Einkäufe und Honorare) |
-| Ergebnis | Einnahmen minus Ausgaben (Überschuss oder Verlust) |
-| Deckungsgrad | Einnahmen in Prozent der Ausgaben |
+| Ergebnis | Einnahmen minus Ausgaben (Überschuss oder Verlust). Solange Einkäufe bestellt oder Honorare offen sind, heißt es „Voraussichtliches Ergebnis“. |
+| Kostendeckung | Einnahmen ÷ Ausgaben in Prozent. Ab 100 % sind alle Kosten gedeckt. |
+| Gewinnspanne | Ergebnis ÷ Einnahmen in Prozent: so viel bleibt von jedem eingenommenen Euro übrig. |
 
 > 🖨️ Über den Button **„Drucken / PDF"** lässt sich die Abrechnung ausdrucken – Navigation und Bearbeiten-Buttons werden dabei automatisch ausgeblendet, sodass ein sauberes Dokument für Vorstand oder Kassaprüfung entsteht.
 
