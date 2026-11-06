@@ -708,7 +708,12 @@ require_once __DIR__ . '/classes/FestAbrechnung.php';
     if (!$spalte('mitglieder', 'mitgliedsart_code')) {
         $db->execute("ALTER TABLE mitglieder ADD COLUMN mitgliedsart_code INT NULL, ADD KEY idx_mitgliedsart (mitgliedsart_code)");
     }
+    // Gast (kein Vereinsmitglied): spielt nur in seiner Formation mit, nie im BMV, keine Beiträge/Ehrungen/Statistik
+    if (!$spalte('mitgliedsarten', 'gast')) {
+        $db->execute("ALTER TABLE mitgliedsarten ADD COLUMN gast TINYINT(1) NOT NULL DEFAULT 0");
+    }
     Mitgliedsart::einmaligUebernehmen();
+    Mitgliedsart::gastArtAnlegen();
     Mitgliedsart::aktualisierenFallsNoetig(); // einmal am Tag: laufende Zeiträume ändern sich mit dem Datum
 
     // Welche Syncopa-Instrumentart zu einer BMV-Inventarbezeichnung gehört (z. B. „B-Bariton“ => Bariton)

@@ -23,13 +23,16 @@ class Mitglied {
             array_unshift($params, $formationId);
         }
 
-        // Mitgliedsart: 'mitglieder' = alle aktuellen (ohne ausgetretene), 'aktiv' = zählt als aktiv,
+        // Mitgliedsart: 'mitglieder' = alle aktuellen Vereinsmitglieder (ohne Ausgetretene und Gäste), 'aktiv' = zählt als aktiv,
+        // 'gast' = Gastmusiker (kein Vereinsmitglied),
         // 'ausgetreten' = keine laufende Mitgliedsart, Zahl = genau diese Mitgliedsart, 'alle' bzw. leer = ohne Filter
         $art = (string)($filter['mitgliedsart'] ?? '');
         if ($art === 'mitglieder') {
-            $where[] = "m.mitgliedsart_code IS NOT NULL";
+            $where[] = "m.mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE gast = 0)";
         } elseif ($art === 'aktiv') {
-            $where[] = "m.mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1)";
+            $where[] = "m.mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1 AND gast = 0)";
+        } elseif ($art === 'gast') {
+            $where[] = "m.mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE gast = 1)";
         } elseif ($art === 'ausgetreten') {
             $where[] = "m.mitgliedsart_code IS NULL";
         } elseif (ctype_digit($art)) {
@@ -251,7 +254,7 @@ class Mitglied {
         $joinF2 = $formationId ? "JOIN mitglied_formationen mf_s ON mf_s.mitglied_id = m.id AND mf_s.formation_id = {$formationId}" : '';
 
         // Gesamtanzahl
-        $aktiv = "m.mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1)";
+        $aktiv = "m.mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1 AND gast = 0)"; // aktive Vereinsmitglieder, ohne Gäste
         $sql = "SELECT COUNT(*) as total FROM mitglieder m {$joinF} WHERE {$aktiv}";
         $result = $this->db->fetchOne($sql);
         $stats['total'] = $result['total'];
@@ -276,7 +279,7 @@ class Mitglied {
         // Nach Mitgliedsart (ohne ausgetretene)
         $sql = "SELECT m.mitgliedsart_code AS code, COUNT(*) as anzahl
                 FROM mitglieder m {$joinF2}
-                WHERE m.mitgliedsart_code IS NOT NULL
+                WHERE m.mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE gast = 0)
                 GROUP BY m.mitgliedsart_code";
         $stats['mitgliedsart'] = [];
         foreach ($this->db->fetchAll($sql) as $r) {

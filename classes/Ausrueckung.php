@@ -310,7 +310,7 @@ class Ausrueckung {
         }
         $sql = "INSERT INTO anwesenheit (ausrueckung_id, mitglied_id, status)
                 SELECT ?, id, 'keine_antwort'
-                FROM mitglieder WHERE mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1)";
+                FROM mitglieder WHERE mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1 AND gast = 0)";
         return $this->db->execute($sql, [$ausrueckungId]);
     }
     

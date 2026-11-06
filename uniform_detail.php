@@ -246,7 +246,7 @@ include 'includes/header.php';
                             <option value="">-- Mitglied wählen --</option>
                             <?php
                             $db = Database::getInstance();
-                            $mitglieder = $db->fetchAll("SELECT id, vorname, nachname, mitgliedsnummer FROM mitglieder WHERE mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1) ORDER BY nachname, vorname");
+                            $mitglieder = $db->fetchAll("SELECT id, vorname, nachname, mitgliedsnummer FROM mitglieder WHERE mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1 AND gast = 0) ORDER BY nachname, vorname");
                             foreach ($mitglieder as $m):
                             ?>
                             <option value="<?php echo $m['id']; ?>">

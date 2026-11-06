@@ -504,6 +504,8 @@ include 'includes/header.php';
     <i class="bi bi-info-circle"></i>
     Die Mitgliedsart ersetzt den früheren Status (aktiv, passiv …). Welche Art ein Mitglied gerade hat, steht beim Mitglied
     im Reiter <strong>Mitgliedsart</strong> – aus dem BMV oder selbst eingetragen. Ohne laufende Mitgliedsart gilt ein Mitglied als ausgetreten.<br>
+    <strong>Gast</strong> = kein Vereinsmitglied, z. B. Gastmusiker/innen: Sie spielen nur in den Formationen mit, denen sie zugeordnet sind,
+    werden nie an den BMV übertragen und zählen nicht bei Beiträgen, Ehrungen und Statistik.<br>
     <strong>Nr.</strong> ist die Nummer im BMV. Für Arten, die es im BMV (noch) nicht gibt, eine eigene Nummer ab <?php echo Mitgliedsart::EIGENE_NUMMERN_AB; ?>
     verwenden; sie lässt sich später auf die BMV-Nummer ändern, alle Einträge werden mit umgestellt.
 </div>
@@ -520,6 +522,7 @@ include 'includes/header.php';
                         <th>Name</th>
                         <th class="text-center" data-bs-toggle="tooltip" title="Erscheint bei Proben, Ausrückungen, Instrument- und Uniformausgabe, Festen und in der Statistik">Zählt als aktiv <i class="bi bi-question-circle text-muted"></i></th>
                         <th class="text-center">Beitragspflichtig</th>
+                        <th class="text-center" data-bs-toggle="tooltip" title="Kein Vereinsmitglied (z. B. Gastmusiker/in): spielt nur in den zugeordneten Formationen mit, wird nie an den BMV übertragen, zählt nicht bei Beiträgen, Ehrungen und Statistik">Gast <i class="bi bi-question-circle text-muted"></i></th>
                         <th style="width:130px" data-bs-toggle="tooltip" title="Leer = Standardbeitrag aus den Einstellungen">Beitrag € <i class="bi bi-question-circle text-muted"></i></th>
                         <th style="width:130px">Farbe</th>
                         <th style="width:90px">Reihenf.</th>
@@ -536,6 +539,7 @@ include 'includes/header.php';
                     </td>
                     <td class="text-center"><input type="checkbox" class="form-check-input" name="<?php echo $f; ?>[aktiv]" value="1" <?php echo $a['aktiv'] ? 'checked' : ''; ?>></td>
                     <td class="text-center"><input type="checkbox" class="form-check-input" name="<?php echo $f; ?>[beitragspflichtig]" value="1" <?php echo $a['beitragspflichtig'] ? 'checked' : ''; ?>></td>
+                    <td class="text-center"><input type="checkbox" class="form-check-input" name="<?php echo $f; ?>[gast]" value="1" <?php echo $a['gast'] ? 'checked' : ''; ?>></td>
                     <td><input type="number" step="0.01" min="0" class="form-control form-control-sm" name="<?php echo $f; ?>[beitrag]" value="<?php echo $a['beitrag'] !== null ? htmlspecialchars($a['beitrag']) : ''; ?>" placeholder="Standard"></td>
                     <td><?php echo $farbAuswahl($f . '[farbe]', $a['farbe']); ?></td>
                     <td><input type="number" class="form-control form-control-sm" name="<?php echo $f; ?>[sortierung]" value="<?php echo (int)$a['sortierung']; ?>"></td>
@@ -554,6 +558,7 @@ include 'includes/header.php';
                     <td><input type="text" class="form-control form-control-sm" name="neu[name]" maxlength="100" placeholder="Neue Mitgliedsart, z. B. Ehrenobmann"></td>
                     <td class="text-center"><input type="checkbox" class="form-check-input" name="neu[aktiv]" value="1"></td>
                     <td class="text-center"><input type="checkbox" class="form-check-input" name="neu[beitragspflichtig]" value="1"></td>
+                    <td class="text-center"><input type="checkbox" class="form-check-input" name="neu[gast]" value="1"></td>
                     <td><input type="number" step="0.01" min="0" class="form-control form-control-sm" name="neu[beitrag]" placeholder="Standard"></td>
                     <td><?php echo $farbAuswahl('neu[farbe]', 'secondary'); ?></td>
                     <td><input type="number" class="form-control form-control-sm" name="neu[sortierung]" value="100"></td>

@@ -19,15 +19,20 @@ $tabs = [
     'mitgliedsart' => ['label' => 'Mitgliedsart', 'icon' => 'bi-person-vcard'],
 ];
 
+$istGast = Mitgliedsart::istGast($mitglied['mitgliedsart_code'] ?? null);
+
 /** Herkunft eines Eintrags als kleines Abzeichen */
-$herkunft = function (array $z): string {
+$herkunft = function (array $z) use ($istGast): string {
     if (!empty($z['bmv_eintrag_id'])) {
         return '<span class="badge bg-primary-subtle text-primary-emphasis" data-bs-toggle="tooltip"'
             . ' title="Aus dem BMV. Änderungen bitte im BMV-Portal machen, Syncopa übernimmt sie beim nächsten Holen.">'
             . '<i class="bi bi-cloud-check"></i> BMV</span>';
     }
+    $titel = $istGast
+        ? 'Nur in Syncopa eingetragen. Gastmusiker werden nicht an den BMV übertragen.'
+        : 'Nur in Syncopa eingetragen. Wird an den BMV übertragen, sobald das möglich ist.';
     return '<span class="badge bg-warning-subtle text-warning-emphasis" data-bs-toggle="tooltip"'
-        . ' title="Nur in Syncopa eingetragen. Wird an den BMV übertragen, sobald das möglich ist.">'
+        . ' title="' . $titel . '">'
         . '<i class="bi bi-hdd"></i> Syncopa</span>';
 };
 
@@ -240,7 +245,7 @@ $leer = function (string $text) {
     </div>
     <div class="card-footer small text-muted d-flex flex-wrap gap-3">
         <span><span class="badge bg-primary-subtle text-primary-emphasis"><i class="bi bi-cloud-check"></i> BMV</span> aus dem BMV, wird beim Holen aktualisiert</span>
-        <span><span class="badge bg-warning-subtle text-warning-emphasis"><i class="bi bi-hdd"></i> Syncopa</span> nur hier eingetragen, wird später an den BMV übertragen</span>
+        <span><span class="badge bg-warning-subtle text-warning-emphasis"><i class="bi bi-hdd"></i> Syncopa</span> nur hier eingetragen, <?php echo $istGast ? 'wird als Gast nicht an den BMV übertragen' : 'wird später an den BMV übertragen'; ?></span>
     </div>
 </div>
 

@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.7.1]
+
+### Hinzugefügt
+
+- Gastmusiker/innen: neue Mitgliedsart mit der Eigenschaft „Gast“ (kein Vereinsmitglied)
+  - spielen nur in den Formationen mit, denen sie zugeordnet sind
+  - werden nie an den BMV übertragen
+  - zählen nicht bei Beiträgen, Ehrungen, Statistik und in der Mitgliederliste
+  - eigener Filter „Alle Gäste“ in der Mitgliederliste
+
+### Verbessert
+
+- Mitgliederliste filtert sofort beim Tippen bzw. Auswählen, ohne Filtern-Knopf
+- Suche in der Mitgliederliste findet auch Register, Instrumente und Kontaktdaten
+
 ## [2.7.0]
 
 ### Hinzugefügt

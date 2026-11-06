@@ -4,6 +4,8 @@
 // - Katalog in der Tabelle mitgliedsarten (Stammdaten → Mitgliedsarten). Die Nummer ist die BMV-Nummer;
 //   eigene Arten (z. B. Ehrenmitglied) bekommen eine eigene Nummer, die später auf die BMV-Nummer geändert werden kann.
 // - Je Art: zählt als aktiv (Proben, Ausrückungen, Instrumente, Statistik …), beitragspflichtig, eigener Beitrag, Farbe.
+// - Gast: kein Vereinsmitglied (z. B. Gastmusiker/in). Spielt nur in den Formationen mit, denen er zugeordnet ist,
+//   wird nie an den BMV übertragen und zählt nicht bei Beiträgen, Ehrungen, Statistik und der Mitgliederliste.
 // - Die aktuelle Art eines Mitglieds ergibt sich aus dem laufenden Zeitraum im Reiter „Mitgliedsart“
 //   (bmv_mitglied_daten, art = 'mitgliedsart'), aus dem BMV oder selbst eingetragen – auch ohne BMV-Anbindung.
 //   Sie wird in mitglieder.mitgliedsart_code zwischengespeichert. Ohne laufenden Zeitraum gilt ein Mitglied als ausgetreten.
@@ -46,14 +48,38 @@ class Mitgliedsart {
         return '<span class="badge ' . $text . '">' . htmlspecialchars(self::name($code)) . '</span>';
     }
 
-    /** SQL-Bedingung „zählt als aktives Mitglied“ für die Mitglieder-Tabelle mit Alias $alias */
-    public static function sqlAktiv(string $alias = 'm'): string {
-        return "{$alias}.mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1)";
+    /**
+     * SQL-Bedingung „aktives Vereinsmitglied“ (ohne Gäste) für die Mitglieder-Tabelle mit Alias $alias.
+     * Für Abfragen innerhalb einer Formation (Proben, Ausrückungen der Formation) Gäste mitnehmen: $mitGaesten = true.
+     */
+    public static function sqlAktiv(string $alias = 'm', bool $mitGaesten = false): string {
+        return "{$alias}.mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1" . ($mitGaesten ? "" : " AND gast = 0") . ")";
     }
 
-    /** SQL-Bedingung „ist derzeit Mitglied“ (hat eine laufende Mitgliedsart, also nicht ausgetreten) */
+    /** SQL-Bedingung „ist derzeit Vereinsmitglied“ (laufende Mitgliedsart, kein Gast) */
     public static function sqlMitglied(string $alias = 'm'): string {
-        return "{$alias}.mitgliedsart_code IS NOT NULL";
+        return "{$alias}.mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE gast = 0)";
+    }
+
+    /** Ob die Mitgliedsart ein Gast ist (kein Vereinsmitglied) */
+    public static function istGast($code): bool {
+        return $code !== null && $code !== '' && !empty(self::alle()[(int)$code]['gast']);
+    }
+
+    /** Legt einmalig die Mitgliedsart „Gastmusiker/in“ an (Einstellung mitgliedsart_gast_angelegt) */
+    public static function gastArtAnlegen(): void {
+        $db = Database::getInstance();
+        if ($db->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = 'mitgliedsart_gast_angelegt'")) {
+            return;
+        }
+        if (!$db->fetchOne("SELECT code FROM mitgliedsarten WHERE gast = 1 LIMIT 1")) {
+            $db->execute(
+                "INSERT INTO mitgliedsarten (code, name, aktiv, beitragspflichtig, gast, farbe, sortierung) VALUES (?, 'Gastmusiker/in', 1, 0, 1, 'dark', 90)",
+                [self::naechsteEigeneNummer()]
+            );
+        }
+        $db->execute("INSERT INTO einstellungen (schluessel, wert) VALUES ('mitgliedsart_gast_angelegt', ?)", [date('Y-m-d H:i:s')]);
+        self::$alle = null;
     }
 
     // ------------------------------------------------------------------------------------------------
@@ -120,7 +146,7 @@ class Mitgliedsart {
         $db = Database::getInstance();
         $vortag = date('Y-m-d', strtotime($ab . ' -1 day'));
         $db->execute(
-            "UPDATE bmv_mitglied_daten SET bis = ?, sync_status = 'neu'
+            "UPDATE bmv_mitglied_daten SET bis = ?, sync_status = IF(code IN (SELECT code FROM mitgliedsarten WHERE gast = 1), NULL, 'neu')
              WHERE mitglied_id = ? AND art = 'mitgliedsart' AND bis IS NULL AND bmv_eintrag_id IS NULL AND (von IS NULL OR von <= ?)",
             [$vortag, $mitgliedId, $vortag]
         );
@@ -152,7 +178,7 @@ class Mitgliedsart {
             }
             $vortag = date('Y-m-d', strtotime($ab . ' -1 day'));
             $db->execute(
-                "UPDATE bmv_mitglied_daten SET bis = ?, sync_status = 'neu'
+                "UPDATE bmv_mitglied_daten SET bis = ?, sync_status = IF(code IN (SELECT code FROM mitgliedsarten WHERE gast = 1), NULL, 'neu')
                  WHERE mitglied_id = ? AND art = 'mitgliedsart' AND bmv_eintrag_id IS NULL AND (bis IS NULL OR bis > ?)",
                 [$vortag, $mitgliedId, $vortag]
             );
@@ -210,14 +236,15 @@ class Mitgliedsart {
             $betrag === '' ? null : round((float)$betrag, 2),
             isset(self::FARBEN[$e['farbe'] ?? '']) ? $e['farbe'] : 'secondary',
             (int)($e['sortierung'] ?? 100),
+            !empty($e['gast']) ? 1 : 0,
         ];
         $db->beginTransaction();
         try {
             if ($alterCode === null) {
-                $db->execute("INSERT INTO mitgliedsarten (code, name, aktiv, beitragspflichtig, beitrag, farbe, sortierung) VALUES (?, ?, ?, ?, ?, ?, ?)", $werte);
+                $db->execute("INSERT INTO mitgliedsarten (code, name, aktiv, beitragspflichtig, beitrag, farbe, sortierung, gast) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", $werte);
             } else {
                 $db->execute(
-                    "UPDATE mitgliedsarten SET code = ?, name = ?, aktiv = ?, beitragspflichtig = ?, beitrag = ?, farbe = ?, sortierung = ? WHERE code = ?",
+                    "UPDATE mitgliedsarten SET code = ?, name = ?, aktiv = ?, beitragspflichtig = ?, beitrag = ?, farbe = ?, sortierung = ?, gast = ? WHERE code = ?",
                     array_merge($werte, [$alterCode])
                 );
                 if ($code !== $alterCode) {

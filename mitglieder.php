@@ -17,9 +17,7 @@ $filter['mitgliedsart'] = $filterArt;
 if (!empty($_GET['register'])) {
     $filter['register'] = $_GET['register'];
 }
-if (!empty($_GET['search'])) {
-    $filter['search'] = $_GET['search'];
-}
+// Die Suche filtert sofort in der Tabelle (ohne Neuladen), daher hier kein Suchfilter
 
 $mitglieder = $mitglied->getAll($filter);
 
@@ -51,11 +49,11 @@ include 'includes/header.php';
 <!-- Filter -->
 <div class="card mb-4">
     <div class="card-body">
-        <form method="GET" class="row g-3">
-            <div class="col-md-4">
+        <form method="GET" class="row g-3" id="mitgliederFilter">
+            <div class="col-md-5">
                 <label for="search" class="form-label">Suche</label>
-                <input type="text" class="form-control" id="search" name="search" 
-                       placeholder="Name oder Mitgliedsnummer" 
+                <input type="search" class="form-control" id="search" name="search" autocomplete="off"
+                       placeholder="Name, Nummer, Instrument, Kontakt …"
                        value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>">
             </div>
             
@@ -65,6 +63,7 @@ include 'includes/header.php';
                     <?php
                     $artOptionen = ['mitglieder' => 'Alle aktuellen Mitglieder', 'aktiv' => 'Nur aktive (spielen mit)'];
                     foreach (Mitgliedsart::alle() as $code => $a) $artOptionen[(string)$code] = $a['name'];
+                    $artOptionen['gast'] = 'Alle Gäste (kein Vereinsmitglied)';
                     $artOptionen['ausgetreten'] = 'Ausgetreten';
                     $artOptionen['alle'] = 'Alle (auch ausgetretene)';
                     foreach ($artOptionen as $wert => $text): ?>
@@ -85,12 +84,9 @@ include 'includes/header.php';
                 </select>
             </div>
             
-            <div class="col-md-2 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary me-2">
-                    <i class="bi bi-search"></i> Filtern
-                </button>
-                <a href="mitglieder.php" class="btn btn-secondary">
-                    <i class="bi bi-x"></i>
+            <div class="col-md-1 d-flex align-items-end">
+                <a href="mitglieder.php" class="btn btn-outline-secondary" title="Filter zurücksetzen">
+                    <i class="bi bi-x-lg"></i>
                 </a>
             </div>
         </form>
@@ -233,12 +229,22 @@ include 'includes/header.php';
 
 <script>
 $(document).ready(function() {
-    $('#mitgliederTable').DataTable({
+    // Ohne eigenes Suchfeld der Tabelle – gesucht wird über das Feld oben, sofort beim Tippen
+    const tabelle = $('#mitgliederTable').DataTable({
         order: [[1, 'asc']],
         columnDefs: [
             { targets: -1, orderable: false }
-        ]
+        ],
+        dom: '<"row align-items-center mb-2"<"col-auto"l>><"table-responsive"t><"row align-items-center mt-2"<"col-sm-5"i><"col-sm-7"p>>'
     });
+    const suche = document.getElementById('search');
+    tabelle.search(suche.value).draw();
+    suche.addEventListener('input', () => tabelle.search(suche.value).draw());
+    suche.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+
+    // Auswahlfelder filtern sofort (Seite lädt mit den neuen Filtern neu, die Suche bleibt erhalten)
+    document.querySelectorAll('#mitgliederFilter select').forEach(feld =>
+        feld.addEventListener('change', () => document.getElementById('mitgliederFilter').submit()));
     
     // Bootstrap Tooltips initialisieren
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
