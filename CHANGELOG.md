@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.8.3]
+
+### Verbessert
+
+- Festverwaltung, Abrechnung: Ausgaben übersichtlicher
+  - eine Liste mit Gruppen (Einkäufe, Honorare, Sonstige) und Zwischensummen
+  - erhaltene und bestellte Einkäufe gemeinsam, bestellte mit Kennzeichen
+  - Details wie Lieferant, Station oder Auftritt klein unter dem Namen
+  - Eingabeformulare unter den Listen
+
+### Bugs
+
+- Festverwaltung, Abrechnung: Zahlungsstatus „teilweise bezahlt“ bei Verträgen wurde als „–“ angezeigt
+
 ## [2.8.2]
 
 ### Hinzugefügt
