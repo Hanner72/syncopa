@@ -27,6 +27,7 @@ require_once __DIR__ . '/classes/ImapClient.php';
 require_once __DIR__ . '/classes/MailSender.php';
 require_once __DIR__ . '/classes/MailKonto.php';
 require_once __DIR__ . '/classes/MailSpamfilter.php';
+require_once __DIR__ . '/classes/Kassabuch.php';
 
 // Migration: Mehrfachrollen-Pivot-Tabelle
 (function() {
@@ -805,4 +806,124 @@ require_once __DIR__ . '/classes/FestAbrechnung.php';
         bezeichnung VARCHAR(150) NOT NULL PRIMARY KEY,
         instrument_typ_id INT NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+})();
+
+// Migration: Kassabuch mit Konten, Kategorien, Umbuchungen, Belegen, Budget, Kassasturz und Jahresabschluss
+(function() {
+    $db = Database::getInstance();
+    $spalte = fn($t, $s) => (int)($db->fetchOne("SELECT COUNT(*) AS c FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?", [$t, $s])['c'] ?? 0) > 0;
+
+    $db->execute("CREATE TABLE IF NOT EXISTS finanz_konten (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        art ENUM('kassa','bank','sparbuch','sonstig') NOT NULL DEFAULT 'bank',
+        iban VARCHAR(40) NULL,
+        formation_id INT NULL,
+        sortierung INT NOT NULL DEFAULT 100,
+        aktiv TINYINT(1) NOT NULL DEFAULT 1,
+        erstellt_am DATETIME NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $db->execute("CREATE TABLE IF NOT EXISTS finanz_anfangsbestaende (
+        konto_id INT NOT NULL,
+        jahr INT NOT NULL,
+        betrag DECIMAL(12,2) NOT NULL DEFAULT 0,
+        PRIMARY KEY (konto_id, jahr),
+        CONSTRAINT fk_fa_konto FOREIGN KEY (konto_id) REFERENCES finanz_konten(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $db->execute("CREATE TABLE IF NOT EXISTS finanz_kategorien (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        typ ENUM('einnahme','ausgabe','beide') NOT NULL DEFAULT 'beide',
+        sortierung INT NOT NULL DEFAULT 100,
+        aktiv TINYINT(1) NOT NULL DEFAULT 1
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $db->execute("CREATE TABLE IF NOT EXISTS finanz_budget (
+        jahr INT NOT NULL,
+        kategorie_id INT NOT NULL,
+        betrag DECIMAL(12,2) NOT NULL DEFAULT 0,
+        PRIMARY KEY (jahr, kategorie_id),
+        CONSTRAINT fk_fb_kategorie FOREIGN KEY (kategorie_id) REFERENCES finanz_kategorien(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $db->execute("CREATE TABLE IF NOT EXISTS finanz_kassasturz (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        konto_id INT NOT NULL,
+        datum DATETIME NOT NULL,
+        zaehlung TEXT NULL,
+        ist_betrag DECIMAL(12,2) NOT NULL,
+        soll_betrag DECIMAL(12,2) NOT NULL,
+        bemerkung TEXT NULL,
+        gezaehlt_von VARCHAR(150) NULL,
+        erstellt_von INT NULL,
+        CONSTRAINT fk_fk_konto FOREIGN KEY (konto_id) REFERENCES finanz_konten(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $db->execute("CREATE TABLE IF NOT EXISTS finanz_abschluesse (
+        jahr INT NOT NULL PRIMARY KEY,
+        pruefer1 VARCHAR(150) NULL,
+        pruefer2 VARCHAR(150) NULL,
+        pruef_datum DATE NULL,
+        feststellungen TEXT NULL,
+        abgeschlossen TINYINT(1) NOT NULL DEFAULT 0,
+        abgeschlossen_am DATETIME NULL,
+        abgeschlossen_von INT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // Buchungen erweitern
+    try { $db->execute("ALTER TABLE finanzen MODIFY typ ENUM('einnahme','ausgabe','umbuchung') NOT NULL"); } catch (\Throwable $e) {}
+    foreach ([
+        'konto_id'      => "INT NULL AFTER typ",
+        'gegenkonto_id' => "INT NULL AFTER konto_id",
+        'kategorie_id'  => "INT NULL AFTER kategorie",
+        'beleg_datei'   => "VARCHAR(255) NULL AFTER beleg_nummer",
+        'beleg_name'    => "VARCHAR(255) NULL AFTER beleg_datei",
+        'beitrag_id'    => "INT NULL",
+        'fest_id'       => "INT NULL",
+    ] as $s => $def) {
+        if (!$spalte('finanzen', $s)) {
+            try { $db->execute("ALTER TABLE finanzen ADD COLUMN $s $def"); } catch (\Throwable $e) {}
+        }
+    }
+
+    // Aus Freitext übernommene Kategorien (Reihenfolge 500, „beides“): Typ aus den Buchungen ableiten
+    $db->execute("UPDATE finanz_kategorien c
+                  JOIN (SELECT kategorie_id, MIN(typ) a, MAX(typ) b FROM finanzen WHERE kategorie_id IS NOT NULL AND typ IN ('einnahme','ausgabe') GROUP BY kategorie_id) x
+                    ON x.kategorie_id = c.id AND x.a = x.b
+                  SET c.typ = x.a, c.sortierung = 499
+                  WHERE c.typ = 'beide' AND c.sortierung = 500");
+
+    // Einmalig: Vorlagen und Übernahme der bisherigen Buchungen
+    if ($db->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = 'kassabuch_eingerichtet'")) return;
+    if (!(int)$db->fetchOne("SELECT COUNT(*) c FROM finanz_konten")['c']) {
+        $db->execute("INSERT INTO finanz_konten (name, art, sortierung, erstellt_am) VALUES ('Handkassa', 'kassa', 10, NOW()), ('Girokonto', 'bank', 20, NOW())");
+    }
+    if (!(int)$db->fetchOne("SELECT COUNT(*) c FROM finanz_kategorien")['c']) {
+        $vorlage = [
+            ['Mitgliedsbeiträge', 'einnahme'], ['Spenden und unterstützende Mitglieder', 'einnahme'], ['Subvention Gemeinde', 'einnahme'],
+            ['Subvention Land, Bund, Verband', 'einnahme'], ['Konzerte und Eintritte', 'einnahme'], ['Ausrückungen und Auftritte', 'einnahme'],
+            ['Feste und Veranstaltungen', 'beide'], ['Sponsoring und Werbung', 'einnahme'], ['Zinsen', 'einnahme'], ['Sonstige Einnahmen', 'einnahme'],
+            ['Noten', 'ausgabe'], ['Instrumente Anschaffung', 'ausgabe'], ['Instrumente Reparatur und Wartung', 'ausgabe'], ['Trachten und Uniformen', 'ausgabe'],
+            ['Jugendarbeit und Ausbildung', 'ausgabe'], ['Kapellmeister und Dirigent', 'ausgabe'], ['Verbandsbeiträge und AKM', 'ausgabe'],
+            ['Versicherungen', 'ausgabe'], ['Musikheim und Betriebskosten', 'ausgabe'], ['Kameradschaft und Bewirtung', 'ausgabe'],
+            ['Ehrungen und Geschenke', 'ausgabe'], ['Verwaltung, Büro und Porto', 'ausgabe'], ['Bankspesen', 'ausgabe'], ['Sonstige Ausgaben', 'ausgabe'],
+        ];
+        foreach ($vorlage as $i => [$name, $typ]) {
+            $db->execute("INSERT INTO finanz_kategorien (name, typ, sortierung) VALUES (?, ?, ?)", [$name, $typ, ($i + 1) * 10]);
+        }
+    }
+    $kassa = $db->fetchOne("SELECT id FROM finanz_konten WHERE art = 'kassa' ORDER BY sortierung, id LIMIT 1")['id'] ?? null;
+    $bank  = $db->fetchOne("SELECT id FROM finanz_konten WHERE art <> 'kassa' ORDER BY sortierung, id LIMIT 1")['id'] ?? $kassa;
+    $db->execute("UPDATE finanzen SET konto_id = ? WHERE konto_id IS NULL AND zahlungsart = 'bar'", [$kassa]);
+    $db->execute("UPDATE finanzen SET konto_id = ? WHERE konto_id IS NULL", [$bank]);
+    // Freitext-Kategorien zuordnen, unbekannte als neue Kategorie anlegen
+    foreach ($db->fetchAll("SELECT DISTINCT TRIM(kategorie) k FROM finanzen WHERE kategorie_id IS NULL AND kategorie IS NOT NULL AND TRIM(kategorie) <> ''") as $r) {
+        $kat = $db->fetchOne("SELECT id FROM finanz_kategorien WHERE LOWER(name) = LOWER(?)", [$r['k']]);
+        if (!$kat) {
+            $db->execute("INSERT INTO finanz_kategorien (name, typ, sortierung) VALUES (?, 'beide', 500)", [mb_substr($r['k'], 0, 100)]);
+            $katId = (int)$db->lastInsertId();
+        } else {
+            $katId = (int)$kat['id'];
+        }
+        $db->execute("UPDATE finanzen SET kategorie_id = ? WHERE kategorie_id IS NULL AND TRIM(kategorie) = ?", [$katId, $r['k']]);
+    }
+    $db->execute("INSERT INTO einstellungen (schluessel, wert, beschreibung) VALUES ('kassabuch_eingerichtet', '1', 'Kassabuch: Konten und Kategorien eingerichtet')
+                  ON DUPLICATE KEY UPDATE wert = '1'");
 })();

@@ -393,18 +393,25 @@ DROP TABLE IF EXISTS `finanzen`;
 CREATE TABLE IF NOT EXISTS `finanzen` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `formation_id` int(11) DEFAULT NULL,
-  `typ` enum('einnahme','ausgabe') NOT NULL,
+  `typ` enum('einnahme','ausgabe','umbuchung') NOT NULL,
+  `konto_id` int(11) DEFAULT NULL,
+  `gegenkonto_id` int(11) DEFAULT NULL,
   `datum` date NOT NULL,
   `betrag` decimal(10,2) NOT NULL,
   `kategorie` varchar(100) DEFAULT NULL,
+  `kategorie_id` int(11) DEFAULT NULL,
   `beschreibung` text DEFAULT NULL,
   `beleg_nummer` varchar(50) DEFAULT NULL,
+  `beleg_datei` varchar(255) DEFAULT NULL,
+  `beleg_name` varchar(255) DEFAULT NULL,
   `zahlungsart` varchar(50) DEFAULT NULL,
+  `beitrag_id` int(11) DEFAULT NULL,
+  `fest_id` int(11) DEFAULT NULL,
   `erstellt_von` int(11) DEFAULT NULL,
   `erstellt_am` datetime DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   KEY `erstellt_von` (`erstellt_von`)
-) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Tabellenstruktur für Tabelle `instrumente`
@@ -1297,6 +1304,72 @@ CREATE TABLE IF NOT EXISTS `mail_spam_protokoll` (
   PRIMARY KEY (`id`),
   KEY `idx_konto_msg` (`konto_id`,`message_id`(100)),
   CONSTRAINT `fk_spam_protokoll_konto` FOREIGN KEY (`konto_id`) REFERENCES `mail_konten` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Kassabuch: Konten, Anfangsbestände, Kategorien, Budget, Kassasturz, Jahresabschluss (Vorlagen legt die Migration in includes.php an)
+CREATE TABLE IF NOT EXISTS `finanz_konten` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `art` enum('kassa','bank','sparbuch','sonstig') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'bank',
+  `iban` varchar(40) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `formation_id` int DEFAULT NULL,
+  `sortierung` int NOT NULL DEFAULT '100',
+  `aktiv` tinyint(1) NOT NULL DEFAULT '1',
+  `erstellt_am` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `finanz_anfangsbestaende` (
+  `konto_id` int NOT NULL,
+  `jahr` int NOT NULL,
+  `betrag` decimal(12,2) NOT NULL DEFAULT '0.00',
+  PRIMARY KEY (`konto_id`,`jahr`),
+  CONSTRAINT `fk_fa_konto` FOREIGN KEY (`konto_id`) REFERENCES `finanz_konten` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `finanz_kategorien` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `typ` enum('einnahme','ausgabe','beide') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'beide',
+  `sortierung` int NOT NULL DEFAULT '100',
+  `aktiv` tinyint(1) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `finanz_budget` (
+  `jahr` int NOT NULL,
+  `kategorie_id` int NOT NULL,
+  `betrag` decimal(12,2) NOT NULL DEFAULT '0.00',
+  PRIMARY KEY (`jahr`,`kategorie_id`),
+  KEY `fk_fb_kategorie` (`kategorie_id`),
+  CONSTRAINT `fk_fb_kategorie` FOREIGN KEY (`kategorie_id`) REFERENCES `finanz_kategorien` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `finanz_kassasturz` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `konto_id` int NOT NULL,
+  `datum` datetime NOT NULL,
+  `zaehlung` text COLLATE utf8mb4_unicode_ci,
+  `ist_betrag` decimal(12,2) NOT NULL,
+  `soll_betrag` decimal(12,2) NOT NULL,
+  `bemerkung` text COLLATE utf8mb4_unicode_ci,
+  `gezaehlt_von` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `erstellt_von` int DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk_fk_konto` (`konto_id`),
+  CONSTRAINT `fk_fk_konto` FOREIGN KEY (`konto_id`) REFERENCES `finanz_konten` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `finanz_abschluesse` (
+  `jahr` int NOT NULL,
+  `pruefer1` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `pruefer2` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `pruef_datum` date DEFAULT NULL,
+  `feststellungen` text COLLATE utf8mb4_unicode_ci,
+  `abgeschlossen` tinyint(1) NOT NULL DEFAULT '0',
+  `abgeschlossen_am` datetime DEFAULT NULL,
+  `abgeschlossen_von` int DEFAULT NULL,
+  PRIMARY KEY (`jahr`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 COMMIT;

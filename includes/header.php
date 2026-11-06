@@ -48,7 +48,7 @@ $pages = [
     'probe' => ['probe', 'probe_leiter', 'probe_stimmen'],
     'instrumente' => ['instrumente', 'instrument_detail', 'instrument_bearbeiten'],
     'uniformen' => ['uniformen', 'uniform_detail', 'uniform_bearbeiten', 'uniform_mitglied', 'uniform_kleidungsstuecke', 'uniform_kategorien'],
-    'finanzen' => ['finanzen', 'transaktion_bearbeiten', 'beitraege_verwalten'],
+    'finanzen' => ['finanzen', 'transaktion_bearbeiten', 'beitraege_verwalten', 'finanz_konten', 'finanz_budget', 'finanz_kassasturz', 'finanz_abschluss'],
     'admin' => ['benutzer', 'benutzer_bearbeiten', 'rollen', 'rolle_bearbeiten', 'einstellungen', 'bmv_daten', 'berechtigungen_bearbeiten'],
     'formationen' => ['formationen', 'formation_bearbeiten', 'formation_mitglieder'],
     'fest'  => [
@@ -665,7 +665,7 @@ function isActive($page, $pages, $current) {
                 <div class="nav-label">Finanzen</div>
                 <ul class="nav flex-column">
                     <li><a class="nav-link <?php echo isActive('finanzen', $pages, $currentPage); ?>" href="finanzen.php">
-                        <i class="bi bi-wallet2"></i> Kassenbuch
+                        <i class="bi bi-wallet2"></i> Kassabuch
                     </a></li>
                 </ul>
             </div>

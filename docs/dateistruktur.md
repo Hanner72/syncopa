@@ -30,6 +30,7 @@ syncopa/
 │   ├── FestTodo.php                # Festverwaltung: Aufgaben
 │   ├── FestAbrechnung.php          # Festverwaltung: Abrechnung
 │   ├── FestKopieren.php            # Festverwaltung: Fest als Vorlage kopieren
+│   ├── Kassabuch.php               # Kassabuch: Konten, Bestände, Buchungen, Belege, Abschluss, Beitrags-/Festbuchung
 │   ├── MailKonto.php               # E-Mail: Postfächer, Zugriff, Server-Prüfung
 │   ├── MailKrypto.php              # E-Mail: Verschlüsselung der Postfach-Passwörter (sodium)
 │   ├── MailVerbindung.php          # E-Mail: Netzwerkverbindung (SSL/STARTTLS)
@@ -82,6 +83,8 @@ syncopa/
 ├── formationen.php, formation_bearbeiten.php, formation_mitglieder.php
 ├── ausrueckungen.php, ausrueckung_bearbeiten.php, ausrueckung_detail.php, ausrueckung_loeschen.php
 ├── finanzen.php, transaktion_bearbeiten.php, transaktion_loeschen.php, beitraege_verwalten.php
+│   finanz_konten.php, finanz_budget.php, finanz_kassasturz.php, finanz_abschluss.php, finanz_beleg.php
+│   finanzen_bericht.php (alle Ausdrucke), finanzen_export.php (CSV)
 ├── noten.php, noten_bearbeiten.php, noten_loeschen.php, noten_instrumente.php
 ├── notenbucher.php, notenbuch_bearbeiten.php
 ├── probe.php, probe_leiter.php, probe_stimmen.php   # Live-Probe (Musiker- bzw. Kapellmeister-Ansicht)

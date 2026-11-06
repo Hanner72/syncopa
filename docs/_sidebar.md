@@ -23,7 +23,9 @@
   <!-- * [Kalender abonnieren](kalender-abo.md) -->
 
 * **💰 Finanzen**
-  * [Kassenbuch](finanzen.md)
+  * [Kassabuch](finanzen.md)
+  * [Berichte zum Ausdrucken](finanzen.md#berichte-zum-ausdrucken)
+  * [Jahresabschluss](finanzen.md#jahresabschluss)
 
 * **🎼 Noten**
   * [Notenarchiv](noten.md)

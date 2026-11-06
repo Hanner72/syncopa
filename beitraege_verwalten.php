@@ -73,12 +73,23 @@ if (isset($_GET['bezahlt']) && isset($_GET['beitrag_id'])) {
         $bezahlt = $_GET['bezahlt'] == '1' ? 1 : 0;
         $datum = $bezahlt ? date('Y-m-d') : null;
         
+        // Kassabuch: Buchung zuerst entfernen (scheitert bei abgeschlossenem Jahr), beim Bezahlen danach anlegen
+        if (!$bezahlt) Kassabuch::beitragBuchen((int)$_GET['beitrag_id'], false);
         $db->execute(
             "UPDATE beitraege SET bezahlt = ?, bezahlt_am = ? WHERE id = ?",
             [$bezahlt, $datum, $_GET['beitrag_id']]
         );
-        
-        Session::setFlashMessage('success', $bezahlt ? 'Als bezahlt markiert' : 'Als unbezahlt markiert');
+        $hinweis = '';
+        if ($bezahlt) {
+            try {
+                Kassabuch::beitragBuchen((int)$_GET['beitrag_id'], true);
+                $hinweis = ' und im Kassabuch gebucht';
+            } catch (RuntimeException $e) {
+                $hinweis = ' (nicht im Kassabuch gebucht: ' . $e->getMessage() . ')';
+            }
+        }
+
+        Session::setFlashMessage('success', ($bezahlt ? 'Als bezahlt markiert' : 'Als unbezahlt markiert, Buchung im Kassabuch entfernt') . $hinweis);
         header('Location: beitraege_verwalten.php?jahr=' . $jahr);
         exit;
     } catch (Exception $e) {
