@@ -1,6 +1,6 @@
 # <img src="../assets/logo_full.png" alt="Syncopa" style="max-width:75px"> – Musikvereinsverwaltung
 
-> **Version 2.7.1** · Benutzerhandbuch
+> **Version 2.8.0** · Benutzerhandbuch
 
 Willkommen zur offiziellen Dokumentation von **Syncopa** – der Verwaltungssoftware für Musikvereine.
 
@@ -23,6 +23,7 @@ Syncopa vereint alle wichtigen Verwaltungsaufgaben eines Musikvereins in einer w
 | 🎻 **Instrumente** | Inventar, Wartungsfristen, Zuordnung |
 | 👔 **Uniformen** | Bestand, Ausgabe und Rücknahme |
 | 🎪 **Festverwaltung** | Stationen, Dienstplan, Einkäufe, Verträge, Todos, Abrechnung |
+| ✉️ **E-Mail** | E-Mail-Programm im Outlook-Stil für persönliche und Funktions-Postfächer (z. B. obmann@…), mit Adressbuch, Ordnern und Spamfilter |
 | 🔐 **Benutzerverwaltung** | Rollen, Mehrfachrollen, Berechtigungen, Google-Login |
 
 ---

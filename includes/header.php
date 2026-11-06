@@ -593,6 +593,10 @@ function isActive($page, $pages, $current) {
                     <li><a class="nav-link <?php echo isActive('index', $pages, $currentPage); ?>" href="index.php">
                         <i class="bi bi-grid"></i> Dashboard
                     </a></li>
+                    <li><a class="nav-link <?php echo $currentPage === 'mail' ? 'active' : ''; ?>" href="mail.php">
+                        <i class="bi bi-envelope"></i> E-Mail
+                        <span class="badge bg-primary ms-1 d-none" data-mail-zaehler></span>
+                    </a></li>
                 </ul>
             </div>
             
@@ -859,13 +863,39 @@ function isActive($page, $pages, $current) {
             </div>
             <?php endif; ?>
 
-            <div class="topbar-user">
+            <?php $hatPostfach = (bool)MailKonto::meine(); ?>
+            <?php if ($hatPostfach): ?>
+            <a href="mail.php" class="theme-toggle position-relative text-decoration-none" data-bs-toggle="tooltip" data-bs-placement="bottom" title="E-Mail">
+                <i class="bi bi-envelope"></i>
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" style="font-size:10px" data-mail-zaehler></span>
+            </a>
+            <?php endif; ?>
+            <a href="konto.php" class="topbar-user text-decoration-none" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Mein Konto">
                 <div class="topbar-avatar"><?php echo strtoupper(substr(Session::getUsername(), 0, 1)); ?></div>
                 <div class="topbar-info d-none d-sm-block">
                     <div class="topbar-name"><?php echo htmlspecialchars(Session::getUsername()); ?></div>
                     <div class="topbar-role"><?php echo ucfirst(Session::getRole()); ?></div>
                 </div>
-            </div>
+            </a>
+            <?php if ($hatPostfach): ?>
+            <script>
+            // Ungelesene E-Mails im Posteingang: beim Laden und alle 2 Minuten (Server speichert 60 s zwischen)
+            (function () {
+                let bisher = null;
+                function zeigen(n) {
+                    document.querySelectorAll('[data-mail-zaehler]').forEach(b => { b.textContent = n > 99 ? '99+' : n; b.classList.toggle('d-none', !n); });
+                    if (bisher !== null && n > bisher && window.showToast) {
+                        showToast('<i class="bi bi-envelope"></i> ' + (n - bisher === 1 ? 'Neue E-Mail eingetroffen' : (n - bisher) + ' neue E-Mails eingetroffen'), 'primary');
+                    }
+                    bisher = n;
+                }
+                window.syncopaMailZaehler = function (neu) {
+                    fetch('api/mail.php?aktion=ungelesen' + (neu ? '&neu=1' : '')).then(r => r.json()).then(d => { if (d.success) zeigen(d.gesamt); }).catch(() => {});
+                };
+                document.addEventListener('DOMContentLoaded', () => { window.syncopaMailZaehler(false); setInterval(() => window.syncopaMailZaehler(false), 120000); });
+            })();
+            </script>
+            <?php endif; ?>
             
             <a href="logout.php" class="topbar-logout" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Abmelden">
                 <i class="bi bi-box-arrow-right"></i>

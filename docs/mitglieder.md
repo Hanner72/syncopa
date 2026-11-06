@@ -33,6 +33,8 @@ Die Übersichtstabelle zeigt alle Mitglieder mit folgenden Informationen:
 - **Mitgliedsart:** Alle aktuellen Mitglieder (Standard), nur aktive, eine bestimmte Mitgliedsart, ausgetretene oder alle
 - **Registerfilter:** Nach musikalischem Register filtern
 
+Die Liste filtert sofort beim Tippen bzw. Auswählen. Suche, Filter, Sortierung und Seite bleiben erhalten, wenn man ein Mitglied öffnet und zurückkommt oder die Seite wechselt. **✕** neben der Suche setzt alles zurück.
+
 ---
 
 ## Mitglied anlegen

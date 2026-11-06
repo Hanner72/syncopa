@@ -33,6 +33,7 @@ $branch    = 'main';
 // Dateien/Verzeichnisse die beim Update NICHT überschrieben werden
 $skipFiles = [
     'config.php',
+    'config.mailkey.php', // Schlüssel der E-Mail-Passwörter
     'uploads',
 ];
 

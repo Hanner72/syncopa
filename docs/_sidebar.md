@@ -41,6 +41,11 @@
 * **🎪 Festverwaltung**
   * [Übersicht & Module](festverwaltung.md)
 
+* **✉️ E-Mail**
+  * [E-Mail-Programm](email.md)
+  * [Ordner](email.md#ordner)
+  * [Junk-E-Mail (Spamfilter)](email.md#junk-e-mail-spamfilter)
+
 * **⚙️ Administration**
   * [Benutzerverwaltung](benutzer.md)
   * [Rollen & Berechtigungen](rollen.md)
