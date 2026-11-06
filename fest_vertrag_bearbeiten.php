@@ -33,12 +33,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'honorar'        => (($_POST['honorar'] ?? '') !== '') ? (float)$_POST['honorar'] : null,
         'zahlungsstatus' => $_POST['zahlungsstatus'] ?? 'offen',
         'zahlungsdatum'  => $_POST['zahlungsdatum'] ?? '',
+        'bezahlt_betrag' => (($_POST['bezahlt_betrag'] ?? '') !== '') ? (float)str_replace(',', '.', $_POST['bezahlt_betrag']) : null,
         'notizen'        => trim($_POST['notizen'] ?? ''),
         'erstellt_von'   => Session::getUserId(),
     ];
 
     if (empty($data['band_name'])) {
         $error = 'Bitte einen Band-/Gruppennamen eingeben.';
+    } elseif ($data['zahlungsstatus'] === 'teilweise' && ($data['bezahlt_betrag'] === null || $data['bezahlt_betrag'] <= 0)) {
+        $error = 'Bitte den bereits bezahlten Betrag eingeben.';
+    } elseif ($data['zahlungsstatus'] === 'teilweise' && $data['honorar'] !== null && $data['bezahlt_betrag'] >= $data['honorar']) {
+        $error = 'Der bezahlte Betrag ist so hoch wie das Honorar. Bitte „Bezahlt“ wählen oder den Betrag korrigieren.';
     } else {
         try {
             if ($isEdit) {
@@ -171,6 +176,12 @@ include 'includes/header.php';
                             <option value="storniert" <?php echo ($vertrag['zahlungsstatus'] ?? '') === 'storniert' ? 'selected' : ''; ?>>Storniert</option>
                         </select>
                     </div>
+                    <div class="mb-3" id="teilbetrag-feld" <?php echo ($vertrag['zahlungsstatus'] ?? '') === 'teilweise' ? '' : 'hidden'; ?>>
+                        <label for="bezahlt_betrag" class="form-label">Bereits bezahlt (€)</label>
+                        <input type="number" class="form-control" id="bezahlt_betrag" name="bezahlt_betrag" step="0.01" min="0.01"
+                               value="<?php echo htmlspecialchars($vertrag['bezahlt_betrag'] ?? ''); ?>">
+                        <div class="form-text" id="restbetrag-text"></div>
+                    </div>
                     <div class="mb-3">
                         <label for="zahlungsdatum" class="form-label">Zahlungsdatum</label>
                         <input type="date" class="form-control" id="zahlungsdatum" name="zahlungsdatum"
@@ -183,3 +194,18 @@ include 'includes/header.php';
 </form>
 
 <?php include 'includes/footer.php'; ?>
+<script>
+// Teilbetrag nur bei „Teilweise bezahlt“ zeigen und Restbetrag anzeigen
+(function () {
+    var status = document.getElementById('zahlungsstatus'), feld = document.getElementById('teilbetrag-feld');
+    var bezahlt = document.getElementById('bezahlt_betrag'), honorar = document.getElementById('honorar'), text = document.getElementById('restbetrag-text');
+    function aktualisieren() {
+        var teil = status.value === 'teilweise';
+        feld.hidden = !teil; bezahlt.required = teil;
+        var h = parseFloat(honorar.value), b = parseFloat(bezahlt.value);
+        text.textContent = teil && !isNaN(h) && !isNaN(b) ? 'Noch offen: ' + (h - b).toLocaleString('de-AT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €' : '';
+    }
+    [status, bezahlt, honorar].forEach(function (el) { el.addEventListener('input', aktualisieren); el.addEventListener('change', aktualisieren); });
+    aktualisieren();
+})();
+</script>

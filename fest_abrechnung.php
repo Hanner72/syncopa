@@ -64,6 +64,8 @@ $katEin = FestAbrechnung::kategorienEinnahmen();
 $katAus = FestAbrechnung::kategorienAusgaben();
 
 $ergebnisPositiv = $summary['ergebnis'] >= 0;
+// Voraussichtlich, solange Einkäufe bestellt oder Honorare noch offen sind
+$voraussichtlich = $summary['bestellt_anzahl'] > 0 || $summary['honorar_offen'] > 0;
 
 include 'includes/header.php';
 ?>
@@ -103,6 +105,7 @@ include 'includes/header.php';
                         <?php endif; ?>
                         <?php if ($summary['vertrags_summe'] > 0): ?>
                         · Honorare: <?php echo number_format($summary['vertrags_summe'], 2, ',', '.'); ?> €
+                        <?php if ($summary['honorar_offen'] > 0): ?>(davon offen: <?php echo number_format($summary['honorar_offen'], 2, ',', '.'); ?> €)<?php endif; ?>
                         <?php endif; ?>
                     </small>
                 </div>
@@ -114,11 +117,11 @@ include 'includes/header.php';
         <div class="card stat-card border-<?php echo $ergebnisPositiv ? 'success' : 'danger'; ?> h-100">
             <div class="card-body">
                 <div>
-                    <h6><?php echo $summary['bestellt_anzahl'] ? 'Voraussichtliches Ergebnis' : 'Ergebnis'; ?></h6>
+                    <h6><?php echo $voraussichtlich ? 'Voraussichtliches Ergebnis' : 'Ergebnis'; ?></h6>
                     <h2 class="text-<?php echo $ergebnisPositiv ? 'success' : 'danger'; ?>">
                         <?php echo ($ergebnisPositiv ? '+' : '') . number_format($summary['ergebnis'], 2, ',', '.'); ?> €
                     </h2>
-                    <small class="text-muted"><?php echo $ergebnisPositiv ? 'Überschuss' : 'Verlust'; ?><?php if ($summary['bestellt_anzahl']): ?> · inkl. bestellter Einkäufe<?php endif; ?></small>
+                    <small class="text-muted"><?php echo $ergebnisPositiv ? 'Überschuss' : 'Verlust'; ?><?php if ($voraussichtlich): ?> · inkl. <?php echo implode(' und ', array_filter([$summary['bestellt_anzahl'] ? 'bestellter Einkäufe' : '', $summary['honorar_offen'] > 0 ? 'offener Honorare' : ''])); ?><?php endif; ?></small>
                 </div>
                 <i class="bi bi-<?php echo $ergebnisPositiv ? 'graph-up-arrow text-success' : 'graph-down-arrow text-danger'; ?> stat-icon"></i>
             </div>
@@ -290,24 +293,49 @@ include 'includes/header.php';
 
                 <?php if ($vertragsAusg): ?>
                 <tr class="gruppe">
-                    <td><i class="bi bi-music-note-beamed"></i> Honorare / Verträge</td>
+                    <td><i class="bi bi-music-note-beamed"></i> Honorare / Verträge
+                        <?php if ($summary['honorar_offen'] > 0): ?>
+                        <span class="fw-normal text-muted small ms-1">davon offen: <?php echo number_format($summary['honorar_offen'], 2, ',', '.'); ?> €</span>
+                        <?php endif; ?>
+                    </td>
                     <td class="text-end text-danger"><?php echo number_format($summary['vertrags_summe'], 2, ',', '.'); ?> €</td>
                     <?php if ($darfSchreiben): ?><td class="no-print"></td><?php endif; ?>
                 </tr>
                 <?php
-                $zStatus = ['offen' => ['offen', 'warning'], 'teilweise' => ['teilweise bezahlt', 'info'], 'bezahlt' => ['bezahlt', 'success'], 'storniert' => ['storniert', 'danger']];
+                $offenBadge = '<span class="badge bg-warning text-dark ms-1" title="Noch nicht bezahlt – als voraussichtliche Ausgabe eingerechnet">noch offen</span>';
                 foreach ($vertragsAusg as $v):
-                    $zs = $zStatus[$v['zahlungsstatus']] ?? [$v['zahlungsstatus'], 'secondary'];
+                    $auftritt = $v['auftritt_datum'] ? 'Auftritt ' . date('d.m.Y', strtotime($v['auftritt_datum'])) : '';
+                    $teilweise = $v['zahlungsstatus'] === 'teilweise' && $v['bezahlt_betrag'] !== null && (float)$v['bezahlt_betrag'] > 0;
                 ?>
+                <?php if ($teilweise): ?>
+                <tr>
+                    <td>
+                        <?php echo htmlspecialchars($v['band_name']); ?> <span class="text-muted">· Anzahlung</span>
+                        <span class="badge bg-success ms-1">bezahlt</span>
+                        <div class="unterzeile"><?php echo htmlspecialchars(implode(' · ', array_filter([$auftritt, 'Honorar ' . number_format($v['honorar'], 2, ',', '.') . ' €']))); ?></div>
+                    </td>
+                    <td class="text-end"><?php echo number_format($v['bezahlt_betrag'], 2, ',', '.'); ?> €</td>
+                    <?php if ($darfSchreiben): ?><td class="no-print"></td><?php endif; ?>
+                </tr>
+                <tr>
+                    <td>
+                        <?php echo htmlspecialchars($v['band_name']); ?> <span class="text-muted">· Restbetrag</span>
+                        <?php echo $offenBadge; ?>
+                    </td>
+                    <td class="text-end"><?php echo number_format(FestVertrag::offenerBetrag($v), 2, ',', '.'); ?> €</td>
+                    <?php if ($darfSchreiben): ?><td class="no-print"></td><?php endif; ?>
+                </tr>
+                <?php else: ?>
                 <tr>
                     <td>
                         <?php echo htmlspecialchars($v['band_name']); ?>
-                        <span class="badge bg-<?php echo $zs[1]; ?> ms-1"><?php echo htmlspecialchars($zs[0]); ?></span>
-                        <?php if ($v['auftritt_datum']): ?><div class="unterzeile">Auftritt <?php echo date('d.m.Y', strtotime($v['auftritt_datum'])); ?></div><?php endif; ?>
+                        <?php echo $v['zahlungsstatus'] === 'bezahlt' ? '<span class="badge bg-success ms-1">bezahlt</span>' : $offenBadge; ?>
+                        <?php if ($auftritt): ?><div class="unterzeile"><?php echo $auftritt; ?></div><?php endif; ?>
                     </td>
                     <td class="text-end"><?php echo number_format($v['honorar'], 2, ',', '.'); ?> €</td>
                     <?php if ($darfSchreiben): ?><td class="no-print"></td><?php endif; ?>
                 </tr>
+                <?php endif; ?>
                 <?php endforeach; ?>
                 <?php endif; ?>
 
@@ -351,7 +379,7 @@ include 'includes/header.php';
                 </tbody>
                 <tfoot>
                     <tr class="summe">
-                        <td>Gesamt Ausgaben<?php if ($summary['bestellt_summe'] > 0): ?> <span class="fw-normal text-muted small">(inkl. bestellter Einkäufe)</span><?php endif; ?></td>
+                        <td>Gesamt Ausgaben<?php if ($voraussichtlich): ?> <span class="fw-normal text-muted small">(voraussichtlich, inkl. noch offener Beträge)</span><?php endif; ?></td>
                         <td class="text-end text-danger"><?php echo number_format($summary['ausgaben'], 2, ',', '.'); ?> €</td>
                         <?php if ($darfSchreiben): ?><td class="no-print"></td><?php endif; ?>
                     </tr>

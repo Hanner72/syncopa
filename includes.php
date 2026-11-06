@@ -509,6 +509,10 @@ require_once __DIR__ . '/classes/FestAbrechnung.php';
         erstellt_am    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (fest_id) REFERENCES feste(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    // Bei „teilweise bezahlt“: bereits bezahlter Betrag (Rest gilt als offen)
+    if (!$db->fetchOne("SHOW COLUMNS FROM fest_vertraege LIKE 'bezahlt_betrag'")) {
+        try { $db->execute("ALTER TABLE fest_vertraege ADD COLUMN bezahlt_betrag DECIMAL(10,2) NULL AFTER zahlungsstatus"); } catch (\Throwable $e) {}
+    }
 
     // status nutzt 'in_arbeit'/'abgebrochen' (NICHT 'in_bearbeitung') - siehe
     // classes/FestTodo.php::updateStatus() und die fest_todos*.php Toggle-Logik.

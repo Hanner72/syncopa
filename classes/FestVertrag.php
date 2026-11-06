@@ -23,8 +23,8 @@ class FestVertrag {
     }
 
     public function create(array $data): int {
-        $sql = "INSERT INTO fest_vertraege (fest_id, band_name, vertrags_datum, auftritt_datum, auftritt_zeit, honorar, zahlungsstatus, zahlungsdatum, dokument_pfad, dokument_name, notizen, erstellt_von)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO fest_vertraege (fest_id, band_name, vertrags_datum, auftritt_datum, auftritt_zeit, honorar, zahlungsstatus, bezahlt_betrag, zahlungsdatum, dokument_pfad, dokument_name, notizen, erstellt_von)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $this->db->execute($sql, [
             (int)$data['fest_id'],
             $data['band_name'],
@@ -33,6 +33,7 @@ class FestVertrag {
             $data['auftritt_zeit'] ?: null,
             !empty($data['honorar']) ? (float)$data['honorar'] : null,
             $data['zahlungsstatus'] ?? 'offen',
+            self::bezahltBetrag($data),
             $data['zahlungsdatum'] ?: null,
             $data['dokument_pfad'] ?? null,
             $data['dokument_name'] ?? null,
@@ -42,8 +43,22 @@ class FestVertrag {
         return $this->db->lastInsertId();
     }
 
+    /** Bezahlter Teilbetrag – nur bei „teilweise“, sonst leer */
+    private static function bezahltBetrag(array $data): ?float {
+        if (($data['zahlungsstatus'] ?? '') !== 'teilweise') return null;
+        return isset($data['bezahlt_betrag']) && $data['bezahlt_betrag'] !== null && $data['bezahlt_betrag'] !== '' ? round((float)$data['bezahlt_betrag'], 2) : null;
+    }
+
+    /** Offener Betrag eines Vertrags (offen: ganzes Honorar, teilweise: Rest, sonst 0) */
+    public static function offenerBetrag(array $v): float {
+        $honorar = (float)($v['honorar'] ?? 0);
+        if ($v['zahlungsstatus'] === 'offen') return $honorar;
+        if ($v['zahlungsstatus'] === 'teilweise') return max(0, $honorar - (float)($v['bezahlt_betrag'] ?? 0));
+        return 0.0;
+    }
+
     public function update(int $id, array $data): void {
-        $sql = "UPDATE fest_vertraege SET band_name=?, vertrags_datum=?, auftritt_datum=?, auftritt_zeit=?, honorar=?, zahlungsstatus=?, zahlungsdatum=?, notizen=?
+        $sql = "UPDATE fest_vertraege SET band_name=?, vertrags_datum=?, auftritt_datum=?, auftritt_zeit=?, honorar=?, zahlungsstatus=?, bezahlt_betrag=?, zahlungsdatum=?, notizen=?
                 WHERE id=?";
         $this->db->execute($sql, [
             $data['band_name'],
@@ -52,6 +67,7 @@ class FestVertrag {
             $data['auftritt_zeit'] ?: null,
             !empty($data['honorar']) ? (float)$data['honorar'] : null,
             $data['zahlungsstatus'] ?? 'offen',
+            self::bezahltBetrag($data),
             $data['zahlungsdatum'] ?: null,
             $data['notizen'] ?: null,
             $id

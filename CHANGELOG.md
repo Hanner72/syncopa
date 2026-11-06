@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.8.4]
+
+### Hinzugefügt
+
+- Festverwaltung, Verträge: bei „Teilweise bezahlt“ den bereits bezahlten Betrag eintragen
+  - der offene Restbetrag wird gleich angezeigt
+- Festverwaltung, Abrechnung: Anzahlung und Restbetrag eines Vertrags getrennt aufgelistet
+  - offene Honorare sind als „noch offen“ gekennzeichnet und im voraussichtlichen Ergebnis eingerechnet
+
+### Bugs
+
+- Festverwaltung, Abrechnung: stornierte Verträge wurden bei den Ausgaben mitgezählt
+
 ## [2.8.3]
 
 ### Verbessert
