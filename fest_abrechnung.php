@@ -49,8 +49,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && Session::checkPermission('fest', 's
 // Daten laden
 $posten         = $abrObj->getByFest($festId);
 $einkaufAusg    = $abrObj->getEinkaufAusgaben($festId);
+$einkaufBestellt = $abrObj->getEinkaufBestellt($festId);
 $vertragsAusg   = $abrObj->getVertragsAusgaben($festId);
 $summary        = $abrObj->getSummary($festId);
+$bestelltSumme  = $summary['bestellt_summe'];
 
 $einnahmenPosten = array_filter($posten, fn($p) => $p['typ'] === 'einnahme');
 $ausgabenPosten  = array_filter($posten, fn($p) => $p['typ'] === 'ausgabe');
@@ -100,7 +102,10 @@ include 'includes/header.php';
                     <h6>Ausgaben</h6>
                     <h2><?php echo number_format($summary['ausgaben'], 2, ',', '.'); ?> €</h2>
                     <small class="text-muted">
-                        Einkäufe: <?php echo number_format($summary['einkauf_summe'], 2, ',', '.'); ?> €
+                        Einkäufe: <?php echo number_format($summary['einkauf_summe'] + $summary['bestellt_summe'], 2, ',', '.'); ?> €
+                        <?php if ($summary['bestellt_summe'] > 0): ?>
+                        (davon bestellt: <?php echo number_format($summary['bestellt_summe'], 2, ',', '.'); ?> €)
+                        <?php endif; ?>
                         <?php if ($summary['vertrags_summe'] > 0): ?>
                         · Honorare: <?php echo number_format($summary['vertrags_summe'], 2, ',', '.'); ?> €
                         <?php endif; ?>
@@ -114,11 +119,11 @@ include 'includes/header.php';
         <div class="card stat-card border-<?php echo $ergebnisPositiv ? 'success' : 'danger'; ?> h-100">
             <div class="card-body">
                 <div>
-                    <h6>Ergebnis</h6>
+                    <h6><?php echo $summary['bestellt_anzahl'] ? 'Voraussichtliches Ergebnis' : 'Ergebnis'; ?></h6>
                     <h2 class="text-<?php echo $ergebnisPositiv ? 'success' : 'danger'; ?>">
                         <?php echo ($ergebnisPositiv ? '+' : '') . number_format($summary['ergebnis'], 2, ',', '.'); ?> €
                     </h2>
-                    <small class="text-muted"><?php echo $ergebnisPositiv ? 'Überschuss' : 'Verlust'; ?></small>
+                    <small class="text-muted"><?php echo $ergebnisPositiv ? 'Überschuss' : 'Verlust'; ?><?php if ($summary['bestellt_anzahl']): ?> · inkl. bestellter Einkäufe<?php endif; ?></small>
                 </div>
                 <i class="bi bi-<?php echo $ergebnisPositiv ? 'graph-up-arrow text-success' : 'graph-down-arrow text-danger'; ?> stat-icon"></i>
             </div>
@@ -309,6 +314,38 @@ include 'includes/header.php';
                     <td class="text-end small"><?php echo number_format($e['preis_gesamt'], 2, ',', '.'); ?> €</td>
                 </tr>
                 <?php endforeach; ?>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php endif; ?>
+
+            <!-- Einkäufe (bestellt, noch nicht erhalten) – nur zur Info, nicht in der Summe -->
+            <?php if (!empty($einkaufBestellt)): ?>
+            <div class="px-3 pt-2 pb-1 bg-light border-bottom border-top">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="small fw-semibold text-muted"><i class="bi bi-hourglass-split"></i> Bestellt, noch nicht erhalten</span>
+                    <span class="small fw-semibold text-danger" title="Voraussichtlicher Betrag, in Ausgaben und Ergebnis eingerechnet"><?php echo number_format($bestelltSumme, 2, ',', '.'); ?> €</span>
+                </div>
+                <div class="small text-muted mt-1" style="font-size:11px">
+                    <i class="bi bi-info-circle"></i> Noch nicht geliefert. Der Betrag ist bereits in Ausgaben und voraussichtlichem Ergebnis eingerechnet.
+                    <a href="fest_einkauefe.php?fest_id=<?php echo $festId; ?>">Zu den Einkäufen</a>
+                </div>
+            </div>
+            <table class="table table-sm mb-0 text-muted">
+                <thead class="table-light" style="font-size:10px">
+                    <tr><th>Bezeichnung</th><th>Lieferant</th><th>Station</th><th class="text-end">Betrag</th></tr>
+                </thead>
+                <tbody>
+                <?php foreach ($einkaufBestellt as $e): ?>
+                <tr>
+                    <td class="small"><?php echo htmlspecialchars($e['bezeichnung']); ?>
+                        <?php if ($e['menge']): ?><span> · <?php echo (int)$e['menge']; ?> <?php echo htmlspecialchars($e['einheit'] ?? ''); ?></span><?php endif; ?>
+                        <span class="badge bg-warning text-dark ms-1" style="font-size:9px">bestellt</span>
+                    </td>
+                    <td class="small"><?php echo htmlspecialchars($e['lieferant'] ?: '–'); ?></td>
+                    <td class="small"><?php echo htmlspecialchars($e['station_name'] ?? '–'); ?></td>
+                    <td class="text-end small"><?php echo $e['preis_gesamt'] !== null ? number_format($e['preis_gesamt'], 2, ',', '.') . ' €' : '<em>Preis offen</em>'; ?></td>
+                </tr>
                 <?php endforeach; ?>
                 </tbody>
             </table>

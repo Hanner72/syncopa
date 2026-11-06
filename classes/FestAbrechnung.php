@@ -45,6 +45,17 @@ class FestAbrechnung {
         return $this->db->fetchAll($sql, [$festId]);
     }
 
+    /** Einkäufe mit Status 'bestellt' (noch nicht geliefert, zählen als voraussichtliche Ausgaben) */
+    public function getEinkaufBestellt(int $festId): array {
+        $sql = "SELECT e.*, s.name as station_name, k.name as kategorie_name
+                FROM fest_einkauefe e
+                LEFT JOIN fest_stationen s ON e.station_id = s.id
+                LEFT JOIN fest_einkauf_kategorien k ON e.kategorie_id = k.id
+                WHERE e.fest_id = ? AND e.status = 'bestellt'
+                ORDER BY e.lieferant, e.bezeichnung";
+        return $this->db->fetchAll($sql, [$festId]);
+    }
+
     /** Verträge mit Honorar (= Ausgaben) */
     public function getVertragsAusgaben(int $festId): array {
         $sql = "SELECT * FROM fest_vertraege
@@ -57,6 +68,7 @@ class FestAbrechnung {
     public function getSummary(int $festId): array {
         $posten     = $this->getByFest($festId);
         $einkauf    = $this->getEinkaufAusgaben($festId);
+        $bestellt   = $this->getEinkaufBestellt($festId);
         $vertraege  = $this->getVertragsAusgaben($festId);
 
         $einnahmen  = 0;
@@ -67,6 +79,9 @@ class FestAbrechnung {
             else                          $ausgaben   += (float)$p['betrag'];
         }
         foreach ($einkauf   as $e) $ausgaben += (float)$e['preis_gesamt'];
+        // Bestellte (noch nicht erhaltene) Einkäufe zählen mit, damit das voraussichtliche Ergebnis stimmt
+        $bestelltSumme = array_sum(array_map(fn($e) => (float)($e['preis_gesamt'] ?? 0), $bestellt));
+        $ausgaben += $bestelltSumme;
         foreach ($vertraege as $v) $ausgaben += (float)$v['honorar'];
 
         return [
@@ -74,6 +89,8 @@ class FestAbrechnung {
             'ausgaben'          => $ausgaben,
             'ergebnis'          => $einnahmen - $ausgaben,
             'einkauf_summe'     => array_sum(array_column($einkauf,   'preis_gesamt')),
+            'bestellt_summe'    => $bestelltSumme,
+            'bestellt_anzahl'   => count($bestellt),
             'vertrags_summe'    => array_sum(array_column($vertraege, 'honorar')),
             'manuelle_einnahmen'=> array_sum(array_map(fn($p) => $p['typ'] === 'einnahme' ? (float)$p['betrag'] : 0, $posten)),
             'manuelle_ausgaben' => array_sum(array_map(fn($p) => $p['typ'] === 'ausgabe'  ? (float)$p['betrag'] : 0, $posten)),
