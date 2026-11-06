@@ -9,13 +9,20 @@ Session::requirePermission('mitglieder', 'lesen');
 $mitglied = new Mitglied();
 $db = Database::getInstance();
 
-// Filter verarbeiten
-$filter = [];
-// Mitgliedsart (ersetzt den früheren Status); ohne Auswahl werden nur aktuelle Mitglieder gezeigt
-$filterArt = $_GET['mitgliedsart'] ?? 'mitglieder';
-$filter['mitgliedsart'] = $filterArt;
-if (!empty($_GET['register'])) {
-    $filter['register'] = $_GET['register'];
+// Filter verarbeiten – Mitgliedsart und Register werden für die Sitzung gemerkt, damit sie nach dem Öffnen eines
+// Mitglieds und dem Zurückkehren (auch über das Menü) erhalten bleiben. „✕“ (reset) setzt sie zurück.
+// Suchbegriff, Tabellenseite und Sortierung merkt sich die Tabelle selbst (DataTables stateSave, sessionStorage).
+if (isset($_GET['reset'])) {
+    unset($_SESSION['mitglieder_filter']);
+} elseif (isset($_GET['mitgliedsart']) || isset($_GET['register'])) {
+    $_SESSION['mitglieder_filter'] = ['mitgliedsart' => (string)($_GET['mitgliedsart'] ?? 'mitglieder'), 'register' => (string)($_GET['register'] ?? '')];
+}
+$gemerkt = $_SESSION['mitglieder_filter'] ?? [];
+$filterArt = $gemerkt['mitgliedsart'] ?? 'mitglieder'; // ohne Auswahl nur aktuelle Mitglieder
+$filterRegister = $gemerkt['register'] ?? '';
+$filter = ['mitgliedsart' => $filterArt];
+if ($filterRegister !== '') {
+    $filter['register'] = $filterRegister;
 }
 // Die Suche filtert sofort in der Tabelle (ohne Neuladen), daher hier kein Suchfilter
 
@@ -52,9 +59,8 @@ include 'includes/header.php';
         <form method="GET" class="row g-3" id="mitgliederFilter">
             <div class="col-md-5">
                 <label for="search" class="form-label">Suche</label>
-                <input type="search" class="form-control" id="search" name="search" autocomplete="off"
-                       placeholder="Name, Nummer, Instrument, Kontakt …"
-                       value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>">
+                <input type="search" class="form-control" id="search" autocomplete="off"
+                       placeholder="Name, Nummer, Instrument, Kontakt …">
             </div>
             
             <div class="col-md-3">
@@ -77,7 +83,7 @@ include 'includes/header.php';
                 <select class="form-select" id="register" name="register">
                     <option value="">Alle Register</option>
                     <?php foreach ($register as $reg): ?>
-                    <option value="<?php echo $reg['id']; ?>" <?php echo ($_GET['register'] ?? '') == $reg['id'] ? 'selected' : ''; ?>>
+                    <option value="<?php echo $reg['id']; ?>" <?php echo $filterRegister == $reg['id'] ? 'selected' : ''; ?>>
                         <?php echo htmlspecialchars($reg['name']); ?>
                     </option>
                     <?php endforeach; ?>
@@ -85,7 +91,7 @@ include 'includes/header.php';
             </div>
             
             <div class="col-md-1 d-flex align-items-end">
-                <a href="mitglieder.php" class="btn btn-outline-secondary" title="Filter zurücksetzen">
+                <a href="mitglieder.php?reset=1" class="btn btn-outline-secondary" title="Filter zurücksetzen" id="filterZuruecksetzen">
                     <i class="bi bi-x-lg"></i>
                 </a>
             </div>
@@ -230,7 +236,10 @@ include 'includes/header.php';
 <script>
 $(document).ready(function() {
     // Ohne eigenes Suchfeld der Tabelle – gesucht wird über das Feld oben, sofort beim Tippen
+    // stateSave: Suchbegriff, Seite, Sortierung und Zeilenanzahl bleiben für die Sitzung erhalten (stateDuration -1 = sessionStorage)
     const tabelle = $('#mitgliederTable').DataTable({
+        stateSave: true,
+        stateDuration: -1,
         order: [[1, 'asc']],
         columnDefs: [
             { targets: -1, orderable: false }
@@ -238,8 +247,9 @@ $(document).ready(function() {
         dom: '<"row align-items-center mb-2"<"col-auto"l>><"table-responsive"t><"row align-items-center mt-2"<"col-sm-5"i><"col-sm-7"p>>'
     });
     const suche = document.getElementById('search');
-    tabelle.search(suche.value).draw();
+    suche.value = tabelle.search(); // gemerkten Suchbegriff anzeigen
     suche.addEventListener('input', () => tabelle.search(suche.value).draw());
+    document.getElementById('filterZuruecksetzen').addEventListener('click', () => tabelle.state.clear());
     suche.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
 
     // Auswahlfelder filtern sofort (Seite lädt mit den neuen Filtern neu, die Suche bleibt erhalten)

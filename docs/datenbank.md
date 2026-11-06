@@ -99,6 +99,17 @@ Es gibt **kein externes Migrationstool**. Neue Tabellen/Spalten werden als anony
 | `fest_todos` | Aufgaben mit Priorität, Fälligkeit, Zuständigkeit |
 | `fest_abrechnung_posten` | Manuelle Zusatzposten der Festabrechnung (Einkäufe/Verträge fließen automatisch mit ein) |
 
+## E-Mail
+
+| Tabelle | Zweck |
+|---|---|
+| `mail_konten` | Postfächer: persönliche (`benutzer_id` gesetzt) und Funktions-Postfächer (`benutzer_id` NULL), Server, verschlüsseltes Passwort, Signatur, Spamfilter ein/aus |
+| `mail_konto_rollen` | Welche Rollen ein Funktions-Postfach sehen |
+| `mail_spam_absender` | Sichere und blockierte Absender bzw. Domains je Postfach |
+| `mail_spam_woerter` | Gelernte Wörter des Lernfilters (Anzahl in Junk und erwünschten Nachrichten) |
+| `mail_spam_stand` | Lernstand und zuletzt geprüfte Nachricht je Postfach |
+| `mail_spam_protokoll` | Aussortierte Nachrichten mit Grund (90 Tage) |
+
 ## Sonstiges
 
 | Tabelle | Zweck |

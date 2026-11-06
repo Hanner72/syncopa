@@ -1223,6 +1223,81 @@ CREATE TABLE IF NOT EXISTS `ehrungsregeln` (
   UNIQUE KEY `uk_ehrung` (`ehrung_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+
+-- E-Mail-Programm: Postfächer, Freigaben für Rollen, Spamfilter
+CREATE TABLE IF NOT EXISTS `mail_konten` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `benutzer_id` int DEFAULT NULL,
+  `bezeichnung` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `email` varchar(190) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `anzeigename` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `benutzername` varchar(190) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `passwort_enc` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `imap_host` varchar(190) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `imap_port` int NOT NULL DEFAULT '993',
+  `imap_sicherheit` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'ssl',
+  `smtp_host` varchar(190) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `smtp_port` int NOT NULL DEFAULT '465',
+  `smtp_sicherheit` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'ssl',
+  `signatur` text COLLATE utf8mb4_unicode_ci,
+  `sortierung` int NOT NULL DEFAULT '100',
+  `erstellt_am` datetime DEFAULT NULL,
+  `spamfilter` tinyint(1) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  KEY `idx_benutzer` (`benutzer_id`),
+  CONSTRAINT `fk_mail_konto_benutzer` FOREIGN KEY (`benutzer_id`) REFERENCES `benutzer` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `mail_konto_rollen` (
+  `konto_id` int NOT NULL,
+  `rolle_id` int NOT NULL,
+  PRIMARY KEY (`konto_id`,`rolle_id`),
+  CONSTRAINT `fk_mkr_konto` FOREIGN KEY (`konto_id`) REFERENCES `mail_konten` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `mail_spam_absender` (
+  `konto_id` int NOT NULL,
+  `muster` varchar(190) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `art` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `erstellt_am` datetime DEFAULT NULL,
+  PRIMARY KEY (`konto_id`,`muster`),
+  CONSTRAINT `fk_spam_absender_konto` FOREIGN KEY (`konto_id`) REFERENCES `mail_konten` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `mail_spam_woerter` (
+  `konto_id` int NOT NULL,
+  `wort` varchar(64) COLLATE utf8mb4_bin NOT NULL,
+  `spam` int NOT NULL DEFAULT '0',
+  `ham` int NOT NULL DEFAULT '0',
+  PRIMARY KEY (`konto_id`,`wort`),
+  CONSTRAINT `fk_spam_woerter_konto` FOREIGN KEY (`konto_id`) REFERENCES `mail_konten` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE IF NOT EXISTS `mail_spam_stand` (
+  `konto_id` int NOT NULL,
+  `spam_mails` int NOT NULL DEFAULT '0',
+  `ham_mails` int NOT NULL DEFAULT '0',
+  `letzte_uid` int NOT NULL DEFAULT '0',
+  `ham_uid` int NOT NULL DEFAULT '0',
+  `angelernt` tinyint(1) NOT NULL DEFAULT '0',
+  `letzter_lauf` datetime DEFAULT NULL,
+  PRIMARY KEY (`konto_id`),
+  CONSTRAINT `fk_spam_stand_konto` FOREIGN KEY (`konto_id`) REFERENCES `mail_konten` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `mail_spam_protokoll` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `konto_id` int NOT NULL,
+  `message_id` varchar(250) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `absender` varchar(190) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `betreff` varchar(250) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `grund` varchar(250) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `zeit` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_konto_msg` (`konto_id`,`message_id`(100)),
+  CONSTRAINT `fk_spam_protokoll_konto` FOREIGN KEY (`konto_id`) REFERENCES `mail_konten` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

@@ -20,6 +20,13 @@ require_once __DIR__ . '/classes/Ehrungen.php';
 require_once __DIR__ . '/classes/BmvInventar.php';
 require_once __DIR__ . '/classes/BmvNoten.php';
 require_once __DIR__ . '/classes/Mitgliedsart.php';
+require_once __DIR__ . '/classes/MailKrypto.php';
+require_once __DIR__ . '/classes/MailVerbindung.php';
+require_once __DIR__ . '/classes/MailNachricht.php';
+require_once __DIR__ . '/classes/ImapClient.php';
+require_once __DIR__ . '/classes/MailSender.php';
+require_once __DIR__ . '/classes/MailKonto.php';
+require_once __DIR__ . '/classes/MailSpamfilter.php';
 
 // Migration: Mehrfachrollen-Pivot-Tabelle
 (function() {
@@ -715,6 +722,79 @@ require_once __DIR__ . '/classes/FestAbrechnung.php';
     Mitgliedsart::einmaligUebernehmen();
     Mitgliedsart::gastArtAnlegen();
     Mitgliedsart::aktualisierenFallsNoetig(); // einmal am Tag: laufende Zeiträume ändern sich mit dem Datum
+
+    // E-Mail: Postfächer der Benutzer (benutzer_id gesetzt) und Funktions-Postfächer (benutzer_id leer, für Rollen freigegeben).
+    // Das Passwort wird mit MailKrypto verschlüsselt gespeichert.
+    $db->execute("CREATE TABLE IF NOT EXISTS mail_konten (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        benutzer_id INT NULL,
+        bezeichnung VARCHAR(100) NOT NULL,
+        email VARCHAR(190) NOT NULL,
+        anzeigename VARCHAR(150) NULL,
+        benutzername VARCHAR(190) NOT NULL,
+        passwort_enc TEXT NOT NULL,
+        imap_host VARCHAR(190) NOT NULL,
+        imap_port INT NOT NULL DEFAULT 993,
+        imap_sicherheit VARCHAR(10) NOT NULL DEFAULT 'ssl',
+        smtp_host VARCHAR(190) NOT NULL,
+        smtp_port INT NOT NULL DEFAULT 465,
+        smtp_sicherheit VARCHAR(10) NOT NULL DEFAULT 'ssl',
+        signatur TEXT NULL,
+        sortierung INT NOT NULL DEFAULT 100,
+        erstellt_am DATETIME NULL,
+        KEY idx_benutzer (benutzer_id),
+        CONSTRAINT fk_mail_konto_benutzer FOREIGN KEY (benutzer_id) REFERENCES benutzer(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $db->execute("CREATE TABLE IF NOT EXISTS mail_konto_rollen (
+        konto_id INT NOT NULL,
+        rolle_id INT NOT NULL,
+        PRIMARY KEY (konto_id, rolle_id),
+        CONSTRAINT fk_mkr_konto FOREIGN KEY (konto_id) REFERENCES mail_konten(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // Spamfilter je Postfach: sichere/blockierte Absender, gelernte Wörter (Bayes), Stand der Prüfung, Protokoll
+    if (!$spalte('mail_konten', 'spamfilter')) {
+        $db->execute("ALTER TABLE mail_konten ADD COLUMN spamfilter TINYINT(1) NOT NULL DEFAULT 1");
+    }
+    $db->execute("CREATE TABLE IF NOT EXISTS mail_spam_absender (
+        konto_id INT NOT NULL,
+        muster VARCHAR(190) NOT NULL,
+        art VARCHAR(10) NOT NULL,
+        erstellt_am DATETIME NULL,
+        PRIMARY KEY (konto_id, muster),
+        CONSTRAINT fk_spam_absender_konto FOREIGN KEY (konto_id) REFERENCES mail_konten(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $db->execute("CREATE TABLE IF NOT EXISTS mail_spam_woerter (
+        konto_id INT NOT NULL,
+        wort VARCHAR(64) NOT NULL,
+        spam INT NOT NULL DEFAULT 0,
+        ham INT NOT NULL DEFAULT 0,
+        PRIMARY KEY (konto_id, wort),
+        CONSTRAINT fk_spam_woerter_konto FOREIGN KEY (konto_id) REFERENCES mail_konten(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin");
+    $db->execute("CREATE TABLE IF NOT EXISTS mail_spam_stand (
+        konto_id INT NOT NULL PRIMARY KEY,
+        spam_mails INT NOT NULL DEFAULT 0,
+        ham_mails INT NOT NULL DEFAULT 0,
+        letzte_uid INT NOT NULL DEFAULT 0,
+        angelernt TINYINT(1) NOT NULL DEFAULT 0,
+        letzter_lauf DATETIME NULL,
+        CONSTRAINT fk_spam_stand_konto FOREIGN KEY (konto_id) REFERENCES mail_konten(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    if (!$spalte('mail_spam_stand', 'ham_uid')) {
+        $db->execute("ALTER TABLE mail_spam_stand ADD COLUMN ham_uid INT NOT NULL DEFAULT 0 AFTER letzte_uid");
+    }
+    $db->execute("CREATE TABLE IF NOT EXISTS mail_spam_protokoll (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        konto_id INT NOT NULL,
+        message_id VARCHAR(250) NULL,
+        absender VARCHAR(190) NULL,
+        betreff VARCHAR(250) NULL,
+        grund VARCHAR(250) NOT NULL,
+        zeit DATETIME NOT NULL,
+        KEY idx_konto_msg (konto_id, message_id(100)),
+        CONSTRAINT fk_spam_protokoll_konto FOREIGN KEY (konto_id) REFERENCES mail_konten(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     // Welche Syncopa-Instrumentart zu einer BMV-Inventarbezeichnung gehört (z. B. „B-Bariton“ => Bariton)
     $db->execute("CREATE TABLE IF NOT EXISTS bmv_inventar_zuordnung (

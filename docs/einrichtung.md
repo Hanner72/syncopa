@@ -10,7 +10,7 @@ Für eine leichte Installation wurde ein komplettes Installationsscript implemen
 | MySQL / MariaDB | 5.7 / 10.3 oder höher |
 | Webserver | Apache oder Nginx (Syncopa nutzt normale `.php`-Adressen, `mod_rewrite` wird nicht benötigt) |
 | PHP-Extensions (Pflicht) | `pdo`, `pdo_mysql`, `intl`, `fileinfo` |
-| PHP-Extensions (empfohlen) | `curl` (Google-Login, automatisches System-Update), `zip` (automatisches System-Update) |
+| PHP-Extensions (empfohlen) | `curl` (Google-Login, automatisches System-Update), `zip` (automatisches System-Update), `openssl` und `sodium` (E-Mail-Programm) |
 
 Der Installationsassistent (`install.php`) prüft die Pflicht-Voraussetzungen automatisch und zeigt an, falls etwas fehlt.
 
@@ -121,8 +121,21 @@ Nach der Installation gibt es zwei Konfigurationsdateien:
 |---|---|---|
 | `config.php` | DB-Zugangsdaten, BASE_URL, API-Keys | **Nein** |
 | `config.app.php` | App-Konstanten, Autoloader, Hilfsfunktionen | Ja |
+| `config.mailkey.php` | Schlüssel für die gespeicherten Postfach-Passwörter (wird beim ersten Postfach automatisch erzeugt) | **Nein** |
 
 > ⚠️ Eigene Anpassungen nur in `config.php` vornehmen – `config.app.php` wird bei jedem System-Update automatisch aktualisiert.
+
+> 🔒 `config.php` und `config.mailkey.php` gehören zur Datensicherung. Geht `config.mailkey.php` verloren, müssen alle Postfach-Passwörter neu eingetragen werden.
+
+### 3.8 Cronjob für den Spamfilter (optional)
+
+Das [E-Mail-Programm](email.md) prüft neue Nachrichten auf Junk, sobald jemand den Posteingang öffnet. Damit das auch im Hintergrund passiert und der Filter laufend dazulernt, einen Cronjob alle 5 Minuten als Webserver-Benutzer einrichten:
+
+```bash
+echo '*/5 * * * * www-data /usr/bin/php /var/www/html/syncopa/cron/mail_spamfilter.php >/dev/null 2>&1' | sudo tee /etc/cron.d/syncopa-mailspam
+```
+
+Unter Windows geht das über die Aufgabenplanung mit `php.exe cron\mail_spamfilter.php`. Zum Testen: `php cron/mail_spamfilter.php -v`.
 
 ---
 

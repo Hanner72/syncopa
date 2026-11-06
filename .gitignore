@@ -9,3 +9,6 @@ uploads/
 
 ENTWICKLUNG.md
 telemetry/
+
+# Schlüssel für gespeicherte E-Mail-Passwörter (wird automatisch erzeugt)
+config.mailkey.php

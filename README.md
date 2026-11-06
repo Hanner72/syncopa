@@ -1,6 +1,6 @@
 # 🎵 SYNCOPA - Musikvereinsverwaltung
 
-[![Version](https://img.shields.io/badge/Version-2.3.2-blue.svg)](https://github.com/Hanner72/syncopa)
+[![Version](https://img.shields.io/badge/Version-2.8.0-blue.svg)](https://github.com/Hanner72/syncopa)
 [![PHP](https://img.shields.io/badge/PHP-8.0+-purple.svg)](https://php.net)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Made in Austria](https://img.shields.io/badge/Made%20in-Austria-red.svg)]()
@@ -45,19 +45,21 @@ Telegram: https://t.me/hanner72
 | **Finanzen** | Einnahmen, Ausgaben und Mitgliedsbeiträge |
 | **Uniformen** | Trachtenverwaltung und Ausgabehistorie |
 | **Festverwaltung** | Stationen, Dienstplan, Einkäufe, Verträge, Abrechnung |
+| **E-Mail** | E-Mail-Programm für persönliche und Funktions-Postfächer, mit Spamfilter |
 | **Benutzerverwaltung** | Mehrfachrollen, Berechtigungen, Google OAuth |
 
 ---
 
 ## ✨ Features
 
-- 👥 **Mitgliederverwaltung** – Stammdaten, Instrumente, Register, Status
+- 👥 **Mitgliederverwaltung** – Stammdaten, Instrumente, Register, Mitgliedsarten, Laufbahn, BMV-Abgleich
 - 🎺 **Instrumenteninventar** – Verleih, Wartung, Versicherungswerte
 - 🎼 **Notenarchiv** – PDF-Upload, Schwierigkeitsgrade, Archivnummern
 - 📅 **Kalender & Ausrückungen** – Termine, Anwesenheit, iCal-Export
 - 💰 **Finanzen** – Kassenbuch, Mitgliedsbeiträge, Berichte
 - 👔 **Uniformverwaltung** – Trachten, Größen, Ausgabe/Rückgabe
 - 🎪 **Festverwaltung** – vollständiges Modul zur Vereinsfest-Organisation
+- ✉️ **E-Mail** – Outlook-ähnliches Postfach für obmann@, kapellmeister@ usw., mit Adressbuch, Ordnern und Junk-Filter
 - 🔐 **Mehrfachrollen** – ein Benutzer kann mehrere Rollen gleichzeitig haben
 - 🔄 **Automatische Updates** – direkt im Admin-Bereich via GitHub
 - 🌓 **Dark/Light Mode** – automatisch oder manuell umschaltbar
@@ -74,7 +76,7 @@ Telegram: https://t.me/hanner72
 | PHP | 8.0 oder höher |
 | MySQL / MariaDB | 5.7 / 10.3 oder höher |
 | Webserver | Apache (mod_rewrite) oder Nginx |
-| PHP-Extensions | `pdo_mysql`, `intl`, `zip`, `gd`, `curl` |
+| PHP-Extensions | `pdo_mysql`, `intl`, `zip`, `gd`, `curl`, `openssl`, `sodium` |
 
 ### Schritte
 
@@ -122,7 +124,7 @@ Syncopa aktualisiert sich direkt aus dem Admin-Bereich heraus:
 
 - Vergleicht die installierte Version mit der aktuellen Version auf GitHub
 - Lädt das Update als ZIP herunter und überspielt alle Dateien automatisch
-- `config.php` (Zugangsdaten) und `uploads/` werden dabei **nie** überschrieben
+- `config.php` (Zugangsdaten), `config.mailkey.php` (Schlüssel der Postfach-Passwörter) und `uploads/` werden dabei **nie** überschrieben
 
 ---
 
@@ -139,6 +141,7 @@ syncopa/
 │   ├── Database.php
 │   ├── Session.php         # Mehrfachrollen-Support
 │   └── ...
+├── cron/                   # Cronjobs (z. B. Spamfilter, nur Kommandozeile)
 ├── docs/                   # Dokumentation
 ├── uploads/                # Datei-Uploads (nicht in git)
 │   ├── noten/
@@ -146,6 +149,7 @@ syncopa/
 │   ├── dokumente/
 │   └── fest_vertraege/
 ├── config.php              # Umgebungsspezifisch (nicht in git)
+├── config.mailkey.php      # Schlüssel der Postfach-Passwörter (nicht in git, mitsichern!)
 ├── config.app.php          # App-Konstanten (wird per Update aktualisiert)
 ├── config.example.php      # Vorlage für neue Installationen
 ├── database.sql            # Datenbankschema
@@ -158,7 +162,7 @@ syncopa/
 
 1. **HTTPS aktivieren** – SSL-Zertifikat einrichten
 2. **Passwort ändern** – Admin-Passwort sofort nach Installation ändern
-3. **Backups erstellen** – regelmäßige Datenbank-Backups
+3. **Backups erstellen** – regelmäßige Datenbank-Backups, dazu `config.php` und `config.mailkey.php`
 4. **PHP-Fehler verbergen** – in Produktion: `display_errors = Off`
 5. **Upload-Verzeichnis schützen:**
 

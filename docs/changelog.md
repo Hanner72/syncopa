@@ -1,5 +1,35 @@
 # Changelog
 
+## [2.8.0]
+
+### Hinzugefügt
+
+- E-Mail-Programm im Stil von Outlook (neuer Menüpunkt „E-Mail“)
+  - Lesen, Schreiben, Antworten, Allen antworten, Weiterleiten, Anhänge, Signatur
+  - Adressbuch mit Mitgliedern und Gruppen (aktive Mitglieder, Formationen, Register, Mitgliedsarten), Gruppen gehen immer als Bcc
+  - Zahl der ungelesenen Nachrichten im Menü und in der Kopfzeile
+  - funktioniert mit jedem IMAP/SMTP-Postfach, Vorlagen für Gmail, Outlook, GMX, A1, World4You u. a.
+- Persönliche Postfächer und Funktions-Postfächer (z. B. obmann@…) für Rollen
+  - Funktions-Postfächer richtet der Admin unter „Funktions-Postfächer“ ein
+  - wer die Rolle hat, sieht das Postfach, ohne das Passwort zu kennen
+  - Passwörter werden verschlüsselt gespeichert (Schlüssel in config.mailkey.php, bitte mitsichern)
+- Ordner im Postfach anlegen, umbenennen und löschen, direkt am Mailserver
+  - „Verschieben nach“ und Verschieben mit der Maus
+  - „Gesendete speichern in“: Ordner für die gesendete Nachricht wählen
+- Spamfilter (Junk-E-Mail) für jedes Postfach
+  - sichere Absender: Mitglieder, eigene Postfächer, Empfänger gesendeter Mails, eigene Liste
+  - blockierte Absender und Domains
+  - nutzt die Spam-Kennzeichnung des Mailservers
+  - Lernfilter, lernt aus „Junk-E-Mail“ und „Kein Junk“
+  - Hinweis im Junk-Ordner, warum eine Nachricht aussortiert wurde
+  - prüft beim Öffnen des Posteingangs und per Cronjob alle 5 Minuten (cron/mail_spamfilter.php)
+- „Mein Konto“: eigene E-Mail-Adresse und Passwort ändern, eigene Postfächer verwalten
+
+### Verbessert
+
+- Mitgliederliste merkt sich Suche, Filter, Sortierung und Seite beim Seitenwechsel
+- Dokumentation: neue Seite „E-Mail“, Einrichtung des Cronjobs, Datensicherung
+
 ## [2.7.1]
 
 ### Hinzugefügt

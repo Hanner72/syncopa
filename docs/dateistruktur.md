@@ -29,7 +29,14 @@ syncopa/
 │   ├── FestVertrag.php             # Festverwaltung: Verträge (Bands, Lieferanten, ...)
 │   ├── FestTodo.php                # Festverwaltung: Aufgaben
 │   ├── FestAbrechnung.php          # Festverwaltung: Abrechnung
-│   └── FestKopieren.php            # Festverwaltung: Fest als Vorlage kopieren
+│   ├── FestKopieren.php            # Festverwaltung: Fest als Vorlage kopieren
+│   ├── MailKonto.php               # E-Mail: Postfächer, Zugriff, Server-Prüfung
+│   ├── MailKrypto.php              # E-Mail: Verschlüsselung der Postfach-Passwörter (sodium)
+│   ├── MailVerbindung.php          # E-Mail: Netzwerkverbindung (SSL/STARTTLS)
+│   ├── ImapClient.php              # E-Mail: IMAP (Ordner, Nachrichten, Verschieben, …)
+│   ├── MailSender.php              # E-Mail: SMTP-Versand, Ablage in „Gesendet“
+│   ├── MailNachricht.php           # E-Mail: MIME bauen und zerlegen, HTML bereinigen
+│   └── MailSpamfilter.php          # E-Mail: Junk-Filter (Absenderlisten, Server-Kennzeichnung, Lernfilter)
 │
 ├── api/                             # Reine JSON-Endpunkte (fetch()/AJAX aus den Seiten)
 │   ├── formation_switch.php        # Aktive Formation im Topmenü wechseln
@@ -45,11 +52,15 @@ syncopa/
 │   ├── uniform_mitglied.php        # Uniform-Zuordnung speichern
 │   ├── rollen_sortierung.php       # Drag & Drop Rollen-Reihenfolge
 │   ├── system_update.php           # Versionsprüfung & Update aus GitHub
+│   ├── mail.php                    # E-Mail-Programm: Ordner, Liste, Lesen, Senden, Junk, Adressbuch
 │   └── fest_*.php                  # Dienstplan-Drag&Drop, Todo-Status, Einkauf-Vorlagen, Vertrags-Download, Stationstage
 │
 ├── vendor/                          # Extern eingebundene Bibliotheken (kein Composer, manuell)
 │   ├── fpdf/                       # FPDF (Basis-PDF-Erzeugung)
 │   └── fpdi/                       # FPDI (PDF-Seiten aus bestehenden PDFs übernehmen)
+│
+├── cron/                            # Aufgaben für Cronjobs (nur Kommandozeile, vom Web gesperrt)
+│   └── mail_spamfilter.php         # Spamfilter für alle Postfächer, alle 5 Minuten
 │
 ├── assets/                          # Bilder, Logo, JS/CSS für Live-Probe (assets/js/)
 ├── docs/                            # Diese Dokumentation (Docsify)
@@ -59,6 +70,7 @@ syncopa/
 ├── config.php                       # ⚠️ Zugangsdaten & API-Keys (nicht in Git!)
 ├── config.app.php                   # App-Konstanten (Version, Upload-Pfade, Klassen-Autoloader)
 ├── config.example.php               # Vorlage für neue Installationen
+├── config.mailkey.php               # ⚠️ Schlüssel der Postfach-Passwörter (nicht in Git, gehört zur Sicherung!)
 ├── includes.php                     # Klassen-Includes + Datenbank-Migrationen (laufen bei jedem Request)
 ├── database.sql                     # Vollständiges Schema für Neuinstallationen
 │
@@ -91,6 +103,7 @@ syncopa/
 ├── benutzer.php, benutzer_bearbeiten.php, benutzer_befoerdern.php, benutzer_loeschen.php
 ├── rollen.php, rolle_bearbeiten.php, berechtigungen_bearbeiten.php, berechtigungen_matrix.php
 ├── stammdaten.php
+├── mail.php, mail_konten.php, konto.php   # E-Mail-Programm, Funktions-Postfächer, Mein Konto
 └── einstellungen.php
 ```
 
