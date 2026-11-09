@@ -111,6 +111,7 @@ Es gibt **kein externes Migrationstool**. Neue Tabellen/Spalten werden als anony
 |---|---|
 | `mail_konten` | Postfächer: persönliche (`benutzer_id` gesetzt) und Funktions-Postfächer (`benutzer_id` NULL), Server, verschlüsseltes Passwort, Signatur, Spamfilter ein/aus |
 | `mail_konto_rollen` | Welche Rollen ein Funktions-Postfach sehen |
+| `mail_freigaben` | Download-Links für große Anhänge: Schlüssel, Datei, Größe, Ablaufdatum, Anzahl Downloads |
 | `mail_kontakte` | Kontakte des E-Mail-Programms; `oeffentlich` = für alle mit E-Mail-Zugang, sonst nur für `erstellt_von` |
 | `mail_spam_absender` | Sichere und blockierte Absender bzw. Domains je Postfach |
 | `mail_spam_woerter` | Gelernte Wörter des Lernfilters (Anzahl in Junk und erwünschten Nachrichten) |

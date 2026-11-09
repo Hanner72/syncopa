@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.9.2]
+
+### Hinzugefügt
+
+- E-Mail: große Dateien als Download-Link (bis 2 GB)
+  - automatisch für Dateien über 10 MB oder Anhänge über 20 MB zusammen
+  - Hochladen in Stücken mit Fortschrittsanzeige
+  - Link gültig 7, 14, 30 oder 90 Tage, danach wird die Datei automatisch gelöscht
+  - Downloadseite für Empfänger ohne Anmeldung
+  - „Mein Konto → Meine Download-Links“: Downloads ansehen, Link kopieren, löschen
+  - öffentliche Adresse von Syncopa unter E-Mail → Funktions-Postfächer einstellbar
+
+### Bugs
+
+- E-Mail: zu große Anhänge brachen mit „Unbekannte Aktion“ ab, jetzt gibt es eine verständliche Meldung
+- E-Mail: Anhänge über der Upload-Grenze wurden stillschweigend weggelassen, jetzt wird nicht gesendet und die Datei genannt
+
+### Geändert
+
+- Doku: PHP-Grenzen für Uploads (25 MB je Datei) in der Einrichtung beschrieben
+
 ## [2.9.1]
 
 ### Hinzugefügt

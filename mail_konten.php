@@ -18,6 +18,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (($_POST['aktion'] ?? '') === 'postfach_speichern') {
             MailKonto::speichern($_POST, !empty($_POST['id']) ? (int)$_POST['id'] : null, true, (array)($_POST['rollen'] ?? []));
             Session::setFlashMessage('success', 'Funktions-Postfach gespeichert.');
+        } elseif (($_POST['aktion'] ?? '') === 'link_adresse') {
+            MailFreigabe::adresseSpeichern((string)($_POST['adresse'] ?? ''));
+            Session::setFlashMessage('success', 'Adresse für Download-Links gespeichert.');
         } elseif (($_POST['aktion'] ?? '') === 'postfach_loeschen') {
             MailKonto::loeschen((int)($_POST['id'] ?? 0));
             Session::setFlashMessage('success', 'Funktions-Postfach entfernt.');
@@ -77,6 +80,24 @@ include 'includes/header.php';
         </table>
         </div>
         <?php endif; ?>
+    </div>
+</div>
+
+<?php $linkAdresse = MailFreigabe::basisAdresse(); $linkOk = MailFreigabe::linksMoeglich(); ?>
+<div class="card mt-4" id="download-links">
+    <div class="card-header"><h5 class="mb-0"><i class="bi bi-link-45deg"></i> Große Dateien als Download-Link</h5></div>
+    <div class="card-body">
+        <p class="small text-muted">Dateien über 10 MB (oder über 20 MB zusammen) verschickt Syncopa als Download-Link statt als Anhang. Dafür braucht es die Adresse, unter der Syncopa <strong>von außen</strong> erreichbar ist.</p>
+        <?php if (!$linkOk): ?>
+        <div class="alert alert-warning alert-permanent small"><i class="bi bi-exclamation-triangle"></i> Derzeit „<?php echo htmlspecialchars($linkAdresse ?: '(keine)'); ?>“: Diese Adresse ist von außen nicht erreichbar. Bis hier eine öffentliche Adresse steht, können keine Download-Links verschickt werden.</div>
+        <?php endif; ?>
+        <form method="POST" class="row g-2 align-items-end">
+            <input type="hidden" name="aktion" value="link_adresse">
+            <div class="col-md-8"><label class="form-label small" for="adresse">Öffentliche Adresse von Syncopa</label>
+                <input class="form-control" id="adresse" name="adresse" placeholder="https://verein.at/syncopa" value="<?php echo htmlspecialchars($linkOk ? $linkAdresse : ''); ?>"></div>
+            <div class="col-md-4"><button class="btn btn-primary w-100"><i class="bi bi-save"></i> Speichern</button></div>
+        </form>
+        <div class="form-text">Leer lassen, um die Adresse aus config.php (BASE_URL) zu verwenden.</div>
     </div>
 </div>
 

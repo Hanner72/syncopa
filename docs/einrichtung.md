@@ -127,7 +127,18 @@ Nach der Installation gibt es zwei Konfigurationsdateien:
 
 > 🔒 `config.php` und `config.mailkey.php` gehören zur Datensicherung. Geht `config.mailkey.php` verloren, müssen alle Postfach-Passwörter neu eingetragen werden.
 
-### 3.8 Cronjob für den Spamfilter (optional)
+### 3.8 PHP-Grenzen für Uploads
+
+Für E-Mail-Anhänge bis 20 MB und Belege im Kassabuch muss PHP größere Uploads annehmen. Unter Linux mit Apache am einfachsten als eigene Datei:
+
+```bash
+printf 'upload_max_filesize = 25M\npost_max_size = 32M\nmemory_limit = 256M\n' | sudo tee /etc/php/8.3/apache2/conf.d/99-syncopa.ini
+sudo systemctl reload apache2
+```
+
+(PHP-Version im Pfad anpassen. Bei Webhosting die Werte im Kundenmenü des Providers setzen.) Sehr große Dateien lädt Syncopa ohnehin in Stücken hoch, dafür reichen diese Werte.
+
+### 3.9 Cronjob für den Spamfilter (optional)
 
 Das [E-Mail-Programm](email.md) prüft neue Nachrichten auf Junk, sobald jemand den Posteingang öffnet. Damit das auch im Hintergrund passiert und der Filter laufend dazulernt, einen Cronjob alle 5 Minuten als Webserver-Benutzer einrichten:
 

@@ -6,6 +6,14 @@ require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes.php';
 
 $aktion = $_REQUEST['aktion'] ?? '';
+
+// Zu große Anfrage: PHP verwirft dann alle Felder (auch „aktion“). Verständlich melden statt „Unbekannte Aktion“.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($_POST) && empty($_FILES) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['success' => false, 'error' => 'Die Daten sind zu groß für den Server (höchstens ' . ini_get('post_max_size')
+        . ' je Übertragung). Große Dateien bitte als Download-Link senden.'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
 if ($aktion !== 'anhang') {
     header('Content-Type: application/json; charset=utf-8');
 }
@@ -247,7 +255,14 @@ try {
             $anhaenge = [];
             $groesse = 0;
             foreach ((array)($_FILES['anhaenge']['tmp_name'] ?? []) as $i => $tmp) {
-                if (!is_uploaded_file($tmp) || ($_FILES['anhaenge']['error'][$i] ?? 1) !== UPLOAD_ERR_OK) continue;
+                $fehler = $_FILES['anhaenge']['error'][$i] ?? UPLOAD_ERR_NO_FILE;
+                $dateiname = (string)($_FILES['anhaenge']['name'][$i] ?? 'Datei');
+                if ($fehler === UPLOAD_ERR_NO_FILE) continue;
+                // Nie still weglassen: lieber nicht senden und genau sagen, warum
+                if ($fehler === UPLOAD_ERR_INI_SIZE || $fehler === UPLOAD_ERR_FORM_SIZE) {
+                    throw new RuntimeException("„{$dateiname}“ ist zu groß für einen Anhang (höchstens " . ini_get('upload_max_filesize') . '). Bitte als Download-Link senden.');
+                }
+                if ($fehler !== UPLOAD_ERR_OK || !is_uploaded_file($tmp)) throw new RuntimeException("„{$dateiname}“ konnte nicht hochgeladen werden. Bitte erneut versuchen.");
                 $daten = (string)file_get_contents($tmp);
                 $groesse += strlen($daten);
                 $anhaenge[] = [basename((string)$_FILES['anhaenge']['name'][$i]), (string)($_FILES['anhaenge']['type'][$i] ?: 'application/octet-stream'), $daten];
@@ -272,12 +287,21 @@ try {
                     }
                 }
             }
-            if ($groesse > 20 * 1024 * 1024) throw new RuntimeException('Die Anhänge sind zusammen größer als 20 MB.');
+            if ($groesse > 20 * 1024 * 1024) throw new RuntimeException('Die Anhänge sind zusammen größer als 20 MB. Große Dateien bitte als Download-Link senden.');
+
+            // Große Dateien: Download-Links in den Mailtext
+            $html = (string)($_POST['html'] ?? '');
+            $freigaben = array_filter(array_map('intval', (array)($_POST['freigaben'] ?? [])));
+            if ($freigaben) {
+                $kasten = MailFreigabe::htmlKasten(MailFreigabe::versenden($freigaben, (int)($_POST['gueltig'] ?? 30)));
+                // vor der Signatur einfügen, sonst ans Ende
+                $html = str_contains($html, '<div class="signatur">') ? preg_replace('/<div class="signatur">/', $kasten . '<div class="signatur">', $html, 1) : $html . $kasten;
+            }
 
             $erg = MailSender::senden($konto, [
                 'an' => $an, 'cc' => $cc, 'bcc' => $bcc,
                 'betreff' => trim((string)($_POST['betreff'] ?? '')),
-                'html' => (string)($_POST['html'] ?? ''),
+                'html' => $html,
                 'anhaenge' => $anhaenge,
                 'antwort_auf' => ($bezug && in_array($_POST['modus'] ?? '', ['antworten', 'allen'], true)) ? $bezug['message_id'] : null,
                 'referenzen' => $bezug['referenzen'] ?? '',
@@ -409,6 +433,25 @@ try {
                 default:
                     throw new RuntimeException('Unbekannte Einstellung.');
             }
+            antworten([]);
+        }
+
+        // Download-Links für große Dateien: anlegen, Stück für Stück hochladen, abschließen, löschen
+        case 'freigabe_start': {
+            if (!MailKonto::meine()) throw new RuntimeException('Kein Postfach vorhanden.');
+            antworten(MailFreigabe::starten((string)($_POST['name'] ?? ''), (int)($_POST['groesse'] ?? 0), (string)($_POST['typ'] ?? '')));
+        }
+        case 'freigabe_teil': {
+            $tmp = $_FILES['teil']['tmp_name'] ?? '';
+            if (($_FILES['teil']['error'] ?? 1) !== UPLOAD_ERR_OK || !is_uploaded_file($tmp)) throw new RuntimeException('Ein Teil der Datei ist nicht angekommen. Bitte erneut versuchen.');
+            antworten(['position' => MailFreigabe::teil((int)($_POST['id'] ?? 0), (int)($_POST['start'] ?? -1), $tmp)]);
+        }
+        case 'freigabe_fertig': {
+            MailFreigabe::abschliessen((int)($_POST['id'] ?? 0));
+            antworten([]);
+        }
+        case 'freigabe_loeschen': {
+            MailFreigabe::loeschen((int)($_POST['id'] ?? 0));
             antworten([]);
         }
 

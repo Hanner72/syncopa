@@ -11,6 +11,10 @@ require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes.php';
 
 $ausgabe = in_array('-v', $argv, true);
+
+// Abgelaufene Download-Links und abgebrochene Uploads entfernen
+$weg = MailFreigabe::aufraeumen();
+if ($ausgabe && $weg) echo "$weg abgelaufene Download-Links entfernt\n";
 foreach (Database::getInstance()->fetchAll("SELECT * FROM mail_konten WHERE spamfilter = 1 ORDER BY id") as $konto) {
     try {
         $imap = new ImapClient($konto['imap_host'], (int)$konto['imap_port'], $konto['imap_sicherheit']);

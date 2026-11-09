@@ -39,11 +39,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 unset($_SESSION['mail_ungelesen']);
                 Session::setFlashMessage('success', 'Postfach entfernt.');
                 break;
+            case 'freigabe_loeschen':
+                MailFreigabe::loeschen((int)($_POST['id'] ?? 0));
+                Session::setFlashMessage('success', 'Download-Link gelöscht.');
+                break;
         }
     } catch (RuntimeException $e) {
         Session::setFlashMessage('danger', $e->getMessage());
     }
-    header('Location: konto.php' . (str_starts_with($_POST['aktion'] ?? '', 'postfach') ? '#postfaecher' : ''));
+    header('Location: konto.php' . (str_starts_with($_POST['aktion'] ?? '', 'postfach') ? '#postfaecher' : (($_POST['aktion'] ?? '') === 'freigabe_loeschen' ? '#freigaben' : '')));
     exit;
 }
 
@@ -149,6 +153,32 @@ include 'includes/header.php';
                 <?php endif; ?>
             </div>
         </div>
+
+        <?php $freigaben = MailFreigabe::meine(); if ($freigaben): ?>
+        <div class="card mb-3" id="freigaben">
+            <div class="card-header"><h5 class="mb-0"><i class="bi bi-link-45deg"></i> Meine Download-Links</h5></div>
+            <ul class="list-group list-group-flush">
+                <?php foreach ($freigaben as $fr): $abgelaufen = $fr['gueltig_bis'] && strtotime($fr['gueltig_bis']) < time(); ?>
+                <li class="list-group-item d-flex flex-wrap align-items-center gap-2">
+                    <div class="flex-grow-1" style="min-width:200px">
+                        <div class="text-truncate"><i class="bi bi-file-earmark"></i> <?php echo htmlspecialchars($fr['dateiname']); ?></div>
+                        <div class="small text-muted"><?php echo MailFreigabe::groesseText((int)$fr['groesse']); ?> ·
+                            <?php echo $fr['gueltig_bis'] ? ($abgelaufen ? 'abgelaufen' : 'gültig bis ' . date('d.m.Y', strtotime($fr['gueltig_bis']))) : 'noch nicht versendet'; ?> ·
+                            <?php echo (int)$fr['downloads']; ?>× heruntergeladen</div>
+                    </div>
+                    <?php if ($fr['gueltig_bis'] && !$abgelaufen): ?>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="navigator.clipboard.writeText('<?php echo htmlspecialchars(MailFreigabe::link($fr['token'])); ?>').then(() => window.showToast && showToast('Link kopiert', 'success'))" title="Link kopieren"><i class="bi bi-clipboard"></i></button>
+                    <?php endif; ?>
+                    <form method="POST" class="d-inline" onsubmit="return confirm('Download-Link löschen? Die Datei ist danach nicht mehr abrufbar.')">
+                        <input type="hidden" name="aktion" value="freigabe_loeschen"><input type="hidden" name="id" value="<?php echo $fr['id']; ?>">
+                        <button class="btn btn-sm btn-outline-danger" title="Löschen"><i class="bi bi-trash"></i></button>
+                    </form>
+                </li>
+                <?php endforeach; ?>
+            </ul>
+            <div class="card-footer small text-muted">Abgelaufene Links und ihre Dateien löscht Syncopa automatisch.</div>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 
