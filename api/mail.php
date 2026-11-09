@@ -303,6 +303,11 @@ try {
             $treffer = [];
             if (mb_strlen($q) >= 2) {
                 $like = '%' . $q . '%';
+                foreach (MailKontakt::sichtbare('', $q, 10) as $k) {
+                    $name = MailKontakt::name($k);
+                    $treffer[] = ['wert' => MailNachricht::adresse($k['email'], $name), 'name' => $name,
+                        'info' => $k['email'] . ' · Kontakt' . ($k['oeffentlich'] ? '' : ' (privat)'), 'gruppe' => false];
+                }
                 foreach (gruppen() as [$token, $name, $anzahl]) {
                     if (mb_stripos($name, $q) !== false) $treffer[] = ['wert' => $token, 'name' => $name, 'info' => $anzahl . ' Empfänger (als Bcc)', 'gruppe' => true];
                 }

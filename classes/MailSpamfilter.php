@@ -402,7 +402,8 @@ class MailSpamfilter {
         }
         $db = Database::getInstance();
         foreach ($db->fetchAll("SELECT LOWER(email) e FROM mitglieder WHERE email LIKE '%@%' UNION SELECT LOWER(bmv_email2) FROM mitglieder WHERE bmv_email2 LIKE '%@%'
-                                UNION SELECT LOWER(email) FROM mail_konten UNION SELECT LOWER(email) FROM benutzer WHERE email LIKE '%@%'") as $r) {
+                                UNION SELECT LOWER(email) FROM mail_konten UNION SELECT LOWER(email) FROM benutzer WHERE email LIKE '%@%'
+                                UNION SELECT LOWER(email) FROM mail_kontakte") as $r) {
             $adressen[trim($r['e'])] = true;
         }
         return ['adressen' => $adressen, 'domains' => $domains];

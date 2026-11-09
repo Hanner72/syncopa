@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.9.1]
+
+### Hinzugefügt
+
+- E-Mail: Kontaktverwaltung (Knopf „Kontakte“)
+  - Kontakte mit Name, Organisation, Funktion, E-Mail, Telefon, Adresse und Notizen
+  - Haken „Für alle mit E-Mail-Zugang sichtbar“, sonst bleibt der Kontakt privat
+  - ändern und löschen nur durch den Ersteller oder einen Administrator
+  - „+ Kontakt“ beim Absender einer Mail, „E-Mail schreiben“ direkt aus der Kontaktliste
+- Adressbuch beim Schreiben schlägt Kontakte vor, jetzt für alle mit E-Mail-Zugang
+
+### Verbessert
+
+- Spamfilter: Mails von Kontakten kommen nie in den Junk-Ordner
+
 ## [2.9.0]
 
 ### Hinzugefügt

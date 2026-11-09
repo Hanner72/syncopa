@@ -593,7 +593,7 @@ function isActive($page, $pages, $current) {
                     <li><a class="nav-link <?php echo isActive('index', $pages, $currentPage); ?>" href="index.php">
                         <i class="bi bi-grid"></i> Dashboard
                     </a></li>
-                    <li><a class="nav-link <?php echo $currentPage === 'mail' ? 'active' : ''; ?>" href="mail.php">
+                    <li><a class="nav-link <?php echo in_array($currentPage, ['mail', 'mail_kontakte'], true) ? 'active' : ''; ?>" href="mail.php">
                         <i class="bi bi-envelope"></i> E-Mail
                         <span class="badge bg-primary ms-1 d-none" data-mail-zaehler></span>
                     </a></li>
