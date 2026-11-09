@@ -32,6 +32,7 @@ syncopa/
 │   ├── FestKopieren.php            # Festverwaltung: Fest als Vorlage kopieren
 │   ├── Kassabuch.php               # Kassabuch: Konten, Bestände, Buchungen, Belege, Abschluss, Beitrags-/Festbuchung
 │   ├── MailKonto.php               # E-Mail: Postfächer, Zugriff, Server-Prüfung
+│   ├── MailKontakt.php             # E-Mail: Kontakte (privat oder gemeinsam)
 │   ├── MailKrypto.php              # E-Mail: Verschlüsselung der Postfach-Passwörter (sodium)
 │   ├── MailVerbindung.php          # E-Mail: Netzwerkverbindung (SSL/STARTTLS)
 │   ├── ImapClient.php              # E-Mail: IMAP (Ordner, Nachrichten, Verschieben, …)
@@ -106,7 +107,7 @@ syncopa/
 ├── benutzer.php, benutzer_bearbeiten.php, benutzer_befoerdern.php, benutzer_loeschen.php
 ├── rollen.php, rolle_bearbeiten.php, berechtigungen_bearbeiten.php, berechtigungen_matrix.php
 ├── stammdaten.php
-├── mail.php, mail_konten.php, konto.php   # E-Mail-Programm, Funktions-Postfächer, Mein Konto
+├── mail.php, mail_konten.php, mail_kontakte.php, konto.php   # E-Mail-Programm, Funktions-Postfächer, Kontakte, Mein Konto
 └── einstellungen.php
 ```
 

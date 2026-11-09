@@ -11,7 +11,7 @@ $konten = array_map(fn($k) => [
     'id' => (int)$k['id'], 'bezeichnung' => $k['bezeichnung'], 'email' => $k['email'], 'anzeigename' => $k['anzeigename'],
     'funktion' => (bool)$k['funktion'], 'signatur' => $k['signatur'] ?? '',
 ], MailKonto::meine());
-$adressbuch = Session::checkPermission('mitglieder', 'lesen');
+$adressbuch = true; // Kontakte für alle; Mitglieder und Gruppen prüft die API nach Berechtigung
 
 include 'includes/header.php';
 ?>
@@ -156,6 +156,8 @@ include 'includes/header.php';
         <button class="btn-cmd" id="cmdFlagge" data-auswahl disabled><i class="bi bi-flag"></i><span>Kennzeichnen</span></button>
         <div class="trenner"></div>
         <button class="btn-cmd" id="cmdAktualisieren" title="Aktualisieren"><i class="bi bi-arrow-clockwise"></i><span>Aktualisieren</span></button>
+        <div class="trenner"></div>
+        <a class="btn-cmd text-decoration-none" href="mail_kontakte.php" title="Kontakte"><i class="bi bi-person-lines-fill"></i><span>Kontakte</span></a>
     </div>
     <div class="mail-haupt">
         <nav class="mail-ordner" id="ordnerBereich"></nav>
@@ -431,7 +433,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     <div class="d-flex gap-3 align-items-start">
                         <div class="mail-avatar" style="background:${farbe(absender[0])}">${esc(initialen(absender))}</div>
                         <div class="flex-grow-1 min-w-0">
-                            <div><strong>${esc(absender[1] || absender[0])}</strong> <span class="meta">&lt;${esc(absender[0])}&gt;</span></div>
+                            <div><strong>${esc(absender[1] || absender[0])}</strong> <span class="meta">&lt;${esc(absender[0])}&gt;</span>
+                                <a class="meta ms-1 text-decoration-none" href="mail_kontakte.php?neu=1&email=${encodeURIComponent(absender[0])}&name=${encodeURIComponent(absender[1] || '')}" target="_blank" title="Als Kontakt speichern"><i class="bi bi-person-plus"></i> Kontakt</a></div>
                             <div class="meta">An: ${esc(personText(n.an))}</div>
                             ${n.cc.length ? `<div class="meta">Cc: ${esc(personText(n.cc))}</div>` : ''}
                         </div>
@@ -686,7 +689,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const s = KONTEN.find(k => k.id === +kontoId)?.signatur || '';
         return s ? `<div class="signatur"><br>${esc(s).replace(/\n/g, '<br>')}</div>` : '';
     }
-    function schreiben(modus) {
+    function schreiben(modus, vorgabe) {
         const o = zustand.offen;
         if (modus !== 'neu' && !o) return;
         if (leseBereich.querySelector('.mail-schreiben') && !confirm('Die angefangene Nachricht verwerfen?')) return;
@@ -711,6 +714,7 @@ document.addEventListener('DOMContentLoaded', function () {
             feldBetreff.value = /^(WG|FW|Fwd|WG):/i.test(o.betreff) ? o.betreff : 'WG: ' + o.betreff;
             originalAnhaenge = o.anhaenge.map(a => ({ ...a, mit: true }));
         }
+        (vorgabe?.an || []).forEach(a => felder.an.hinzu(a[1] ? `"${a[1]}" <${a[0]}>` : a[0], a[1] || a[0]));
         if (felder.cc.werte().length) f.querySelector('[data-zeile="cc"]').classList.remove('d-none');
         let html = '<p><br></p>' + signaturHtml(feldKonto.value);
         if (modus !== 'neu') {
@@ -843,6 +847,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     listeLaden();
     if (window.innerWidth >= 992) ansicht('liste');
+    // Aufruf aus den Kontakten: mail.php?an=adresse&name=Name öffnet gleich eine neue Nachricht
+    const startParam = new URLSearchParams(location.search);
+    if (startParam.get('an')) { schreiben('neu', { an: [[startParam.get('an'), startParam.get('name') || '']] }); history.replaceState(null, '', 'mail.php'); }
 });
 </script>
 <?php endif; ?>

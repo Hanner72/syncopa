@@ -47,6 +47,22 @@ Neben **E-Mail** im Menü und oben in der Kopfzeile steht die Zahl der ungelesen
 
 ---
 
+## Kontakte
+
+**Datei:** `mail_kontakte.php` (Knopf **Kontakte** in der E-Mail-Befehlsleiste)
+
+Hier werden Adressen gespeichert, die keine Mitglieder sind, z. B. Gemeinde, Pfarre, Musikhaus, Presse oder Nachbarvereine.
+
+- Jeder Kontakt hat Name oder Organisation, Funktion, E-Mail, Telefon, Adresse und Notizen.
+- Der Haken **„Für alle mit E-Mail-Zugang sichtbar“** macht einen Kontakt **gemeinsam**: Alle, die ein Postfach in Syncopa nutzen, sehen ihn. Ohne Haken bleibt er **privat** und nur der Ersteller sieht ihn.
+- Ändern und löschen kann einen Kontakt nur, wer ihn angelegt hat, oder ein Administrator. Die anderen sehen gemeinsame Kontakte nur zum Lesen.
+- Beim Schreiben schlägt das Adressbuch Kontakte vor (Hinweis „Kontakt“ bzw. „Kontakt (privat)“).
+- Beim Lesen einer Mail speichert **„+ Kontakt“** neben dem Absender diesen gleich als Kontakt.
+- **E-Mail schreiben** in der Kontaktliste öffnet eine neue Nachricht an den Kontakt.
+- Mails von Kontakten kommen nie in den Junk-Ordner.
+
+---
+
 ## Ordner
 
 Ordner werden direkt auf dem Mailserver angelegt und sind damit auch im Handy oder in Outlook sichtbar.
@@ -63,7 +79,7 @@ Gerade öffentliche Adressen bekommen viel Werbung und Betrugsmails. Der Spamfil
 
 Der Filter prüft neue Nachrichten im Posteingang in dieser Reihenfolge:
 
-1. **Sichere Absender** kommen immer durch. Dazu zählen automatisch die Mitglieder und Benutzer aus Syncopa, die eigenen Postfächer und alle, denen man schon geschrieben hat. Dazu kommt die eigene Liste.
+1. **Sichere Absender** kommen immer durch. Dazu zählen automatisch die Mitglieder, Benutzer und Kontakte aus Syncopa, die eigenen Postfächer und alle, denen man schon geschrieben hat. Dazu kommt die eigene Liste.
 2. **Blockierte Absender** landen immer im Junk. Das geht auch für ganze Domains wie `@werbung.com`.
 3. Hat der **Mailserver** die Nachricht als Spam gekennzeichnet, kommt sie in den Junk.
 4. Der **Lernfilter** lernt aus Ihren Entscheidungen. Er entscheidet mit, sobald er je 10 Junk- und erwünschte Beispiele kennt.

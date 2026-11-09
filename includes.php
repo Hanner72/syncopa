@@ -27,6 +27,7 @@ require_once __DIR__ . '/classes/ImapClient.php';
 require_once __DIR__ . '/classes/MailSender.php';
 require_once __DIR__ . '/classes/MailKonto.php';
 require_once __DIR__ . '/classes/MailSpamfilter.php';
+require_once __DIR__ . '/classes/MailKontakt.php';
 require_once __DIR__ . '/classes/Kassabuch.php';
 
 // Migration: Mehrfachrollen-Pivot-Tabelle
@@ -926,4 +927,26 @@ require_once __DIR__ . '/classes/FestAbrechnung.php';
     }
     $db->execute("INSERT INTO einstellungen (schluessel, wert, beschreibung) VALUES ('kassabuch_eingerichtet', '1', 'Kassabuch: Konten und Kategorien eingerichtet')
                   ON DUPLICATE KEY UPDATE wert = '1'");
+})();
+
+// Migration: Kontakte für das E-Mail-Programm (privat oder für alle mit E-Mail-Zugang)
+(function() {
+    $db = Database::getInstance();
+    $db->execute("CREATE TABLE IF NOT EXISTS mail_kontakte (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        vorname VARCHAR(100) NULL,
+        nachname VARCHAR(100) NULL,
+        organisation VARCHAR(150) NULL,
+        funktion VARCHAR(150) NULL,
+        email VARCHAR(190) NOT NULL,
+        telefon VARCHAR(50) NULL,
+        adresse VARCHAR(250) NULL,
+        notizen TEXT NULL,
+        oeffentlich TINYINT(1) NOT NULL DEFAULT 0,
+        erstellt_von INT NULL,
+        erstellt_am DATETIME NULL,
+        aktualisiert_am DATETIME NULL,
+        KEY idx_email (email),
+        KEY idx_ersteller (erstellt_von)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 })();

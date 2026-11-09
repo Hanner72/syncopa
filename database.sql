@@ -1372,6 +1372,26 @@ CREATE TABLE IF NOT EXISTS `finanz_abschluesse` (
   PRIMARY KEY (`jahr`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Kontakte des E-Mail-Programms (privat oder für alle mit E-Mail-Zugang)
+CREATE TABLE IF NOT EXISTS `mail_kontakte` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `vorname` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `nachname` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `organisation` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `funktion` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `email` varchar(190) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `telefon` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `adresse` varchar(250) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `notizen` text COLLATE utf8mb4_unicode_ci,
+  `oeffentlich` tinyint(1) NOT NULL DEFAULT '0',
+  `erstellt_von` int DEFAULT NULL,
+  `erstellt_am` datetime DEFAULT NULL,
+  `aktualisiert_am` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_email` (`email`),
+  KEY `idx_ersteller` (`erstellt_von`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
