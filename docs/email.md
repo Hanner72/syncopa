@@ -39,6 +39,15 @@ Unter **Mein Konto** kann jeder Benutzer außerdem seine E-Mail-Adresse und sein
 
 Beim Schreiben schlägt das **Adressbuch** Mitglieder und Gruppen vor, z. B. „Alle aktiven Mitglieder“, eine Formation oder ein Register. Gruppen werden immer als **Bcc** verschickt, damit niemand die Adressen der anderen sieht. Anhänge sind bis zusammen 20 MB möglich. Jedes Postfach kann eine eigene Signatur haben.
 
+### Große Dateien
+
+- Anhänge dürfen zusammen höchstens **20 MB** groß sein, denn mehr nehmen viele Mailserver nicht an.
+- **Größere Dateien** (über 10 MB je Datei oder über 20 MB zusammen, bis 2 GB) verschickt Syncopa automatisch als **Download-Link**. Am Anhang steht dann „Download-Link“. Beim Senden wird die Datei in Stücken hochgeladen (mit Fortschrittsanzeige), und in die Mail kommt ein Kasten „Dateien zum Herunterladen“.
+- Unten im Schreibfenster wählt man, wie lange der Link gilt: 7, 14, 30 oder 90 Tage. Danach löscht Syncopa die Datei automatisch.
+- Der Empfänger braucht keine Anmeldung. Der Link enthält einen langen Zufallsschlüssel.
+- Unter **Mein Konto → Meine Download-Links** sieht man, wie oft eine Datei heruntergeladen wurde, kann den Link kopieren oder vorzeitig löschen.
+- **Voraussetzung:** Syncopa muss von außen erreichbar sein. Ein Administrator trägt die öffentliche Adresse unter **E-Mail → Funktions-Postfächer → Große Dateien als Download-Link** ein (z. B. `https://verein.at/syncopa`). Solange dort eine interne Adresse steht, verschickt Syncopa keine Links, die draußen nicht funktionieren würden.
+
 Unter **„Gesendete speichern in“** wählt man, in welchem Ordner die gesendete Nachricht abgelegt wird. Standard ist „Gesendete Elemente“.
 
 ### Benachrichtigung
@@ -100,19 +109,20 @@ Der Filter prüft neue Nachrichten im Posteingang in dieser Reihenfolge:
 ### Wann wird geprüft?
 
 - sobald jemand den Posteingang öffnet
-- alle 5 Minuten im Hintergrund, wenn der Cronjob eingerichtet ist (siehe [Einrichtung → Cronjob für den Spamfilter](einrichtung.md#_38-cronjob-für-den-spamfilter-optional))
+- alle 5 Minuten im Hintergrund, wenn der Cronjob eingerichtet ist (siehe [Einrichtung → Cronjob für den Spamfilter](einrichtung.md#_39-cronjob-für-den-spamfilter-optional))
 
 ```bash
 */5 * * * * www-data /usr/bin/php /var/www/html/syncopa/cron/mail_spamfilter.php >/dev/null 2>&1
 ```
 
-Der Cronjob lernt außerdem laufend dazu. Gelesene Nachrichten, die im Posteingang bleiben, gelten als erwünscht.
+Der Cronjob lernt außerdem laufend dazu und löscht abgelaufene Download-Links. Gelesene Nachrichten, die im Posteingang bleiben, gelten als erwünscht.
 
 ---
 
 ## Technisches
 
 - Für IMAP und SMTP braucht es keine PHP-imap-Erweiterung und keine Fremdbibliothek. Nötig sind nur `openssl` und `sodium`, beide sind seit PHP 7.2 dabei.
+- PHP muss Uploads bis 25 MB annehmen (`upload_max_filesize = 25M`, `post_max_size = 32M`, siehe [Einrichtung](einrichtung.md)). Sonst scheitern größere Anhänge und Belege.
 - Erlaubte Ports: IMAP 143/993, SMTP 25/465/587/2525. Interne Serveradressen dürfen nur Admins eintragen.
 - HTML-Mails werden bereinigt und abgeschottet angezeigt, Skripte werden nie ausgeführt.
 - Tabellen: siehe [Datenbankstruktur](datenbank.md#e-mail)

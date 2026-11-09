@@ -28,6 +28,7 @@ require_once __DIR__ . '/classes/MailSender.php';
 require_once __DIR__ . '/classes/MailKonto.php';
 require_once __DIR__ . '/classes/MailSpamfilter.php';
 require_once __DIR__ . '/classes/MailKontakt.php';
+require_once __DIR__ . '/classes/MailFreigabe.php';
 require_once __DIR__ . '/classes/Kassabuch.php';
 
 // Migration: Mehrfachrollen-Pivot-Tabelle
@@ -947,6 +948,26 @@ require_once __DIR__ . '/classes/FestAbrechnung.php';
         erstellt_am DATETIME NULL,
         aktualisiert_am DATETIME NULL,
         KEY idx_email (email),
+        KEY idx_ersteller (erstellt_von)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+})();
+
+// Migration: Download-Links für große E-Mail-Anhänge
+(function() {
+    Database::getInstance()->execute("CREATE TABLE IF NOT EXISTS mail_freigaben (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        token CHAR(40) NOT NULL,
+        dateiname VARCHAR(255) NOT NULL,
+        datei VARCHAR(100) NOT NULL,
+        groesse BIGINT NOT NULL,
+        typ VARCHAR(150) NULL,
+        fertig TINYINT(1) NOT NULL DEFAULT 0,
+        erstellt_von INT NULL,
+        erstellt_am DATETIME NOT NULL,
+        gueltig_bis DATETIME NULL,
+        downloads INT NOT NULL DEFAULT 0,
+        letzter_download DATETIME NULL,
+        UNIQUE KEY uk_token (token),
         KEY idx_ersteller (erstellt_von)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 })();

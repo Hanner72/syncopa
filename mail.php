@@ -249,6 +249,12 @@ include 'includes/header.php';
         <div class="mail-schreiben-fuss">
             <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i> Senden</button>
             <label class="btn btn-outline-secondary mb-0"><i class="bi bi-paperclip"></i> Datei anfügen<input type="file" multiple hidden data-dateien></label>
+            <label class="ablage-wahl mb-0 d-none" data-link-wahl title="Wie lange die Download-Links für große Dateien gelten">
+                <i class="bi bi-link-45deg"></i> Links gültig
+                <select class="form-select form-select-sm" data-gueltig>
+                    <option value="7">7 Tage</option><option value="14">14 Tage</option><option value="30" selected>30 Tage</option><option value="90">90 Tage</option>
+                </select>
+            </label>
             <span class="text-muted small ms-2" data-status></span>
             <label class="ablage-wahl ms-auto mb-0" title="In welchem Ordner die gesendete Nachricht gespeichert wird">
                 <i class="bi bi-folder-check"></i> Gesendete speichern in
@@ -263,6 +269,7 @@ include 'includes/header.php';
 document.addEventListener('DOMContentLoaded', function () {
     const KONTEN = <?php echo json_encode($konten, JSON_UNESCAPED_UNICODE); ?>;
     const ADRESSBUCH = <?php echo $adressbuch ? 'true' : 'false'; ?>;
+    const LINKS_MOEGLICH = <?php echo MailFreigabe::linksMoeglich() ? 'true' : 'false'; ?>;
     const app = document.getElementById('mailApp');
     const ordnerBereich = document.getElementById('ordnerBereich');
     const mailListe = document.getElementById('mailListe');
@@ -276,7 +283,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const fd = daten instanceof FormData ? daten : new FormData();
             if (!(daten instanceof FormData)) Object.entries(daten).forEach(([k, v]) => Array.isArray(v) ? v.forEach(x => fd.append(k + '[]', x)) : fd.append(k, v));
             fd.append('aktion', aktion);
-            return fetch('api/mail.php', { method: 'POST', body: fd }).then(r => r.json());
+            return fetch('api/mail.php', { method: 'POST', body: fd })
+                .then(r => r.json().catch(() => ({ success: false, error: r.status === 413 ? 'Die Datei ist zu groß für den Server.' : 'Der Server hat die Anfrage nicht angenommen (Fehler ' + r.status + ').' })));
         }
         return fetch('api/mail.php?' + new URLSearchParams({ aktion, ...daten })).then(r => r.json());
     }
@@ -740,14 +748,25 @@ document.addEventListener('DOMContentLoaded', function () {
             if (b.dataset.befehl === 'createLink') { const url = prompt('Adresse des Links:', 'https://'); if (url) document.execCommand('createLink', false, url); }
             else document.execCommand(b.dataset.befehl, false, null);
         }));
-        // Anhänge
+        // Anhänge – große Dateien gehen als Download-Link (über 10 MB je Datei oder über 20 MB zusammen)
         let dateien = [];
+        const EINZEL_GRENZE = 10 * 1048576, GESAMT_GRENZE = 20 * 1048576;
+        const alsLink = new Set(), freigabeIds = new WeakMap();
+        function linksBestimmen() {
+            alsLink.clear();
+            dateien.forEach(d => { if (d.size > EINZEL_GRENZE) alsLink.add(d); });
+            let summe = originalAnhaenge.filter(a => a.mit).reduce((s, a) => s + (a.groesse || 0), 0) + dateien.filter(d => !alsLink.has(d)).reduce((s, d) => s + d.size, 0);
+            [...dateien].filter(d => !alsLink.has(d)).sort((a, b) => b.size - a.size).forEach(d => { if (summe > GESAMT_GRENZE) { alsLink.add(d); summe -= d.size; } });
+            f.querySelector('[data-link-wahl]').classList.toggle('d-none', !alsLink.size || !LINKS_MOEGLICH);
+            if (alsLink.size && !LINKS_MOEGLICH) meldung('Diese Datei ist zu groß für einen Anhang (über 10 MB bzw. zusammen über 20 MB). Download-Links sind noch nicht eingerichtet: Ein Administrator muss unter E-Mail → Funktions-Postfächer die öffentliche Adresse von Syncopa eintragen.');
+        }
         const anhangBereich = f.querySelector('[data-anhaenge]');
         function anhaengeZeichnen() {
+            linksBestimmen();
             const alle = originalAnhaenge.filter(a => a.mit).map((a, i) => ({ name: a.name, groesse: a.groesse, typ: a.typ, orig: a.teil }))
-                .concat(dateien.map((d, i) => ({ name: d.name, groesse: d.size, typ: d.type, neu: i })));
+                .concat(dateien.map((d, i) => ({ name: d.name, groesse: d.size, typ: d.type, neu: i, link: alsLink.has(d) })));
             anhangBereich.classList.toggle('d-none', !alle.length);
-            anhangBereich.innerHTML = alle.map(a => `<span class="mail-anhang"><i class="bi ${anhangSymbol(a.typ || '')}"></i><span><span class="n d-block">${esc(a.name)}</span><span class="g">${groesse(a.groesse)}</span></span>
+            anhangBereich.innerHTML = alle.map(a => `<span class="mail-anhang" ${a.link ? 'title="Zu groß für einen Anhang: wird hochgeladen und als Download-Link in die Mail eingefügt"' : ''}><i class="bi ${a.link ? 'bi-cloud-arrow-up' : anhangSymbol(a.typ || '')}"></i><span><span class="n d-block">${esc(a.name)}</span><span class="g">${groesse(a.groesse)}${a.link ? ' · <b>Download-Link</b>' : ''}</span></span>
                 <button type="button" class="btn btn-sm btn-link p-0 ms-1" ${a.orig !== undefined ? `data-orig="${esc(a.orig)}"` : `data-neu="${a.neu}"`} title="Entfernen"><i class="bi bi-x-lg" style="font-size:12px"></i></button></span>`).join('');
         }
         anhangBereich.addEventListener('click', e => {
@@ -769,22 +788,56 @@ document.addEventListener('DOMContentLoaded', function () {
             fd.append('betreff', feldBetreff.value);
             fd.append('html', editor.innerHTML);
             if (ablage.value) fd.append('ablage', ablage.value);
-            dateien.forEach(d => fd.append('anhaenge[]', d));
+            dateien.filter(d => !alsLink.has(d)).forEach(d => fd.append('anhaenge[]', d));
             if (modus !== 'neu') {
                 fd.append('modus', modus); fd.append('bezug_uid', o.uid); fd.append('bezug_ordner', zustand.ordner);
                 originalAnhaenge.filter(a => !a.mit).forEach(a => fd.append('ohne_anhang[]', a.teil));
             }
             const knopf = f.querySelector('[type="submit"]'), status = f.querySelector('[data-status]');
-            knopf.disabled = true; status.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Wird gesendet …';
-            api('senden', fd, true).then(d => {
+            knopf.disabled = true;
+            const fertig = () => { knopf.disabled = false; status.textContent = ''; };
+            // Große Dateien zuerst in Stücken hochladen (bereits hochgeladene nicht noch einmal)
+            const grosse = dateien.filter(d => alsLink.has(d));
+            (async () => {
+                for (const d of grosse) {
+                    if (!freigabeIds.has(d)) freigabeIds.set(d, await grossHochladen(d, p => { status.innerHTML = `<span class="spinner-border spinner-border-sm"></span> ${esc(d.name)} wird hochgeladen … ${p} %`; }));
+                    fd.append('freigaben[]', freigabeIds.get(d));
+                }
+                if (grosse.length) fd.append('gueltig', f.querySelector('[data-gueltig]').value);
+            })().then(() => {
+            status.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Wird gesendet …';
+            return api('senden', fd, true).then(d => {
                 if (!d.success) { knopf.disabled = false; status.textContent = ''; meldung(d.error); return; }
                 meldung(`Gesendet an ${d.empfaenger} Empfänger.`, 'success');
                 if (o && modus !== 'weiterleiten' && modus !== 'neu') { const x = zustand.nachrichten.find(n => n.uid === o.uid); if (x) x.beantwortet = true; listeZeichnen(); }
                 o ? oeffnen(o.uid) : leer();
-            }).catch(() => { knopf.disabled = false; status.textContent = ''; meldung('Keine Verbindung zum Server.'); });
+            });
+            }).catch(err => { fertig(); meldung(err && err.message ? err.message : 'Keine Verbindung zum Server.'); });
         });
         knoepfe(); ansicht('lesen');
         (modus === 'neu' || modus === 'weiterleiten' ? f.querySelector('[data-feld="an"] input') : editor).focus();
+    }
+
+    /** Große Datei in Stücken hochladen, liefert die ID des Download-Links. Einzelne Stücke werden bis zu dreimal versucht. */
+    async function grossHochladen(datei, fortschritt) {
+        const s = await api('freigabe_start', { name: datei.name, groesse: datei.size, typ: datei.type || '' }, true);
+        if (!s.success) throw new Error(s.error);
+        let pos = 0;
+        while (pos < datei.size) {
+            let d = null;
+            for (let versuch = 1; versuch <= 3 && !(d && d.success); versuch++) {
+                const fd = new FormData();
+                fd.append('id', s.id); fd.append('start', pos); fd.append('teil', datei.slice(pos, pos + s.stueck), 'teil');
+                try { d = await api('freigabe_teil', fd, true); } catch (e) { d = null; await new Promise(r => setTimeout(r, 1500 * versuch)); }
+                if (d && !d.success && versuch === 3) throw new Error(d.error);
+            }
+            if (!d || !d.success) throw new Error('Das Hochladen von „' + datei.name + '“ ist abgebrochen. Bitte erneut senden.');
+            pos = d.position;
+            fortschritt(Math.floor(pos / datei.size * 100));
+        }
+        const e = await api('freigabe_fertig', { id: s.id }, true);
+        if (!e.success) throw new Error(e.error);
+        return s.id;
     }
 
     /** Empfängerfeld mit „Chips“ und Vorschlägen aus dem Adressbuch */

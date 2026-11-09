@@ -1392,6 +1392,25 @@ CREATE TABLE IF NOT EXISTS `mail_kontakte` (
   KEY `idx_ersteller` (`erstellt_von`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Download-Links für große E-Mail-Anhänge
+CREATE TABLE IF NOT EXISTS `mail_freigaben` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `token` char(40) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `dateiname` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `datei` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `groesse` bigint NOT NULL,
+  `typ` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `fertig` tinyint(1) NOT NULL DEFAULT '0',
+  `erstellt_von` int DEFAULT NULL,
+  `erstellt_am` datetime NOT NULL,
+  `gueltig_bis` datetime DEFAULT NULL,
+  `downloads` int NOT NULL DEFAULT '0',
+  `letzter_download` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_token` (`token`),
+  KEY `idx_ersteller` (`erstellt_von`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
