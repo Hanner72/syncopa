@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.9.3]
+
+### Geändert
+
+- Mein Konto: Abstände in der Liste „Meine Download-Links“ angepasst
+
 ## [2.9.2]
 
 ### Hinzugefügt
