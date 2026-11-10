@@ -1,6 +1,6 @@
 # <img src="../assets/logo_full.png" alt="Syncopa" style="max-width:75px"> – Musikvereinsverwaltung
 
-> **Version 2.9.3** · Benutzerhandbuch
+> **Version 2.10.0** · Benutzerhandbuch
 
 Willkommen zur offiziellen Dokumentation von **Syncopa** – der Verwaltungssoftware für Musikvereine.
 
@@ -19,7 +19,7 @@ Syncopa vereint alle wichtigen Verwaltungsaufgaben eines Musikvereins in einer w
 | 💰 **Kassabuch** | Konten (Kassa, Bank …), Buchungen mit Belegen, Mitgliedsbeiträge, Berichte für Kassaprüfung und Jahreshauptversammlung, Jahresabschluss |
 | 🎼 **Noten** | Notenarchiv mit mehreren PDFs pro Stück, automatische Stimmen-Erkennung & -Aufteilung |
 | 📚 **Notenbücher** | Private und geteilte Mappen aus mehreren Notenstücken |
-| 📡 **Live-Probe** | Notenstück live an alle Musiker übertragen, jeder sieht automatisch seine eigene Stimme, mit Notizfunktion |
+| 🎼 **Notenpult** | Kapellmeister gibt bei Probe und Konzert das Stück vor, jeder sieht automatisch seine Stimme; zuhause selbst üben, auch ganze Notenbücher; mit Notizfunktion |
 | 🎻 **Instrumente** | Inventar, Wartungsfristen, Zuordnung |
 | 👔 **Uniformen** | Bestand, Ausgabe und Rücknahme |
 | 🎪 **Festverwaltung** | Stationen, Dienstplan, Einkäufe, Verträge, Todos, Abrechnung |

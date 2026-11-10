@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.10.0]
+
+### Hinzugefügt
+
+- Notenpult: „Selbst üben“ – Musikanten können zuhause alleine üben
+  - alle Stücke der eigenen Formation mit eingerichteten Stimmen, mit Suche
+  - eigene und geteilte Notenbücher durchspielen, mit „Voriges“ und „Nächstes“
+  - gewählte Stimme bleibt beim Blättern im Notenbuch erhalten, Favoriten werden vorausgewählt
+  - Notizen sind beim Üben und bei der Probe dieselben
+  - startet der Kapellmeister ein Stück, erscheint ein Hinweis statt einer Unterbrechung
+- Notenpult: Umschalter „Mit der Kapelle“ / „Selbst üben“ und Wartebildschirm, solange der Kapellmeister kein Stück vorgibt
+
+### Geändert
+
+- „Live“ heißt jetzt „Notenpult“, „Live Leitung“ heißt „Notenpult leiten“ (Menü, Berechtigungen, Dokumentation)
+
+### Bugs
+
+- Notenpult: handschriftliche Notizen werden immer dem angemeldeten Benutzer zugeordnet, fremde Notizen lassen sich nicht mehr laden oder überschreiben
+
 ## [2.9.3]
 
 ### Geändert

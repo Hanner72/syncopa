@@ -44,20 +44,20 @@ Es gibt **kein externes Migrationstool**. Neue Tabellen/Spalten werden als anony
 
 > Die Verknüpfung Benutzer↔Mitglied ist **doppelt** ausgelegt (`benutzer.mitglied_id` UND `mitglieder.benutzer_id`) – Abfragen, die Formationen eines Benutzers ermitteln, müssen beide Richtungen per `UNION` berücksichtigen (siehe CLAUDE.md, Abschnitt "Dual-direction member↔user link").
 
-## Noten, Notenbücher & Live-Probe
+## Noten, Notenbücher & Notenpult
 
 | Tabelle | Zweck |
 |---|---|
 | `noten` | Notenstücke (Titel, Komponist, Kategorie, Schwierigkeit, optional `formation_id`) |
 | `noten_dateien` | Mehrere PDF-Dateien pro Notenstück, `beschreibung` beginnt mit `[stimme] ...` wenn automatisch als Einzelstimme erkannt |
-| `noten_stimmen` | Benannte Stimmen eines Stücks (Name, zugeordnete `datei_id`, Seitenbereich) – Grundlage für die Live-Probe-Auswahl |
+| `noten_stimmen` | Benannte Stimmen eines Stücks (Name, zugeordnete `datei_id`, Seitenbereich) – Grundlage für die Stimmenwahl am Notenpult |
 | `noten_instrumente_pattern` | Erkennungsmuster (Regex-Fragmente) für die automatische Instrumenten-Erkennung beim PDF-Split, verwaltet über `noten_instrumente.php` |
 | `notenbucher` / `notenbuch_noten` | Mappen aus mehreren Notenstücken, privat oder "geteilt" (formationsweit sichtbar) |
-| `probe_session` | Die aktuell laufende Live-Probe-Session (nur eine gleichzeitig systemweit aktiv) |
+| `probe_session` | Das aktuell vom Kapellmeister vorgegebene Stück (nur eine gleichzeitig systemweit aktiv) |
 | `probe_session_spieler` | Wer hat sich mit welcher Stimme verbunden (ein neuer Datensatz pro Stimmenwechsel, `last_seen`-Heartbeat) |
 | `probe_session_viewer` | Wer hat welches Notenstück gerade tatsächlich geladen (für den "online/gerade dabei"-Status beim Kapellmeister) |
-| `noten_annotationen` | Handschriftliche Zeichnungen/Stempel pro Benutzer, Stimme und Seite (Live-Probe) |
-| `noten_favoriten` | Gemerkte Lieblings-Stimmen pro Benutzer für die schnelle Auswahl in der Live-Probe |
+| `noten_annotationen` | Handschriftliche Zeichnungen/Stempel pro Benutzer, Stimme und Seite (Notenpult) |
+| `noten_favoriten` | Gemerkte Lieblings-Stimmen pro Benutzer für die schnelle Auswahl am Notenpult |
 
 ## Ausrückungen & Kalender
 

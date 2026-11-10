@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $data       = json_decode(file_get_contents('php://input'), true);
-$benutzerId = (int)($data['musiker_id']  ?? 0);
+$benutzerId = (int)Session::getUserId(); // nur eigene Notizen
 $stimmeId   = (int)($data['stimme_id']   ?? 0);
 $page       = (int)($data['page_number'] ?? 1);
 $zeichnung  = $data['zeichnung'] ?? '';

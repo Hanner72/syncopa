@@ -48,7 +48,7 @@ syncopa/
 │   ├── noten_split_stimmen.php     # PDF automatisch nach Stimmen aufteilen
 │   ├── noten_split_existing.php    # bereits hochgeladene PDF nachträglich aufteilen
 │   ├── notenbuch_sortierung.php    # Drag & Drop Reihenfolge in Notenbüchern
-│   ├── probe_session.php           # Live-Probe: Heartbeat, Stück-/Stimmenwahl
+│   ├── probe_session.php           # Notenpult: Heartbeat, Stück-/Stimmenwahl
 │   ├── probe_annotations_save.php, probe_annotations_load.php  # Zeichnungen/Notizen
 │   ├── anwesenheit_setzen.php      # An-/Abmeldung zu Ausrückungen
 │   ├── kalender.php, kalender_termine.php
@@ -65,7 +65,7 @@ syncopa/
 ├── cron/                            # Aufgaben für Cronjobs (nur Kommandozeile, vom Web gesperrt)
 │   └── mail_spamfilter.php         # Spamfilter für alle Postfächer, alle 5 Minuten
 │
-├── assets/                          # Bilder, Logo, JS/CSS für Live-Probe (assets/js/)
+├── assets/                          # Bilder, Logo, JS/CSS für das Notenpult (assets/js/)
 ├── docs/                            # Diese Dokumentation (Docsify)
 │   └── screenshots/                # Screenshots für die Docs
 ├── uploads/                         # Hochgeladene Dateien (Noten-PDFs, Logo, Fest-Verträge, ...)
@@ -89,7 +89,7 @@ syncopa/
 │   finanzen_bericht.php (alle Ausdrucke), finanzen_export.php (CSV)
 ├── noten.php, noten_bearbeiten.php, noten_loeschen.php, noten_instrumente.php
 ├── notenbucher.php, notenbuch_bearbeiten.php
-├── probe.php, probe_leiter.php, probe_stimmen.php   # Live-Probe (Musiker- bzw. Kapellmeister-Ansicht)
+├── probe.php, probe_leiter.php, probe_stimmen.php   # Notenpult (Musiker- bzw. Kapellmeister-Ansicht)
 ├── instrumente.php, instrument_bearbeiten.php, instrument_detail.php, instrument_loeschen.php
 ├── uniformen.php, uniform_kleidungsstuecke.php, uniform_mitglied.php
 │   # uniform_ausgeben.php, uniform_zuruecknehmen.php, uniform_kategorien.php, uniform_detail.php,
@@ -122,7 +122,7 @@ Syncopa folgt einem einfachen **MVC-ähnlichen Muster**:
 - **Model:** Klassen in `/classes/` kapseln Datenbankzugriffe und Logik (Data-Access-Layer, keine ORM)
 - **View:** PHP-Dateien im Root-Verzeichnis mischen PHP und HTML
 - **Controller:** Logik am Seitenanfang jeder PHP-Datei (Formularverarbeitung, Weiterleitungen)
-- **API:** Eigenständige JSON-Endpunkte in `/api/` für alles, was per `fetch()`/AJAX aus den Seiten heraus aufgerufen wird (Live-Probe, Drag & Drop, Uploads, System-Update)
+- **API:** Eigenständige JSON-Endpunkte in `/api/` für alles, was per `fetch()`/AJAX aus den Seiten heraus aufgerufen wird (Notenpult, Drag & Drop, Uploads, System-Update)
 
 ### Request-Ablauf
 

@@ -34,7 +34,7 @@ Wie einem Benutzer mehrere Rollen zugewiesen werden, steht unter [Benutzerverwal
 | Mitglieder | Mitgliederverwaltung |
 | Ausrückungen | Ausrückungsplanung |
 | Noten | Notenarchiv |
-| Live (Notenansicht) | Proben-/Live-Modul (Noten-PDF-Ansicht) |
+| Notenpult | Digitales Notenpult: gemeinsam spielen (lesen), Notenpult leiten (schreiben) |
 | Instrumente | Instrumenteninventar |
 | Uniformen | Uniformverwaltung |
 | Finanzen | Einnahmen & Ausgaben |
