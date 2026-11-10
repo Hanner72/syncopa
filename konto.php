@@ -159,9 +159,9 @@ include 'includes/header.php';
             <div class="card-header"><h5 class="mb-0"><i class="bi bi-link-45deg"></i> Meine Download-Links</h5></div>
             <ul class="list-group list-group-flush">
                 <?php foreach ($freigaben as $fr): $abgelaufen = $fr['gueltig_bis'] && strtotime($fr['gueltig_bis']) < time(); ?>
-                <li class="list-group-item d-flex flex-wrap align-items-center gap-2">
+                <li class="list-group-item d-flex flex-wrap align-items-center gap-2 px-3 py-2">
                     <div class="flex-grow-1" style="min-width:200px">
-                        <div class="text-truncate"><i class="bi bi-file-earmark"></i> <?php echo htmlspecialchars($fr['dateiname']); ?></div>
+                        <div class="text-truncate"><i class="bi bi-file-earmark me-1"></i> <?php echo htmlspecialchars($fr['dateiname']); ?></div>
                         <div class="small text-muted"><?php echo MailFreigabe::groesseText((int)$fr['groesse']); ?> ·
                             <?php echo $fr['gueltig_bis'] ? ($abgelaufen ? 'abgelaufen' : 'gültig bis ' . date('d.m.Y', strtotime($fr['gueltig_bis']))) : 'noch nicht versendet'; ?> ·
                             <?php echo (int)$fr['downloads']; ?>× heruntergeladen</div>
