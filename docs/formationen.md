@@ -107,7 +107,7 @@ Die aktive Formation aus der Kopfzeile wirkt sich automatisch auf zahlreiche Ber
 - **Ausrückungen** – Liste, Kalender und automatisch angelegte Anwesenheits-Einträge (→ [Ausrückungen](ausrueckungen.md))
 - **Noten / Notenbücher**
 - **Finanzen**
-- **Live-Probe** (probe.php)
+- **Notenpult** (probe.php)
 
 Beim **Anlegen neuer Datensätze** (z.B. einer neuen Ausrückung) wird die aktuell aktive Formation automatisch vorausgewählt bzw. hinterlegt.
 

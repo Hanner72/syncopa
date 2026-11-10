@@ -30,7 +30,7 @@
 * **🎼 Noten**
   * [Notenarchiv](noten.md)
   * [Notenbücher](notenbucher.md)
-  * [Live-Probe](live-probe.md)
+  * [Notenpult](notenpult.md)
 
 * **🎻 Instrumente**
   * [Inventar](instrumente.md)

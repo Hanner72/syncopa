@@ -141,7 +141,7 @@ Nicht jedes PDF lässt sich automatisch zuordnen – zum Beispiel wenn es sich u
 
 - Die Software erkennt, dass es sich um einen Scan handelt, und legt trotzdem **für jede Seite eine eigene Datei** an (z.B. `Konzertmarsch_Seite_1.pdf`)
 - Diese Dateien sind im Ergebnis gelb markiert mit dem Hinweis **„bitte umbenennen"**
-- Die Beschreibung/den Dateinamen kann man danach jederzeit manuell anpassen (Datei löschen und mit passendem Namen neu hochladen, oder über die Stimmenverwaltung in der → [Live-Probe](live-probe.md) einer Stimme zuordnen)
+- Die Beschreibung/den Dateinamen kann man danach jederzeit manuell anpassen (Datei löschen und mit passendem Namen neu hochladen, oder über die Stimmenverwaltung in der → [Notenpult](notenpult.md) einer Stimme zuordnen)
 
 > ⚠️ **Achtung:** Wird kein einziges Instrument auf der ganzen Datei erkannt, wertet Syncopa das gesamte PDF als Scan und legt eine Datei pro Seite an. Bei einem sehr langen Heft können so viele Einzeldateien entstehen – am besten danach gezielt zusammenfassen bzw. sinnvoll benennen.
 
@@ -185,12 +185,12 @@ Ein paar einfache Beispiele, falls ein Instrument unter mehreren Schreibweisen v
 
 ---
 
-## Notenbücher & Live-Probe
+## Notenbücher & Notenpult
 
 Notenstücke lassen sich zu Mappen zusammenfassen und während der Probe „live" an alle Musiker verteilen:
 
 - → [Notenbücher](notenbucher.md) – eigene und geteilte Mappen aus mehreren Stücken
-- → [Live-Probe](live-probe.md) – jeder Musiker sieht während der Probe automatisch die richtige Stimme
+- → [Notenpult](notenpult.md) – jeder Musiker sieht bei Probe und Konzert automatisch die richtige Stimme und kann zuhause selbst üben
 
 ---
 

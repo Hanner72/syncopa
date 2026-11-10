@@ -14,7 +14,7 @@ $aktiveFormationName = $formationId
     : null;
 
 /**
- * Belegungs-Statistik für eine laufende Live-Session ermitteln.
+ * Belegungs-Statistik für das gemeinsame Spielen am Notenpult ermitteln.
  * Ist eine Formation aktiv, werden ALLE aktiven Mitglieder dieser Formation
  * berücksichtigt (nicht nur die gerade online Verbundenen).
  */
@@ -119,7 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['start_session'])) {
             [$notenId, $formationId ?: null, $benutzerId]
         );
     }
-    Session::setFlashMessage('success', 'Live-Session gestartet.');
+    Session::setFlashMessage('success', 'Stück an alle Notenpulte gesendet.');
     header('Location: probe_leiter.php');
     exit;
 }
@@ -127,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['start_session'])) {
 // Session beenden
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['stop_session'])) {
     $db->query("UPDATE probe_session SET aktiv = 0");
-    Session::setFlashMessage('success', 'Live-Session beendet.');
+    Session::setFlashMessage('success', 'Gemeinsames Spielen beendet.');
     header('Location: probe_leiter.php');
     exit;
 }
@@ -233,8 +233,8 @@ include 'includes/header.php';
 ?>
 
 <div class="page-header">
-    <h1 class="page-title"><i class="bi bi-broadcast"></i> Live – Leitung</h1>
-    <a href="probe.php" class="btn btn-primary"><i class="bi bi-eye"></i> Notenansicht öffnen</a>
+    <h1 class="page-title"><i class="bi bi-sliders"></i> Notenpult leiten</h1>
+    <a href="probe.php" class="btn btn-primary"><i class="bi bi-music-note-list"></i> Notenpult öffnen</a>
 </div>
 
 <?php if ($activeSession): ?>
@@ -254,7 +254,7 @@ include 'includes/header.php';
             </a>
             <form method="POST" class="d-inline">
                 <button type="submit" name="stop_session" class="btn btn-sm btn-outline-danger"
-                        onclick="return confirm('Live-Session beenden?')">
+                        onclick="return confirm('Gemeinsames Spielen beenden?')">
                     <i class="bi bi-stop-circle"></i> Beenden
                 </button>
             </form>
@@ -313,7 +313,7 @@ include 'includes/header.php';
 
         <?php
         $statusBadge = ['viewing' => 'bg-success', 'connected' => 'bg-warning text-dark', 'offline' => 'bg-secondary'];
-        $statusTitle = ['viewing' => 'Online, sieht das Stück gerade', 'connected' => 'Online, aber (noch) nicht bei diesem Stück', 'offline' => 'Nicht mit der Live-Session verbunden'];
+        $statusTitle = ['viewing' => 'Online, sieht das Stück gerade', 'connected' => 'Online, aber (noch) nicht bei diesem Stück', 'offline' => 'Nicht mit dem Notenpult verbunden'];
         ?>
         <div id="ohne-stimme-liste" class="mt-3 p-2 rounded d-flex flex-wrap align-items-center gap-2" style="background:var(--bg-body)<?= empty($ohneStimmeListe) ? ';display:none' : '' ?>">
             <small class="text-muted">Ohne Stimme:</small>
@@ -328,7 +328,7 @@ include 'includes/header.php';
 <!-- Stück auswählen -->
 <div class="card">
     <div class="card-header d-flex align-items-center justify-content-between gap-3 flex-wrap">
-        <span>Stück für Live-Session auswählen</span>
+        <span>Stück für alle Notenpulte auswählen</span>
         <?php if (!empty($alleNotenbucher)): ?>
         <div class="d-flex align-items-center gap-2">
             <i class="bi bi-journals text-muted"></i>

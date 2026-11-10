@@ -622,11 +622,11 @@ function isActive($page, $pages, $current) {
                     <?php endif; ?>
                     <?php if (Session::checkPermission('probe', 'lesen')): ?>
                     <li><a class="nav-link <?php echo isActive('probe', $pages, $currentPage); ?>" href="probe.php">
-                        <i class="bi bi-broadcast"></i> Live
+                        <i class="bi bi-music-note-list"></i> Notenpult
                     </a></li>
                     <?php if (Session::checkPermission('probe', 'schreiben')): ?>
                     <li><a class="nav-link <?php echo isActive('probe_leiter', $pages, $currentPage); ?>" href="probe_leiter.php" style="padding-left:28px;font-size:12px">
-                        <i class="bi bi-sliders"></i> Live Leitung
+                        <i class="bi bi-sliders"></i> Notenpult leiten
                     </a></li>
                     <?php endif; ?>
                     <?php endif; ?>

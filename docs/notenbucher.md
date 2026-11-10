@@ -16,7 +16,7 @@ Es gibt zwei Arten von Notenbüchern:
 | **Privat** | nur für dich selbst | persönliche Übungsmappe |
 | **Geteilt** | alle Mitglieder einer bestimmten Formation | „Weihnachtskonzert 2026" für die ganze Kapelle |
 
-> 💡 **Tipp:** Ein geteiltes Notenbuch ist besonders praktisch in Kombination mit der [Live-Probe](live-probe.md) – dort lässt sich die Stückauswahl direkt auf ein Notenbuch eingrenzen, sodass der Kapellmeister bei der Probe nicht durch das ganze Archiv scrollen muss.
+> 💡 **Tipp:** Ein geteiltes Notenbuch ist besonders praktisch in Kombination mit dem [Notenpult](notenpult.md) – beim Leiten lässt sich die Stückauswahl direkt auf ein Notenbuch eingrenzen, sodass der Kapellmeister bei der Probe nicht durch das ganze Archiv scrollen muss.
 
 ---
 
@@ -80,7 +80,7 @@ Die Reihenfolge der Stücke innerhalb eines Notenbuchs lässt sich frei per Maus
 2. Die Zeile an die gewünschte Position ziehen
 3. Loslassen – die neue Reihenfolge wird automatisch im Hintergrund gespeichert (Bestätigung erscheint kurz unter der Liste)
 
-> 💡 **Tipp:** Diese Reihenfolge wird auch bei der [Live-Probe](live-probe.md) verwendet, wenn man dort die Stückauswahl auf dieses Notenbuch eingrenzt.
+> 💡 **Tipp:** Diese Reihenfolge wird auch im [Notenpult](notenpult.md) verwendet – beim Leiten und beim Durchspielen eines Notenbuchs zum Üben.
 
 ---
 
@@ -98,4 +98,4 @@ Ein Notenbuch kann von der Übersichtsseite aus über das **Papierkorb-Symbol** 
 ## Verwandte Themen
 
 - → [Noten](noten.md) – Notenarchiv, PDF-Verwaltung, automatisches Aufteilen nach Stimmen
-- → [Live-Probe](live-probe.md) – Notenbücher als Stückauswahl während der Live-Probe verwenden
+- → [Notenpult](notenpult.md) – Notenbücher bei der Probe als Stückauswahl verwenden oder zuhause durchüben

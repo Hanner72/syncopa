@@ -7,7 +7,7 @@ session_write_close();
 
 Session::requireLogin();
 
-$benutzerId = (int)($_GET['benutzer_id'] ?? 0);
+$benutzerId = (int)Session::getUserId(); // nur eigene Notizen
 $stimmeId   = (int)($_GET['stimme_id']   ?? 0);
 $page       = (int)($_GET['page_number'] ?? 1);
 

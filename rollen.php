@@ -162,7 +162,7 @@ include 'includes/header.php';
                         <tr>
                             <td><span class="badge bg-success">Kapellmeister</span></td>
                             <td>Musikalische Leitung</td>
-                            <td>Ausrückungen, Noten, Live-Sessions leiten; Mitglieder verwalten</td>
+                            <td>Ausrückungen, Noten, Notenpult leiten; Mitglieder verwalten</td>
                         </tr>
                         <tr>
                             <td><span class="badge bg-info">Kassier</span></td>
