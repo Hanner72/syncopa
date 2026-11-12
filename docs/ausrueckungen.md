@@ -21,7 +21,7 @@ Die Übersicht zeigt alle Ausrückungen mit:
 | Ort | Veranstaltungsort |
 | Status | `geplant` · `bestätigt` · `abgesagt` |
 | Formation | Zeigt (falls vergeben) das farbige Kürzel der zugehörigen Formation |
-| Anwesenheit | Anzahl zugesagt / ungewiss / abgesagt, direkt daneben eigene An-/Abmelde-Buttons |
+| Anwesenheit | Anzahl zugesagt (✓) / ungewiss (?) / abgesagt (✗) / keine Antwort (– grau), direkt daneben eigene An-/Abmelde-Buttons |
 | Aktionen | Detail · Bearbeiten · Löschen |
 
 ### Filter
@@ -29,6 +29,8 @@ Die Übersicht zeigt alle Ausrückungen mit:
 - **Typen:** Filter nach den Typen der Ausrückung (Probe, Konzert, Ausrückung, Fest, Wertung, Sonstiges)
 - **Zeitraum:** Von/Bis-Datum eingrenzen
 - **Status:** Nach Planungsstatus filtern
+
+Auf dem Handy ist der Filter eingeklappt und lässt sich über die Zeile „Filter“ aufklappen. Eine Plakette zeigt, wie viele Filter aktiv sind.
 
 > 💡 **Tipp:** Ist oben in der Kopfzeile eine Formation aktiv, werden hier automatisch nur die Ausrückungen **dieser Formation** angezeigt (plus formationsübergreifende Ausrückungen ohne Formationszuordnung). Mehr dazu: → [Formationen](formationen.md)
 
@@ -93,6 +95,20 @@ Die Detailseite zeigt:
   - ❓ Noch keine Antwort
 - **Grund** der Mitglieder (z.B. Begründung bei Absage)
 - Zusammenfassung: Wie viele haben zugesagt / abgesagt mit Registeraufteilung
+- Zähler über der Anmeldeliste: ✓ zugesagt · ? ungewiss · ✗ abgesagt · – keine Antwort (grau)
+
+### Live-Aktualisierung
+
+Die Anmeldeliste, die Zähler und die Karten „Zusagen“ / „Absagen“ aktualisieren sich alle 15 Sekunden von selbst („● Live“ mit Uhrzeit über der Liste). So sieht z. B. der Kapellmeister sofort, wer zu- oder absagt. Geänderte Zeilen und neue Namen leuchten kurz auf. Ist der Browser-Tab im Hintergrund, wird nicht abgefragt.
+
+### Anmeldeliste bearbeiten
+
+**Berechtigung:** `ausrueckungen – schreiben`
+
+- Der Status jedes Mitglieds kann direkt in der Liste geändert werden – **die Änderung wird sofort gespeichert** („✓ Gespeichert“ unter der Zeile)
+- Ein dezenter Farbstreifen links am Status zeigt die Wahl: grün zugesagt, gelb ungewiss, rot abgesagt
+- Das Feld **Grund** erscheint nur bei einer Absage oder wenn schon ein Grund eingetragen ist; es wird kurz nach dem Tippen gespeichert
+- Am Handy stehen Status und Grund untereinander, „Gemeldet am“ steht unter dem Namen
 
 ---
 

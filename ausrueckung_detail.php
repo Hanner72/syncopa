@@ -27,49 +27,10 @@ $anwesenheit = $ausrueckungObj->getAnwesenheit($id);
 // Noten für diese Ausrückung
 $noten = $ausrueckungObj->getNoten($id);
 
-// Zugesagte Mitglieder nach Register
-$db_top = Database::getInstance();
-$zugesagteNachRegister = $db_top->fetchAll(
-    "SELECT m.vorname, m.nachname, r.name as register_name, r.sortierung
-     FROM anwesenheit a
-     JOIN mitglieder m ON a.mitglied_id = m.id
-     LEFT JOIN register r ON m.register_id = r.id
-     INNER JOIN (
-         SELECT mitglied_id, MAX(id) as max_id
-         FROM anwesenheit WHERE ausrueckung_id = ?
-         GROUP BY mitglied_id
-     ) latest ON a.id = latest.max_id AND a.mitglied_id = latest.mitglied_id
-     WHERE a.ausrueckung_id = ? AND a.status = 'zugesagt'
-     ORDER BY r.sortierung, r.name, m.nachname, m.vorname",
-    [$id, $id]
-);
-// Nach Register gruppieren
-$zugesagteGruppiert = [];
-foreach ($zugesagteNachRegister as $m) {
-    $reg = $m['register_name'] ?? 'Ohne Register';
-    $zugesagteGruppiert[$reg][] = $m['vorname'] . ' ' . $m['nachname'];
-}
-
-// Abgesagte Mitglieder nach Register
-$abgesagteNachRegister = $db_top->fetchAll(
-    "SELECT m.vorname, m.nachname, m.id as mitglied_id, r.name as register_name, r.sortierung, a.grund
-     FROM anwesenheit a
-     JOIN mitglieder m ON a.mitglied_id = m.id
-     LEFT JOIN register r ON m.register_id = r.id
-     INNER JOIN (
-         SELECT mitglied_id, MAX(id) as max_id
-         FROM anwesenheit WHERE ausrueckung_id = ?
-         GROUP BY mitglied_id
-     ) latest ON a.id = latest.max_id AND a.mitglied_id = latest.mitglied_id
-     WHERE a.ausrueckung_id = ? AND a.status = 'abgesagt'
-     ORDER BY r.sortierung, r.name, m.nachname, m.vorname",
-    [$id, $id]
-);
-$abgesagteGruppiert = [];
-foreach ($abgesagteNachRegister as $m) {
-    $reg = $m['register_name'] ?? 'Ohne Register';
-    $abgesagteGruppiert[$reg][] = ['name' => $m['vorname'] . ' ' . $m['nachname'], 'grund' => $m['grund']];
-}
+// Zu- und Absagen nach Register (Karten werden auch von der Live-Aktualisierung neu geladen)
+require_once __DIR__ . '/includes/anwesenheit_register.php';
+$zugesagteNachRegister = anwesenheitNachRegister((int)$id, 'zugesagt');
+$abgesagteNachRegister = anwesenheitNachRegister((int)$id, 'abgesagt');
 
 // Selbst-Anmeldung für normale Mitglieder
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['self_anmeldung'])) {
@@ -95,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['self_anmeldung'])) {
 
 // Anwesenheit aktualisieren (für Admins/Schreibberechtigte)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_anwesenheit'])) {
+    Session::requirePermission('ausrueckungen', 'schreiben');
     foreach ($_POST['anwesenheit'] as $mitgliedId => $status) {
         $grund = $_POST['grund'][$mitgliedId] ?? null;
         $ausrueckungObj->setAnwesenheit($id, $mitgliedId, $status, $grund);
@@ -222,62 +184,9 @@ include 'includes/header.php';
             </div>
         </div>
         
-        <!-- Zugesagte Mitglieder nach Register -->
-        <?php if (!empty($zugesagteGruppiert)): ?>
-        <div class="card mb-3 border-success">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-person-check text-success"></i> Zusagen</h5>
-                <span class="badge bg-success"><?php echo count($zugesagteNachRegister); ?></span>
-            </div>
-            <div class="card-body p-0">
-                <?php foreach ($zugesagteGruppiert as $registerName => $mitglieder): ?>
-                <div class="px-3 pt-2 pb-1">
-                    <small class="text-uppercase text-muted fw-semibold" style="font-size:0.7rem;letter-spacing:.05em;">
-                        <?php echo htmlspecialchars($registerName); ?>
-                    </small>
-                    <ul class="list-unstyled mb-2 mt-1">
-                        <?php foreach ($mitglieder as $name): ?>
-                        <li class="py-1 border-bottom">
-                            <i class="bi bi-check-circle-fill text-success me-1" style="font-size:.8rem;"></i>
-                            <small><?php echo htmlspecialchars($name); ?></small>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-        <?php endif; ?>
-
-        <!-- Abgesagte Mitglieder nach Register -->
-        <?php if (!empty($abgesagteGruppiert)): ?>
-        <div class="card mb-3 border-danger">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-person-x text-danger"></i> Absagen</h5>
-                <span class="badge bg-danger"><?php echo count($abgesagteNachRegister); ?></span>
-            </div>
-            <div class="card-body p-0">
-                <?php foreach ($abgesagteGruppiert as $registerName => $mitglieder): ?>
-                <div class="px-3 pt-2 pb-1">
-                    <small class="text-uppercase text-muted fw-semibold" style="font-size:0.7rem;letter-spacing:.05em;">
-                        <?php echo htmlspecialchars($registerName); ?>
-                    </small>
-                    <ul class="list-unstyled mb-2 mt-1">
-                        <?php foreach ($mitglieder as $m): ?>
-                        <li class="py-1 border-bottom">
-                            <i class="bi bi-x-circle-fill text-danger me-1" style="font-size:.8rem;"></i>
-                            <small><?php echo htmlspecialchars($m['name']); ?></small>
-                            <?php if (!empty($m['grund'])): ?>
-                            <br><small class="text-muted ms-3"><i class="bi bi-chat-left-text"></i> <?php echo htmlspecialchars($m['grund']); ?></small>
-                            <?php endif; ?>
-                        </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-        <?php endif; ?>
+        <!-- Zu- und Absagen nach Register -->
+        <?php echo anwesenheitRegisterKarte('zugesagt', $zugesagteNachRegister); ?>
+        <?php echo anwesenheitRegisterKarte('abgesagt', $abgesagteNachRegister); ?>
 
         <!-- Noten/Programm -->
         <?php if (!empty($noten)): ?>
@@ -374,61 +283,67 @@ include 'includes/header.php';
                     <?php
                     $zugesagt = count(array_filter($anwesenheit, fn($a) => $a['status'] === 'zugesagt'));
                     $abgesagt = count(array_filter($anwesenheit, fn($a) => $a['status'] === 'abgesagt'));
-                    $ungewiss = count(array_filter($anwesenheit, fn($a) => in_array($a['status'], ['ungewiss', 'keine_antwort'])));
+                    $ungewiss = count(array_filter($anwesenheit, fn($a) => $a['status'] === 'ungewiss'));
+                    $keineAntwort = count(array_filter($anwesenheit, fn($a) => $a['status'] === 'keine_antwort'));
                     ?>
                     <span class="badge bg-success" title="Zugesagt" data-typ="zugesagt">✓ <?php echo $zugesagt; ?></span>
                     <span class="badge bg-warning text-dark" title="Ungewiss" data-typ="ungewiss">? <?php echo $ungewiss; ?></span>
                     <span class="badge bg-danger" title="Abgesagt" data-typ="abgesagt">✗ <?php echo $abgesagt; ?></span>
+                    <span class="badge bg-secondary" title="Keine Antwort" data-typ="keine_antwort">– <?php echo $keineAntwort; ?></span>
                 </div>
             </div>
             <div class="card-body">
+                <p class="small text-muted mb-2 d-flex flex-wrap gap-2 align-items-center">
+                    <?php if (Session::checkPermission('ausrueckungen', 'schreiben')): ?>
+                    <span><i class="bi bi-lightning-charge"></i> Änderungen werden sofort gespeichert.</span>
+                    <?php endif; ?>
+                    <span id="anwLive" title="Die Liste aktualisiert sich automatisch"><span class="anw-live-punkt"></span> Live<span id="anwLiveZeit"></span></span>
+                    <a href="ausrueckung_detail.php?id=<?php echo (int)$id; ?>" id="anwNeuLaden" class="d-none">Neue Meldungen – Seite neu laden</a>
+                </p>
                 <?php if (Session::checkPermission('ausrueckungen', 'schreiben')): ?>
-                <form method="POST">
+                <form method="POST" id="anwesenheitForm" onsubmit="return false;">
                     <div class="table-responsive">
                         <table class="table table-sm" id="anwesenheitAdminTable">
                             <thead>
                                 <tr>
                                     <th>Mitglied</th>
-                                    <th>Status</th>
-                                    <th>Grund</th>
-                                    <th>Gemeldet am</th>
+                                    <th>Status / Grund</th>
+                                    <th class="d-none d-md-table-cell">Gemeldet am</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($anwesenheit as $a): ?>
-                                <tr>
+                                <tr data-mitglied-id="<?php echo (int)$a['mitglied_id']; ?>">
                                     <td>
                                         <strong><?php echo htmlspecialchars($a['nachname'] . ' ' . $a['vorname']); ?></strong>
                                         <br><small class="text-muted"><?php echo htmlspecialchars($a['mitgliedsnummer']); ?></small>
+
+                                        <small class="text-muted d-md-none anw-zeit-mobil<?php echo $a['gemeldet_am'] ? '' : ' d-none'; ?>"><br><i class="bi bi-clock"></i> <span class="anw-zeit"><?php echo $a['gemeldet_am'] ? date('d.m.Y H:i', strtotime($a['gemeldet_am'])) : ''; ?></span></small>
                                     </td>
                                     <td>
-                                        <select class="form-select form-select-sm" name="anwesenheit[<?php echo $a['mitglied_id']; ?>]">
+                                        <div class="anw-eingabe">
+                                        <select class="form-select form-select-sm anw-status anw-<?php echo htmlspecialchars($a['status']); ?>" name="anwesenheit[<?php echo $a['mitglied_id']; ?>]">
                                             <option value="keine_antwort" <?php echo $a['status'] === 'keine_antwort' ? 'selected' : ''; ?>>Keine Antwort</option>
                                             <option value="zugesagt" <?php echo $a['status'] === 'zugesagt' ? 'selected' : ''; ?>>✓ Zugesagt</option>
                                             <option value="ungewiss" <?php echo $a['status'] === 'ungewiss' ? 'selected' : ''; ?>>? Ungewiss</option>
                                             <option value="abgesagt" <?php echo $a['status'] === 'abgesagt' ? 'selected' : ''; ?>>✗ Abgesagt</option>
-
                                         </select>
-                                    </td>
-                                    <td>
-                                        <input type="text" class="form-control form-control-sm" 
+                                        <?php $grundSichtbar = trim((string)($a['grund'] ?? '')) !== '' || $a['status'] === 'abgesagt'; ?>
+                                        <input type="text" class="form-control form-control-sm anw-grund<?php echo $grundSichtbar ? '' : ' d-none'; ?>"
                                                name="grund[<?php echo $a['mitglied_id']; ?>]"
                                                value="<?php echo htmlspecialchars($a['grund'] ?? ''); ?>"
-                                               placeholder="Optional">
+                                               placeholder="Grund (optional)">
+                                        </div>
+                                        <small class="anw-hinweis d-block" aria-live="polite"></small>
                                     </td>
-                                    <td>
-                                        <small class="text-muted">
-                                            <?php echo $a['gemeldet_am'] ? date('d.m.Y H:i', strtotime($a['gemeldet_am'])) : '-'; ?>
-                                        </small>
+                                    <td class="d-none d-md-table-cell">
+                                        <small class="text-muted anw-zeit"><?php echo $a['gemeldet_am'] ? date('d.m.Y H:i', strtotime($a['gemeldet_am'])) : '-'; ?></small>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
                     </div>
-                    <button type="submit" name="update_anwesenheit" class="btn btn-primary">
-                        <i class="bi bi-save"></i> Anwesenheit speichern
-                    </button>
                 </form>
                 <?php else: ?>
                 <div class="table-responsive">
@@ -442,7 +357,7 @@ include 'includes/header.php';
                         </thead>
                         <tbody>
                             <?php foreach ($anwesenheit as $a): ?>
-                            <tr>
+                            <tr data-mitglied-id="<?php echo (int)$a['mitglied_id']; ?>">
                                 <td><?php echo htmlspecialchars($a['nachname'] . ' ' . $a['vorname']); ?></td>
                                 <td>
                                     <?php
@@ -465,9 +380,9 @@ include 'includes/header.php';
                                     $badge = $statusBadges[$a['status']] ?? 'secondary';
                                     $label = $statusLabels[$a['status']] ?? ucfirst(str_replace('_', ' ', $a['status']));
                                     ?>
-                                    <span class="badge bg-<?php echo $badge; ?>"><?php echo $label; ?></span>
+                                    <span class="badge bg-<?php echo $badge; ?> anw-badge" data-status="<?php echo htmlspecialchars($a['status']); ?>"><?php echo $label; ?></span>
                                 </td>
-                                <td><small><?php echo htmlspecialchars($a['grund'] ?? '-'); ?></small></td>
+                                <td><small class="anw-grund-text"><?php echo htmlspecialchars(($a['grund'] ?? '') !== '' ? $a['grund'] : '-'); ?></small></td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -486,25 +401,231 @@ include 'includes/header.php';
 .btn-anwesenheit {
     transition: all 0.15s ease;
 }
+/* Anwesenheitsliste: Rand nach gewähltem Status */
+/* Status und Grund: am Computer nebeneinander, am Handy untereinander */
+.anw-eingabe { display: flex; gap: .5rem; align-items: center; }
+.anw-eingabe .anw-status { flex: 0 0 9.5rem; }
+.anw-eingabe input { flex: 1 1 auto; min-width: 0; }
+@media (max-width: 767.98px) {
+    .anw-eingabe { flex-direction: column; align-items: stretch; gap: .35rem; min-width: 10rem; }
+    .anw-eingabe .anw-status { flex-basis: auto; }
+}
+/* Live-Anzeige */
+.anw-live-punkt { display: inline-block; width: .5rem; height: .5rem; border-radius: 50%; background: var(--bs-success); margin-right: .15rem; animation: anwPuls 2s infinite; }
+#anwLive.offline .anw-live-punkt { background: var(--bs-secondary); animation: none; }
+@keyframes anwPuls { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+tr.anw-neu > td, li.anw-neu { animation: anwNeu 2.5s ease-out; }
+@keyframes anwNeu { from { background-color: rgba(var(--bs-info-rgb), .25); } to { background-color: transparent; } }
+/* dezenter Farbstreifen links nach gewähltem Status */
+.anw-status.anw-zugesagt,
+.anw-status.anw-ungewiss,
+.anw-status.anw-abgesagt { border-left-width: 4px; }
+.anw-status.anw-zugesagt { border-left-color: rgba(var(--bs-success-rgb), .7); }
+.anw-status.anw-ungewiss { border-left-color: rgba(var(--bs-warning-rgb), .8); }
+.anw-status.anw-abgesagt { border-left-color: rgba(var(--bs-danger-rgb), .7); }
 </style>
 
 <script>
-$(document).ready(function() {
+// jQuery wird erst im Footer geladen – deshalb auf DOMContentLoaded warten
+document.addEventListener('DOMContentLoaded', function() {
+
+    // Anwesenheitsliste: Status und Grund sofort speichern
+    const ausrueckungIdListe = <?php echo (int)$id; ?>;
+
+    function zaehlerNeu() {
+        const z = { zugesagt: 0, ungewiss: 0, abgesagt: 0, keine_antwort: 0 };
+        document.querySelectorAll('.anw-status').forEach(function(s) {
+            if (z[s.value] !== undefined) z[s.value]++;
+        });
+        const zeichen = { zugesagt: '✓', ungewiss: '?', abgesagt: '✗', keine_antwort: '–' };
+        Object.keys(z).forEach(function(k) {
+            document.querySelectorAll('.card-header [data-typ="' + k + '"]').forEach(function(b) { b.textContent = zeichen[k] + ' ' + z[k]; });
+        });
+    }
+
+    function hinweis(zeile, text, klasse) {
+        const h = zeile.querySelector('.anw-hinweis');
+        if (!h) return;
+        clearTimeout(h._timer);
+        h.className = 'anw-hinweis d-block ' + klasse;
+        h.innerHTML = text;
+        if (klasse === 'text-success') h._timer = setTimeout(function() { h.innerHTML = ''; }, 2000);
+    }
+
+    function zeileSpeichern(zeile) {
+        const sel = zeile.querySelector('.anw-status');
+        const grund = zeile.querySelector('.anw-grund');
+        const daten = new URLSearchParams({
+            ausrueckung_id: ausrueckungIdListe,
+            mitglied_id: zeile.dataset.mitgliedId,
+            status: sel.value,
+            grund: grund ? grund.value : ''
+        });
+        const nr = (zeile._nr = (zeile._nr || 0) + 1);
+        zeile._laeuft = true;
+        hinweis(zeile, '<i class="bi bi-arrow-repeat"></i> Speichert …', 'text-muted');
+        fetch('api/anwesenheit_verwalten.php', { method: 'POST', body: daten })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (nr !== zeile._nr) return; // inzwischen neuere Änderung unterwegs
+                zeile._laeuft = false;
+                if (d.success) {
+                    hinweis(zeile, '<i class="bi bi-check-circle"></i> Gespeichert', 'text-success');
+                    liveBald();
+                    zeile.querySelectorAll('.anw-zeit').forEach(function(z) { z.textContent = d.gemeldet_am; });
+                    zeile.querySelectorAll('.anw-zeit-mobil').forEach(function(z) { z.classList.remove('d-none'); });
+                } else {
+                    hinweis(zeile, '<i class="bi bi-exclamation-circle"></i> Nicht gespeichert: ' + (d.message || 'Fehler'), 'text-danger');
+                }
+            })
+            .catch(function() {
+                if (nr !== zeile._nr) return;
+                zeile._laeuft = false;
+                hinweis(zeile, '<i class="bi bi-exclamation-circle"></i> Nicht gespeichert (Verbindung)', 'text-danger');
+            });
+    }
+
+    document.querySelectorAll('.anw-status').forEach(function(sel) {
+        sel.addEventListener('change', function() {
+            sel.classList.remove('anw-zugesagt', 'anw-ungewiss', 'anw-abgesagt', 'anw-keine_antwort');
+            sel.classList.add('anw-' + sel.value);
+            // Grund-Feld nur bei Absage oder wenn schon ein Grund eingetragen ist
+            const grund = sel.closest('.anw-eingabe')?.querySelector('.anw-grund');
+            if (grund) {
+                const zeigen = sel.value === 'abgesagt' || grund.value.trim() !== '';
+                grund.classList.toggle('d-none', !zeigen);
+                if (zeigen && sel.value === 'abgesagt' && grund.value.trim() === '') grund.focus();
+            }
+            if (grund) { clearTimeout(grund._timer); grund.dataset.gespeichert = grund.value; }
+            zaehlerNeu();
+            zeileSpeichern(sel.closest('tr'));
+        });
+    });
+
+    // Grund: kurz nach dem Tippen speichern, spätestens beim Verlassen des Feldes
+    document.querySelectorAll('.anw-grund').forEach(function(g) {
+        g.dataset.gespeichert = g.value;
+        function jetzt() {
+            clearTimeout(g._timer);
+            if (g.value === g.dataset.gespeichert) return;
+            g.dataset.gespeichert = g.value;
+            zeileSpeichern(g.closest('tr'));
+        }
+        g.addEventListener('input', function() {
+            clearTimeout(g._timer);
+            g._timer = setTimeout(jetzt, 1000);
+        });
+        g.addEventListener('blur', jetzt);
+        g.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); jetzt(); } });
+    });
+
+    // Live-Aktualisierung: Zu- und Absagen anderer alle 15 Sekunden nachladen
+    const statusText  = { zugesagt: '✓ Zugesagt', ungewiss: '? Ungewiss', abgesagt: '✗ Abgesagt', keine_antwort: 'Keine Antwort', anwesend: 'Anwesend', abwesend: 'Abwesend' };
+    const statusFarbe = { zugesagt: 'success', ungewiss: 'warning', abgesagt: 'danger', keine_antwort: 'secondary', anwesend: 'success', abwesend: 'danger' };
+
+    // Zeilen merken, bevor DataTables sie bei Suche/Sortierung aus dem DOM nimmt
+    const anwZeilen = new Map();
+    document.querySelectorAll('#anwesenheitAdminTable tr[data-mitglied-id], #anwesenheitTable tr[data-mitglied-id]').forEach(function(tr) {
+        anwZeilen.set(tr.dataset.mitgliedId, tr);
+    });
+
+    function zeileLiveSetzen(zeile, e) {
+        const sel = zeile.querySelector('.anw-status');
+        if (sel) {
+            // Zeile wird gerade bearbeitet oder gespeichert → nicht überschreiben
+            const grund = zeile.querySelector('.anw-grund');
+            if (zeile._laeuft || zeile.contains(document.activeElement)) return false;
+            if (grund && (grund.value !== grund.dataset.gespeichert)) return false;
+            const grundNeu = e.grund || '';
+            if (sel.value === e.status && (!grund || grund.value === grundNeu)) return false;
+            if (sel.querySelector('option[value="' + e.status + '"]')) sel.value = e.status;
+            sel.classList.remove('anw-zugesagt', 'anw-ungewiss', 'anw-abgesagt', 'anw-keine_antwort');
+            sel.classList.add('anw-' + sel.value);
+            if (grund) {
+                grund.value = grundNeu;
+                grund.dataset.gespeichert = grundNeu;
+                grund.classList.toggle('d-none', !(sel.value === 'abgesagt' || grundNeu.trim() !== ''));
+            }
+        } else {
+            const badge = zeile.querySelector('.anw-badge');
+            if (!badge || badge.dataset.status === e.status && (zeile.querySelector('.anw-grund-text')?.textContent || '-') === (e.grund || '-')) return false;
+            badge.dataset.status = e.status;
+            badge.className = 'badge bg-' + (statusFarbe[e.status] || 'secondary') + ' anw-badge';
+            badge.textContent = statusText[e.status] || e.status;
+            const g = zeile.querySelector('.anw-grund-text');
+            if (g) g.textContent = e.grund || '-';
+        }
+        if (e.gemeldet_am) {
+            zeile.querySelectorAll('.anw-zeit').forEach(function(z) { z.textContent = e.gemeldet_am; });
+            zeile.querySelectorAll('.anw-zeit-mobil').forEach(function(z) { z.classList.remove('d-none'); });
+        }
+        zeile.classList.remove('anw-neu'); void zeile.offsetWidth; zeile.classList.add('anw-neu');
+        return true;
+    }
+
+    // Karte „Zusagen“/„Absagen“ nach Register austauschen; neu hinzugekommene Namen kurz hervorheben
+    function karteErsetzen(art, html) {
+        const alt = document.getElementById('anwKarte-' + art);
+        if (!alt || alt._html === html) return;
+        const vorher = new Set([...alt.querySelectorAll('li[data-mitglied-id]')].map(function(li) { return li.dataset.mitgliedId; }));
+        const tmp = document.createElement('div');
+        tmp.innerHTML = html.trim();
+        const neu = tmp.firstElementChild;
+        if (!neu) return;
+        neu._html = html;
+        neu.querySelectorAll('li[data-mitglied-id]').forEach(function(li) {
+            if (!vorher.has(li.dataset.mitgliedId)) li.classList.add('anw-neu');
+        });
+        alt.replaceWith(neu);
+    }
+
+    let liveTimer = null;
+    function liveBald() { clearTimeout(liveTimer); liveTimer = setTimeout(liveLaden, 800); }
+
+    function liveLaden() {
+        if (document.visibilityState !== 'visible') return;
+        fetch('api/anwesenheit_liste.php?ausrueckung_id=' + ausrueckungIdListe, { cache: 'no-store' })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                const live = document.getElementById('anwLive');
+                if (!d.success) { live?.classList.add('offline'); return; }
+                live?.classList.remove('offline');
+                const z = { zugesagt: 0, ungewiss: 0, abgesagt: 0, keine_antwort: 0 };
+                let unbekannt = false;
+                d.liste.forEach(function(e) {
+                    if (z[e.status] !== undefined) z[e.status]++;
+                    const zeile = anwZeilen.get(String(e.mitglied_id));
+                    if (zeile) zeileLiveSetzen(zeile, e); else unbekannt = true;
+                });
+                const zeichen = { zugesagt: '✓', ungewiss: '?', abgesagt: '✗', keine_antwort: '–' };
+                Object.keys(z).forEach(function(k) {
+                    document.querySelectorAll('.card-header [data-typ="' + k + '"]').forEach(function(b) { b.textContent = zeichen[k] + ' ' + z[k]; });
+                });
+                document.getElementById('anwNeuLaden')?.classList.toggle('d-none', !unbekannt);
+                if (d.karten) Object.keys(d.karten).forEach(function(art) { karteErsetzen(art, d.karten[art]); });
+                const t = document.getElementById('anwLiveZeit');
+                if (t) t.textContent = ' · ' + d.zeit;
+            })
+            .catch(function() { document.getElementById('anwLive')?.classList.add('offline'); });
+    }
+    if (document.getElementById('anwLive')) {
+        setInterval(liveLaden, 15000);
+        document.addEventListener('visibilitychange', function() { if (document.visibilityState === 'visible') liveLaden(); });
+    }
 
     // Anwesenheitsliste sortierbar machen
-    if ($'#anwesenheitAdminTable').length) {
+    if ($('#anwesenheitAdminTable').length) {
+        // ohne Seitenaufteilung, damit beim Speichern alle Zeilen im Formular sind
         $('#anwesenheitAdminTable').DataTable({
             order: [[0, 'asc']],
-            pageLength: 25,
-            language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/de-DE.json' },
-            columnDefs: [{ orderable: false, targets: [1, 2] }]
+            paging: false,
+            columnDefs: [{ orderable: false, targets: [1] }]
         });
     }
     if ($('#anwesenheitTable').length) {
         $('#anwesenheitTable').DataTable({
             order: [[1, 'asc']],
             pageLength: 25,
-            language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/de-DE.json' }
         });
     }
 
@@ -533,7 +654,7 @@ $(document).ready(function() {
         const header = $('.card-header [data-typ]');
         if (!header.length) return;
 
-        if (alterStatus && statusMap[alterStatus]) {
+        if (alterStatus && (statusMap[alterStatus] || alterStatus === 'keine_antwort')) {
             const altEl = $('[data-typ="' + alterStatus + '"]');
             altEl.each(function() {
                 const val = parseInt($(this).text().replace(/[^0-9]/g, '')) || 0;
@@ -572,6 +693,7 @@ $(document).ready(function() {
                 const ts = now.toLocaleDateString('de-AT') + ' ' + now.toLocaleTimeString('de-AT', {hour: '2-digit', minute: '2-digit'});
                 $('#anwesenheit-zeitstempel').html('<i class="bi bi-clock"></i> Zuletzt geändert: ' + ts + ' Uhr');
                 $('#anwesenheit-feedback').html('<small class="text-success"><i class="bi bi-check-circle"></i> Gespeichert</small>');
+                if (typeof liveBald === 'function') liveBald();
                 setTimeout(() => $('#anwesenheit-feedback').html(''), 3000);
             } else {
                 $('#anwesenheit-feedback').html('<small class="text-danger"><i class="bi bi-exclamation-circle"></i> Fehler: ' + data.message + '</small>');

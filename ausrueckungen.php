@@ -215,6 +215,7 @@ include 'includes/header.php';
                                     <span class="text-success" data-typ="zugesagt">✓ <?php echo $a['zugesagt'] ?? 0; ?></span>
                                     <span class="text-warning mx-1" data-typ="ungewiss">? <?php echo $a['ungewiss'] ?? 0; ?></span>
                                     <span class="text-danger" data-typ="abgesagt">✗ <?php echo $a['abgesagt'] ?? 0; ?></span>
+                                    <span class="text-secondary ms-1" data-typ="keine_antwort" title="Keine Antwort">– <?php echo $a['keine_antwort'] ?? 0; ?></span>
                                 </small>
                             </div>
                             <?php if ($meineMitgliedId): ?>
@@ -433,7 +434,7 @@ $(document).ready(function() {
         const zaehler = $('.anwesenheit-zaehler[data-ausrueckung-id="' + ausrueckungId + '"]');
         if (!zaehler.length) return;
 
-        if (alterStatus && statusMap[alterStatus]) {
+        if (alterStatus && (statusMap[alterStatus] || alterStatus === 'keine_antwort')) {
             const altSpan = zaehler.find('[data-typ="' + alterStatus + '"]');
             const altVal = parseInt(altSpan.text().replace(/[^0-9]/g, '')) || 0;
             if (altVal > 0) altSpan.text(altSpan.text().replace(/[0-9]+/, altVal - 1));
