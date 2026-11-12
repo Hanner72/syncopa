@@ -78,6 +78,10 @@ Beim **Speichern einer neuen Ausrückung** legt Syncopa automatisch für jedes b
 
 Dadurch muss niemand die Anmeldeliste manuell befüllen – jedes betroffene Mitglied kann sofort auf der Übersichtsseite zu- oder absagen.
 
+Die Anmeldelisten **kommender** Ausrückungen werden bei jedem Aufruf der Ausrückungsliste und der Detailseite mit den aktuellen Mitgliedern abgeglichen: Neue oder neu zugeordnete Mitglieder (z. B. nach dem BMV-Abgleich der Mitgliedsarten oder einer Formationszuordnung) kommen als „keine Antwort“ dazu. Wechselt die Formation einer Ausrückung, fallen nur unberührte Einträge weg – wer schon geantwortet hat, bleibt stehen. Vergangene Ausrückungen bleiben unverändert.
+
+> 💡 Als aktiv zählt die **Mitgliedsart** (Stammdaten → Mitgliedsarten, „zählt als aktiv“). Mitglieder ohne laufende Mitgliedsart gelten als ausgetreten und erscheinen nicht in der Anmeldeliste.
+
 ---
 
 ## Detailansicht einer Ausrückung

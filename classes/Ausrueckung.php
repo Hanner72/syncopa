@@ -218,6 +218,9 @@ class Ausrueckung {
         ];
         
         $result = $this->db->execute($sql, $params);
+
+        // Anmeldeliste an die (evtl. geänderte) Formation anpassen
+        $this->anwesenheitErgaenzen((int)$id);
         
         // Google Calendar Event aktualisieren
         if (GOOGLE_CALENDAR_ENABLED && !empty($data['google_sync'])) {
@@ -309,20 +312,49 @@ class Ausrueckung {
     }
     
     private function addAllActiveMembers($ausrueckungId, $formationId = null) {
-        if ($formationId) {
-            $sql = "INSERT INTO anwesenheit (ausrueckung_id, mitglied_id, status)
-                    SELECT ?, m.id, 'keine_antwort'
-                    FROM mitglieder m
-                    JOIN mitglied_formationen mf ON mf.mitglied_id = m.id
-                    WHERE m.mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1) AND mf.formation_id = ?";
-            return $this->db->execute($sql, [$ausrueckungId, $formationId]);
-        }
-        $sql = "INSERT INTO anwesenheit (ausrueckung_id, mitglied_id, status)
-                SELECT ?, id, 'keine_antwort'
-                FROM mitglieder WHERE mitgliedsart_code IN (SELECT code FROM mitgliedsarten WHERE aktiv = 1 AND gast = 0)";
-        return $this->db->execute($sql, [$ausrueckungId]);
+        return $this->anwesenheitErgaenzen((int)$ausrueckungId, false);
     }
-    
+
+    /**
+     * Gleicht die Anmeldeliste mit den aktuellen Mitgliedern ab:
+     * - Mit Formation: alle aktiven Mitglieder dieser Formation (inkl. Gastmusiker)
+     * - Ohne Formation: alle aktiven Vereinsmitglieder (ohne Gäste)
+     * Fehlende Mitglieder bekommen einen Eintrag „keine Antwort“. Unberührte Einträge „keine Antwort“
+     * (nie gemeldet) von Mitgliedern, die nicht mehr dazugehören, werden entfernt (z. B. nach Formationswechsel).
+     * Ohne $ausrueckungId für alle; $nurKommende = nur Ausrückungen ab heute (vergangene bleiben unverändert).
+     */
+    public function anwesenheitErgaenzen(?int $ausrueckungId = null, bool $nurKommende = true): void {
+        $wo = [];
+        $params = [];
+        if ($ausrueckungId) { $wo[] = 'au.id = ?'; $params[] = $ausrueckungId; }
+        if ($nurKommende)   { $wo[] = 'COALESCE(DATE(au.ende_datum), DATE(au.start_datum)) >= CURDATE()'; }
+        $woSql = $wo ? ' AND ' . implode(' AND ', $wo) : '';
+
+        $gehoertDazu = "(
+            (au.formation_id IS NULL AND " . Mitgliedsart::sqlAktiv('m', false) . ")
+            OR (au.formation_id IS NOT NULL AND " . Mitgliedsart::sqlAktiv('m', true) . "
+                AND EXISTS (SELECT 1 FROM mitglied_formationen mf WHERE mf.mitglied_id = m.id AND mf.formation_id = au.formation_id))
+        )";
+
+        $this->db->execute(
+            "INSERT INTO anwesenheit (ausrueckung_id, mitglied_id, status)
+             SELECT au.id, m.id, 'keine_antwort'
+             FROM ausrueckungen au
+             JOIN mitglieder m ON $gehoertDazu
+             WHERE NOT EXISTS (SELECT 1 FROM anwesenheit x WHERE x.ausrueckung_id = au.id AND x.mitglied_id = m.id) $woSql",
+            $params
+        );
+        $this->db->execute(
+            "DELETE an FROM anwesenheit an
+             JOIN ausrueckungen au ON au.id = an.ausrueckung_id
+             JOIN mitglieder m ON m.id = an.mitglied_id
+             WHERE an.status = 'keine_antwort' AND an.gemeldet_am IS NULL
+               AND (an.grund IS NULL OR an.grund = '')
+               AND NOT $gehoertDazu $woSql",
+            $params
+        );
+    }
+
     private function getEventColor($typ) {
         $colors = [
             'Probe' => '#6c757d',

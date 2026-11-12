@@ -21,7 +21,8 @@ if (!$ausrueckung) {
     exit;
 }
 
-// Anwesenheitsliste
+// Anwesenheitsliste (kommende Ausrückungen vorher mit den aktuellen Mitgliedern abgleichen)
+$ausrueckungObj->anwesenheitErgaenzen((int)$id);
 $anwesenheit = $ausrueckungObj->getAnwesenheit($id);
 
 // Noten für diese Ausrückung
