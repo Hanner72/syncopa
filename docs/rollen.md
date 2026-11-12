@@ -40,6 +40,7 @@ Wie einem Benutzer mehrere Rollen zugewiesen werden, steht unter [Benutzerverwal
 | Finanzen | Einnahmen & Ausgaben |
 | Formationen | Verwaltung mehrerer Formationen |
 | Festverwaltung | Fest-/Veranstaltungslogistik |
+| BMV Online | BMV-Daten und Jahresbericht ansehen (lesen), Daten übernehmen sowie Jahresbericht ausfüllen, abschließen und senden (schreiben), abgeschlossenen Jahresbericht wieder öffnen (löschen) |
 | Benutzer | Benutzerverwaltung |
 | Einstellungen | Systemeinstellungen |
 
@@ -60,7 +61,7 @@ Die Reihenfolge der Rollen in der Übersicht kann per **Drag & Drop** geändert 
 1. Navigiere im Menü zu **System → Rollen**
 2. Klicke auf **+ Neue Rolle**
 3. Vergib einen **Namen** (nur Buchstaben, Zahlen, `-` und `_`, z.B. `zeugwart`)
-4. Wähle eine **Badge-Farbe** zur optischen Unterscheidung
+4. Wähle eine **Farbe**: frei über den Farbwähler oder per Klick auf einen der Vorschläge. Vorgeschlagen werden Farben, die sich von den anderen Rollen gut unterscheiden; darunter stehen die schon vergebenen Farben. Die Schrift im Badge wird automatisch weiß oder dunkel, damit sie lesbar bleibt.
 5. Optional: Häkchen bei **„Administrator-Rolle"** für automatischen Vollzugriff auf alle Module
 6. **Erstellen**
 
@@ -69,7 +70,7 @@ Die Reihenfolge der Rollen in der Übersicht kann per **Drag & Drop** geändert 
 | Feld | Pflicht | Beschreibung |
 |---|---|---|
 | Name | ✅ | Interner Name der Rolle |
-| Badge-Farbe | – | Farbe des Rollen-Badges in Listen |
+| Farbe | – | Frei wählbare Farbe des Rollen-Badges (Rollen, Benutzer, Rechte-Matrix) |
 | Sortierung | – | Kleinere Zahl = weiter oben in der Liste |
 | Beschreibung | – | Freitext zur Erläuterung |
 | Administrator-Rolle | – | Vollzugriff auf alle Module, kann bei bestehenden Admin-Rollen nicht mehr entfernt werden |

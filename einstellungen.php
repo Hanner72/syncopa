@@ -41,6 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $bmvFehler = 'BMV E-Mail: die Adresse ist ungültig.';
     } elseif ($bmvUrl !== '' && !filter_var($bmvUrl, FILTER_VALIDATE_URL)) {
         $bmvFehler = 'BMV API-Link: die Adresse ist ungültig.';
+    } elseif (trim($_POST['bmv_jahresbericht_email'] ?? '') !== '' && !filter_var(trim($_POST['bmv_jahresbericht_email']), FILTER_VALIDATE_EMAIL)) {
+        $bmvFehler = 'Jahresbericht senden an: die Adresse ist ungültig.';
     }
 
     if ($bmvFehler) {
@@ -418,6 +420,14 @@ include 'includes/header.php';
                     <input type="number" class="form-control" id="bmv_sync_intervall_stunden" name="bmv_sync_intervall_stunden"
                            min="1" max="168" value="<?php echo htmlspecialchars($settings['bmv_sync_intervall_stunden'] ?? '24'); ?>">
                     <small class="text-muted">z.B. 24 = einmal täglich. Geprüft wird beim Öffnen der Einstellungen. Gibt es Neues, erscheint oben ein Hinweis.</small>
+                </div>
+
+                <div class="col-md-8 mb-3">
+                    <label for="bmv_jahresbericht_email" class="form-label">Jahresbericht senden an</label>
+                    <input type="email" class="form-control" id="bmv_jahresbericht_email" name="bmv_jahresbericht_email"
+                           placeholder="E-Mail-Adresse des Bezirks- oder Landesverbands"
+                           value="<?php echo htmlspecialchars($settings['bmv_jahresbericht_email'] ?? ''); ?>">
+                    <small class="text-muted">An diese Adresse wird der abgeschlossene <a href="bmv_jahresbericht.php">Jahresbericht</a> als PDF geschickt.</small>
                 </div>
             </div>
 

@@ -21,6 +21,7 @@ $module = [
     'finanzen'      => 'Finanzen',
     'formationen'   => 'Formationen',
     'fest'          => 'Festverwaltung',
+    'bmv'           => 'BMV Online',
     'benutzer'      => 'Benutzer',
     'einstellungen' => 'Einstellungen',
 ];
@@ -100,7 +101,7 @@ $flash = Session::getFlashMessage();
                     <th class="modul-col">Modul</th>
                     <?php foreach ($rollen as $rolle): ?>
                     <th class="text-center rolle-header">
-                        <span class="badge bg-<?= htmlspecialchars($rolle['farbe']) ?>" style="font-size:11px">
+                        <span class="badge" style="<?php echo RollenFarbe::stil($rolle['farbe'] ?? null); ?>;font-size:11px">
                             <?= htmlspecialchars($rolle['name']) ?>
                         </span>
                         <?php if (!$rolle['ist_admin']): ?>

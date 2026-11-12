@@ -62,6 +62,8 @@ Die Übersicht zeigt alle Ausrückungen mit:
 | Uniform | – | Kleiderordnung für diesen Termin |
 | Treffpunkt / Treffpunkt-Uhrzeit | – | Vorankunft für Aufbau etc. |
 | Notizen | – | Interne Anmerkungen, nicht öffentlich sichtbar |
+| BMV-Anlass | – | In welcher Zeile die Ausrückung im [BMV-Jahresbericht](bmv-jahresbericht.md) zählt. Leer = aus dem Typ |
+| Probenart | – | Nur bei Proben: Vollprobe oder Teilprobe (für den Jahresbericht) |
 
 > 💡 **Tipp:** Ist oben in der Kopfzeile eine Formation aktiv, wird sie beim Anlegen automatisch als Formation der neuen Ausrückung vorausgewählt.
 

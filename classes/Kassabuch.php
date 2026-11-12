@@ -145,11 +145,13 @@ class Kassabuch {
         if ($name === '') throw new RuntimeException('Bitte einen Namen für die Kategorie eingeben.');
         $typ = in_array($d['typ'] ?? '', ['einnahme', 'ausgabe', 'beide'], true) ? $d['typ'] : 'beide';
         $werte = [$name, $typ, (int)($d['sortierung'] ?? 100), !empty($d['aktiv']) ? 1 : 0];
+        $posten = $d['bmv_posten'] ?? '';
+        $werte[] = isset(BmvJahresbericht::POSTEN[$posten]) || $posten === 'keine' ? $posten : null;
         if ($id) {
-            self::db()->execute("UPDATE finanz_kategorien SET name=?, typ=?, sortierung=?, aktiv=? WHERE id=?", array_merge($werte, [$id]));
+            self::db()->execute("UPDATE finanz_kategorien SET name=?, typ=?, sortierung=?, aktiv=?, bmv_posten=? WHERE id=?", array_merge($werte, [$id]));
             return $id;
         }
-        self::db()->execute("INSERT INTO finanz_kategorien (name, typ, sortierung, aktiv) VALUES (?, ?, ?, ?)", $werte);
+        self::db()->execute("INSERT INTO finanz_kategorien (name, typ, sortierung, aktiv, bmv_posten) VALUES (?, ?, ?, ?, ?)", $werte);
         return (int)self::db()->lastInsertId();
     }
 

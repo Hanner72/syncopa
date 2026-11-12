@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.11.0]
+
+### Hinzugefügt
+
+- BMV-Jahresbericht (Verband → BMV Online → Jahresbericht)
+  - wird per Knopfdruck aus den Daten in Syncopa befüllt: Finanzen aus dem Kassabuch, Mitgliederstand zum 31.12., Proben und Ausrückungen, Jugendreferenten, Bearbeiter/in
+  - fehlende Angaben sind rot markiert; Farben zeigen, was aus Syncopa, aus dem Vorjahr oder von Hand kommt
+  - Abschließen erzeugt das PDF im Layout des BMV-Formulars und sendet es per E-Mail an den BMV
+  - Erinnerung am Dashboard, solange der Bericht des Vorjahres nicht abgeschlossen ist
+- Neue Felder für den Jahresbericht: BMV-Anlass und Probenart bei Ausrückungen, Klangkörper bei Formationen, Zuordnung der Kassabuch-Kategorien, Empfängeradresse in den Einstellungen
+- Rechte-Matrix: neues Modul „BMV Online“ (lesen, schreiben, wieder öffnen) – BMV Online ist nicht mehr nur für Administratoren
+- Rollen: frei wählbare Farben mit Farbwähler und Vorschlägen für noch nicht vergebene Farben; die Schrift im Badge passt sich automatisch an
+
+### Geändert
+
+- Menü: „BMV Daten holen“ ist jetzt ein Unterpunkt von „BMV Online“ in der neuen Gruppe „Verband“
+- Topmenü: E-Mail und Formationsauswahl haben den Platz getauscht
+
+### Bugs
+
+- Ausrückungen: Speichern ohne Enddatum (offenes Ende) oder ohne Treffpunkt-Zeit führte zu einem Datenbankfehler
+- Rollen: das Badge der Rolle Trachtenwart (Lila) war nicht lesbar
+
 ## [2.10.0]
 
 ### Hinzugefügt

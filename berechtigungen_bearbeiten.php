@@ -37,6 +37,7 @@ $module = [
     'finanzen'      => 'Finanzen',
     'formationen'   => 'Formationen',
     'fest'          => 'Festverwaltung',
+    'bmv'           => 'BMV Online',
     'benutzer'      => 'Benutzer',
     'einstellungen' => 'Einstellungen',
 ];
@@ -82,7 +83,7 @@ include 'includes/header.php';
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h2">
         <i class="bi bi-key"></i> Berechtigungen: 
-        <span class="badge bg-<?php echo htmlspecialchars($rolle['farbe']); ?>">
+        <span class="badge" style="<?php echo RollenFarbe::stil($rolle['farbe'] ?? null); ?>">
             <?php echo htmlspecialchars($rolle['name']); ?>
         </span>
     </h1>

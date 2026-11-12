@@ -86,7 +86,7 @@ include 'includes/header.php';
                         <i class="bi bi-grip-vertical"></i>
                     </td>
                     <td>
-                        <span class="badge bg-<?php echo htmlspecialchars($rolle['farbe']); ?> me-2">
+                        <span class="badge me-2" style="<?php echo RollenFarbe::stil($rolle['farbe'] ?? null); ?>">
                             <?php echo htmlspecialchars($rolle['name']); ?>
                         </span>
                     </td>

@@ -127,12 +127,18 @@ include 'includes/header.php';
     </div>
     <div class="table-responsive">
     <table class="table mb-0 align-middle">
-        <thead class="table-light"><tr><th>Name</th><th>Für</th><th class="text-end">Reihenfolge</th><th class="text-end">Buchungen</th><th></th></tr></thead>
+        <thead class="table-light"><tr><th>Name</th><th>Für</th><th>Im BMV-Jahresbericht</th><th class="text-end">Reihenfolge</th><th class="text-end">Buchungen</th><th></th></tr></thead>
         <tbody>
         <?php foreach ($kategorien as $c): ?>
         <tr class="<?php echo $c['aktiv'] ? '' : 'text-muted'; ?>">
             <td><?php echo htmlspecialchars($c['name']); ?><?php if (!$c['aktiv']): ?> <span class="badge bg-secondary">inaktiv</span><?php endif; ?></td>
             <td><span class="badge bg-<?php echo $typLabel[$c['typ']][1]; ?>"><?php echo $typLabel[$c['typ']][0]; ?></span></td>
+            <td class="small"><?php
+                if ($c['bmv_posten'] === 'keine') echo '<span class="text-muted">zählt nicht</span>';
+                elseif (isset(BmvJahresbericht::POSTEN[$c['bmv_posten'] ?? ''])) echo htmlspecialchars(BmvJahresbericht::POSTEN[$c['bmv_posten']]);
+                elseif ($c['typ'] !== 'einnahme') echo '<span class="text-muted">übrige Ausgaben</span>';
+                else echo '<span class="text-muted">–</span>';
+            ?></td>
             <td class="text-end"><?php echo (int)$c['sortierung']; ?></td>
             <td class="text-end"><?php echo (int)$c['anzahl']; ?></td>
             <td class="text-end text-nowrap">
@@ -173,13 +179,20 @@ include 'includes/header.php';
 
 <!-- Dialog Kategorie -->
 <div class="modal fade" id="kategorieModal" tabindex="-1">
-    <div class="modal-dialog modal-sm"><form method="POST" class="modal-content">
+    <div class="modal-dialog"><form method="POST" class="modal-content">
         <input type="hidden" name="aktion" value="kategorie"><input type="hidden" name="id"><input type="hidden" name="jahr" value="<?php echo $jahr; ?>">
         <div class="modal-header"><h5 class="modal-title">Kategorie</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
         <div class="modal-body">
             <div class="mb-3"><label class="form-label" for="c-name">Name *</label><input class="form-control" id="c-name" name="name" required maxlength="100"></div>
             <div class="mb-3"><label class="form-label" for="c-typ">Für</label>
                 <select class="form-select" id="c-typ" name="typ"><option value="einnahme">Einnahmen</option><option value="ausgabe">Ausgaben</option><option value="beide">beides</option></select></div>
+            <div class="mb-3"><label class="form-label" for="c-bmv">Zeile im BMV-Jahresbericht</label>
+                <select class="form-select" id="c-bmv" name="bmv_posten">
+                    <option value="">automatisch (Ausgaben: „alle übrigen Ausgaben“)</option>
+                    <?php foreach (BmvJahresbericht::POSTEN as $pv => $pl): if ($pv === 'aus_uebrige') continue; ?><option value="<?php echo $pv; ?>"><?php echo htmlspecialchars($pl); ?></option><?php endforeach; ?>
+                    <option value="keine">zählt nicht für den Jahresbericht</option>
+                </select>
+                <div class="form-text">Subventionen zählen nur bei Einnahmen, die übrigen Zeilen nur bei Ausgaben.</div></div>
             <div class="mb-3"><label class="form-label" for="c-sortierung">Reihenfolge</label><input type="number" class="form-control" id="c-sortierung" name="sortierung" value="100"></div>
             <div class="form-check"><input class="form-check-input" type="checkbox" name="aktiv" value="1" id="c-aktiv" checked><label class="form-check-label" for="c-aktiv">aktiv</label></div>
         </div>
@@ -207,6 +220,6 @@ document.querySelectorAll('[data-konto]').forEach(function (b) {
     });
 });
 document.querySelectorAll('[data-kategorie]').forEach(function (b) {
-    b.addEventListener('click', function (e) { e.preventDefault(); dialogFuellen('kategorieModal', JSON.parse(b.dataset.kategorie || '{}'), ['name', 'typ', 'sortierung']); });
+    b.addEventListener('click', function (e) { e.preventDefault(); dialogFuellen('kategorieModal', JSON.parse(b.dataset.kategorie || '{}'), ['name', 'typ', 'sortierung', 'bmv_posten']); });
 });
 </script>

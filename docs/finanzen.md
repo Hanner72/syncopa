@@ -29,7 +29,7 @@ Das Jahr wird oben rechts gewählt. Abgeschlossene Jahre sind mit einem Schloss 
 
 - **Konten:** beliebig viele, z. B. Handkassa, Girokonto, Sparbuch oder eine eigene Jugendkassa. Bei der Einrichtung sind **Handkassa** und **Girokonto** angelegt. Ein Konto kann einer Formation zugeordnet werden; nicht mehr benutzte Konten werden auf „inaktiv“ gesetzt.
 - **Anfangsbestand:** nur im ersten Jahr eintragen (Kassastand bzw. Kontoauszug am 1.1.). In den Folgejahren rechnet Syncopa den Anfangsbestand aus dem Vorjahr weiter. Ein eingetragener Wert hat Vorrang.
-- **Kategorien:** Vorlage mit den üblichen Posten eines Musikvereins (Mitgliedsbeiträge, Subventionen, Konzerte, Feste, Noten, Instrumente, Trachten, Jugendarbeit, Verbandsbeiträge/AKM, Versicherungen …). Kategorien lassen sich ergänzen, umbenennen, sortieren und für Einnahmen, Ausgaben oder beides festlegen.
+- **Kategorien:** Vorlage mit den üblichen Posten eines Musikvereins (Mitgliedsbeiträge, Subventionen, Konzerte, Feste, Noten, Instrumente, Trachten, Jugendarbeit, Verbandsbeiträge/AKM, Versicherungen …). Kategorien lassen sich ergänzen, umbenennen, sortieren und für Einnahmen, Ausgaben oder beides festlegen. Bei jeder Kategorie lässt sich einstellen, in welche Zeile des [BMV-Jahresberichts](bmv-jahresbericht.md) sie zählt.
 
 ---
 

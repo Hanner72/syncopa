@@ -22,7 +22,7 @@ include 'includes/header.php';
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h2"><i class="bi bi-diagram-3"></i> Instrumente</h1>
     <div class="d-flex gap-2">
-        <?php if (Session::isAdmin()): ?>
+        <?php if (Session::checkPermission('bmv', 'schreiben')): ?>
         <a href="bmv_daten.php?bereich=inventar" class="btn btn-outline-secondary" title="Inventar aus dem CSV-Export des BMV-Portals übernehmen">
             <i class="bi bi-cloud-download"></i> <span class="d-none d-md-inline">Aus BMV importieren</span>
         </a>
