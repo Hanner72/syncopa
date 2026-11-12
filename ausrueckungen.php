@@ -62,9 +62,17 @@ include 'includes/header.php';
     </div>
 </div>
 
-<!-- Filter -->
+<!-- Filter (auf dem Handy ein-/ausklappbar, standardmäßig eingeklappt) -->
+<?php $aktiveFilter = count(array_filter([$_GET['typ'] ?? '', $_GET['status'] ?? '', $_GET['von_datum'] ?? '', $_GET['bis_datum'] ?? ''], fn($v) => $v !== '')); ?>
 <div class="card mb-4">
-    <div class="card-body">
+    <button type="button" class="btn btn-link text-decoration-none text-body d-flex d-md-none justify-content-between align-items-center w-100 px-3 py-2 collapsed"
+            data-bs-toggle="collapse" data-bs-target="#filterBereich" aria-expanded="false" aria-controls="filterBereich">
+        <span><i class="bi bi-funnel"></i> Filter
+            <?php if ($aktiveFilter): ?><span class="badge bg-primary ms-1"><?php echo $aktiveFilter; ?> aktiv</span><?php endif; ?>
+        </span>
+        <i class="bi bi-chevron-down filter-pfeil"></i>
+    </button>
+    <div class="card-body collapse d-md-block" id="filterBereich">
         <form method="GET" class="row g-3">
             <div class="col-md-3">
                 <label for="typ" class="form-label">Typ</label>
@@ -372,6 +380,8 @@ include 'includes/header.php';
 <?php include 'includes/footer.php'; ?>
 
 <style>
+[data-bs-target="#filterBereich"] .filter-pfeil { transition: transform .2s; }
+[data-bs-target="#filterBereich"]:not(.collapsed) .filter-pfeil { transform: rotate(180deg); }
 .btn-anwesenheit.dimmed {
     opacity: 0.35;
 }

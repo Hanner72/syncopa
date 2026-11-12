@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.12.1]
+
+### Geändert
+
+- Ausrückungen: Filter auf dem Handy ein- und ausklappbar, standardmäßig eingeklappt; aktive Filter werden angezeigt
+
 ## [2.12.0]
 
 ### Hinzugefügt
