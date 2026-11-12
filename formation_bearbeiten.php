@@ -19,6 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'aktiv'        => isset($_POST['aktiv']) ? 1 : 0,
     ];
 
+    $klangkoerper = isset(BmvJahresbericht::KLANGKOERPER[$_POST['bmv_klangkoerper'] ?? '']) ? $_POST['bmv_klangkoerper'] : 'gesamt';
     if (!$data['name']) $errors[] = 'Name ist erforderlich.';
     if ($data['farbe'] && !preg_match('/^#[0-9a-fA-F]{6}$/', $data['farbe'])) {
         $data['farbe'] = '#4471A3';
@@ -27,10 +28,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($errors)) {
         if ($isNew) {
             $newId = $formationObj->create($data);
+            Database::getInstance()->execute("UPDATE formationen SET bmv_klangkoerper = ? WHERE id = ?", [$klangkoerper, $newId]);
             Session::setFlashMessage('success', 'Formation "' . htmlspecialchars($data['name']) . '" erstellt.');
             header('Location: formation_mitglieder.php?id=' . $newId);
         } else {
             $formationObj->update($id, $data);
+            Database::getInstance()->execute("UPDATE formationen SET bmv_klangkoerper = ? WHERE id = ?", [$klangkoerper, $id]);
             Session::setFlashMessage('success', 'Formation gespeichert.');
             header('Location: formationen.php');
         }
@@ -81,6 +84,15 @@ include 'includes/header.php';
             <div class="mb-3">
                 <label class="form-label">Beschreibung</label>
                 <textarea class="form-control" name="beschreibung" rows="3"><?php echo htmlspecialchars($f['beschreibung'] ?? ''); ?></textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="bmv_klangkoerper">Im BMV-Jahresbericht als</label>
+                <select class="form-select" name="bmv_klangkoerper" id="bmv_klangkoerper">
+                    <?php foreach (BmvJahresbericht::KLANGKOERPER as $kv => $kl): ?>
+                    <option value="<?php echo $kv; ?>" <?php echo ($f['bmv_klangkoerper'] ?? 'gesamt') === $kv ? 'selected' : ''; ?>><?php echo $kl; ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <div class="form-text">Bestimmt, in welcher Spalte Proben und Ausrückungen dieser Formation im Jahresbericht gezählt werden.</div>
             </div>
             <div class="mb-4">
                 <div class="form-check">

@@ -86,7 +86,7 @@ include 'includes/header.php';
                         <?php $userRollen = $benutzerRollenMap[$user['id']] ?? []; ?>
                         <?php if (!empty($userRollen)): ?>
                             <?php foreach ($userRollen as $ur): ?>
-                            <span class="badge bg-<?php echo htmlspecialchars($ur['farbe'] ?? 'secondary'); ?> me-1">
+                            <span class="badge me-1" style="<?php echo RollenFarbe::stil($ur['farbe'] ?? null); ?>">
                                 <?php if ($ur['ist_admin']): ?><i class="bi bi-shield-fill"></i> <?php endif; ?>
                                 <?php echo htmlspecialchars(ucfirst($ur['name'])); ?>
                             </span>
@@ -174,7 +174,7 @@ include 'includes/header.php';
                             <?php foreach ($rollen as $rolle): ?>
                             <tr>
                                 <td>
-                                    <span class="badge bg-<?php echo htmlspecialchars($rolle['farbe']); ?>">
+                                    <span class="badge" style="<?php echo RollenFarbe::stil($rolle['farbe'] ?? null); ?>">
                                         <?php echo htmlspecialchars(ucfirst($rolle['name'])); ?>
                                     </span>
                                     <?php if ($rolle['ist_admin']): ?>

@@ -971,3 +971,70 @@ require_once __DIR__ . '/classes/FestAbrechnung.php';
         KEY idx_ersteller (erstellt_von)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 })();
+
+// Migration: BMV-Jahresbericht (Zuordnungen für Kassabuch, Ausrückungen, Formationen und gespeicherte Berichte)
+(function() {
+    $db = Database::getInstance();
+    $spalte = fn(string $t, string $s) => (int)$db->fetchOne(
+        "SELECT COUNT(*) c FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?", [$t, $s]
+    )['c'] > 0;
+    foreach ([
+        ['finanz_kategorien', 'bmv_posten', "VARCHAR(20) NULL"],
+        ['ausrueckungen', 'bmv_anlass', "VARCHAR(20) NULL"],
+        ['ausrueckungen', 'probenart', "VARCHAR(10) NULL"],
+        ['formationen', 'bmv_klangkoerper', "VARCHAR(10) NOT NULL DEFAULT 'gesamt'"],
+    ] as [$t, $s, $def]) {
+        if (!$spalte($t, $s)) {
+            try { $db->execute("ALTER TABLE `$t` ADD COLUMN `$s` $def"); } catch (\Throwable $e) {}
+        }
+    }
+    $db->execute("CREATE TABLE IF NOT EXISTS bmv_jahresberichte (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        jahr INT NOT NULL,
+        eingaben TEXT NULL,
+        werte MEDIUMTEXT NULL,
+        abgeschlossen_am DATETIME NULL,
+        abgeschlossen_von INT NULL,
+        gesendet_an VARCHAR(190) NULL,
+        gesendet_am DATETIME NULL,
+        pdf_datei VARCHAR(100) NULL,
+        aktualisiert_am DATETIME NULL,
+        UNIQUE KEY uk_jahr (jahr)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // Einmalig: Kassabuch-Kategorien den Zeilen des Jahresberichts zuordnen, fehlende Kategorien anlegen
+    if ($db->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = 'bmv_posten_eingerichtet'")) return;
+    $umbenennen = ['Subvention Land, Bund, Verband' => 'Subvention Land', 'Verbandsbeiträge und AKM' => 'Verbandsbeiträge'];
+    foreach ($umbenennen as $alt => $neu) {
+        if (!$db->fetchOne("SELECT id FROM finanz_kategorien WHERE name = ?", [$neu])) {
+            $db->execute("UPDATE finanz_kategorien SET name = ? WHERE name = ?", [$neu, $alt]);
+        }
+    }
+    $neu = [['Subvention Bund', 'einnahme', 42], ['Subvention NPO', 'einnahme', 44], ['AKM-Gebühren', 'ausgabe', 175], ['Musikheim Neubau', 'ausgabe', 195]];
+    foreach ($neu as [$name, $typ, $sort]) {
+        if (!$db->fetchOne("SELECT id FROM finanz_kategorien WHERE name = ?", [$name])) {
+            $db->execute("INSERT INTO finanz_kategorien (name, typ, sortierung) VALUES (?, ?, ?)", [$name, $typ, $sort]);
+        }
+    }
+    $zuordnung = [
+        'Subvention Land' => 'sub_land', 'Subvention Gemeinde' => 'sub_gemeinde', 'Subvention Bund' => 'sub_bund', 'Subvention NPO' => 'sub_npo',
+        'Instrumente Anschaffung' => 'aus_instr_neu', 'Instrumente Reparatur und Wartung' => 'aus_instr_rep', 'Noten' => 'aus_noten',
+        'Trachten und Uniformen' => 'aus_bekleidung', 'Musikheim Neubau' => 'aus_neubau', 'Musikheim und Betriebskosten' => 'aus_erhaltung',
+        'AKM-Gebühren' => 'aus_akm', 'Jugendarbeit und Ausbildung' => 'aus_ausbildung',
+    ];
+    foreach ($zuordnung as $name => $posten) {
+        $db->execute("UPDATE finanz_kategorien SET bmv_posten = ? WHERE name = ? AND bmv_posten IS NULL", [$posten, $name]);
+    }
+    $db->execute("INSERT INTO einstellungen (schluessel, wert, beschreibung) VALUES ('bmv_posten_eingerichtet', '1', 'BMV-Jahresbericht: Kategorien zugeordnet')
+                  ON DUPLICATE KEY UPDATE wert = '1'");
+})();
+
+// Rollenfarben: frühere Bootstrap-Farbnamen in Hex-Werte umwandeln (frei wählbare Farben)
+(function() {
+    try {
+        $db = Database::getInstance();
+        foreach (RollenFarbe::ALT as $name => $hex) {
+            $db->execute("UPDATE rollen SET farbe = ? WHERE farbe = ?", [$hex, $name]);
+        }
+    } catch (\Throwable $e) { /* Tabelle noch nicht vorhanden */ }
+})();

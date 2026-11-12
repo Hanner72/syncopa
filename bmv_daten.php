@@ -6,9 +6,16 @@ require_once 'config.php';
 require_once 'includes.php';
 
 Session::requireLogin();
-if (!Session::isAdmin()) {
-    Session::setFlashMessage('danger', 'Nur Administratoren haben Zugriff');
+if (!Session::checkPermission('bmv', 'lesen')) {
+    Session::setFlashMessage('danger', 'Keine Berechtigung für BMV Online');
     header('Location: index.php');
+    exit;
+}
+// Übernehmen, Hochladen und Speichern nur mit Schreibrecht
+$darfSchreiben = Session::checkPermission('bmv', 'schreiben');
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$darfSchreiben) {
+    Session::setFlashMessage('danger', 'Dafür fehlt die Berechtigung (BMV Online).');
+    header('Location: bmv_daten.php?bereich=' . urlencode((string)($_GET['bereich'] ?? 'verein')));
     exit;
 }
 
@@ -181,8 +188,15 @@ include 'includes/header.php';
 
 <div class="page-header">
     <h1 class="page-title"><i class="bi bi-cloud-download"></i> BMV Daten holen</h1>
+    <?php if (Session::isAdmin()): ?>
     <a href="einstellungen.php" class="btn btn-outline-secondary btn-sm"><i class="bi bi-gear"></i> Einstellungen</a>
+    <?php endif; ?>
 </div>
+
+<?php if (!$darfSchreiben): ?>
+<style>main form[method="POST"] { display: none !important; }</style>
+<div class="alert alert-permanent alert-secondary small"><i class="bi bi-eye"></i> Nur ansehen – zum Übernehmen fehlt das Schreibrecht für BMV Online.</div>
+<?php endif; ?>
 
 <div class="alert alert-permanent alert-info small">
     <i class="bi bi-info-circle"></i>

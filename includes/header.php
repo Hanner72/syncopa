@@ -49,7 +49,7 @@ $pages = [
     'instrumente' => ['instrumente', 'instrument_detail', 'instrument_bearbeiten'],
     'uniformen' => ['uniformen', 'uniform_detail', 'uniform_bearbeiten', 'uniform_mitglied', 'uniform_kleidungsstuecke', 'uniform_kategorien'],
     'finanzen' => ['finanzen', 'transaktion_bearbeiten', 'beitraege_verwalten', 'finanz_konten', 'finanz_budget', 'finanz_kassasturz', 'finanz_abschluss'],
-    'admin' => ['benutzer', 'benutzer_bearbeiten', 'rollen', 'rolle_bearbeiten', 'einstellungen', 'bmv_daten', 'berechtigungen_bearbeiten'],
+    'admin' => ['benutzer', 'benutzer_bearbeiten', 'rollen', 'rolle_bearbeiten', 'einstellungen', 'berechtigungen_bearbeiten'],
     'formationen' => ['formationen', 'formation_bearbeiten', 'formation_mitglieder'],
     'fest'  => [
         'feste', 'fest_bearbeiten', 'fest_detail',
@@ -693,6 +693,32 @@ function isActive($page, $pages, $current) {
             </div>
             <?php endif; ?>
 
+            <?php if (Session::checkPermission('bmv', 'lesen')):
+                $bmvApiNav = new BmvApi();
+                $bmvKennungNav = BmvJahresbericht::vereinskennung() !== '';
+                if ($bmvApiNav->istKonfiguriert() || $bmvKennungNav):
+                    $bmvNavNeu = $bmvApiNav->istKonfiguriert() ? BmvDaten::anzahlNeuigkeiten(BmvDaten::letztePruefung()) : 0; ?>
+            <div class="nav-group">
+                <div class="nav-label">Verband</div>
+                <ul class="nav flex-column">
+                    <li><a class="nav-link <?php echo in_array($currentPage, ['bmv_daten', 'bmv_jahresbericht']) ? 'active' : ''; ?>" href="<?php echo $bmvApiNav->istKonfiguriert() ? 'bmv_daten.php' : 'bmv_jahresbericht.php'; ?>">
+                        <i class="bi bi-cloud"></i> BMV Online
+                        <?php if ($bmvNavNeu > 0): ?>
+                        <span class="badge bg-warning text-dark ms-1" title="Neue Daten im BMV"><?php echo $bmvNavNeu; ?></span>
+                        <?php endif; ?>
+                    </a></li>
+                    <?php if ($bmvApiNav->istKonfiguriert()): ?>
+                    <li><a class="nav-link <?php echo $currentPage === 'bmv_daten' ? 'active' : ''; ?>" href="bmv_daten.php" style="padding-left:28px;font-size:12px">
+                        <i class="bi bi-cloud-download"></i> BMV Daten holen
+                    </a></li>
+                    <?php endif; ?>
+                    <li><a class="nav-link <?php echo $currentPage === 'bmv_jahresbericht' ? 'active' : ''; ?>" href="bmv_jahresbericht.php" style="padding-left:28px;font-size:12px">
+                        <i class="bi bi-file-earmark-text"></i> Jahresbericht
+                    </a></li>
+                </ul>
+            </div>
+            <?php endif; endif; ?>
+
             <?php if (Session::getRole() === 'admin'): ?>
             <div class="nav-group">
                 <div class="nav-label">System</div>
@@ -709,15 +735,6 @@ function isActive($page, $pages, $current) {
                     <li><a class="nav-link <?php echo $currentPage === 'einstellungen' ? 'active' : ''; ?>" href="einstellungen.php">
                         <i class="bi bi-gear"></i> Einstellungen
                     </a></li>
-                    <?php if ((new BmvApi())->istKonfiguriert()):
-                        $bmvNavNeu = BmvDaten::anzahlNeuigkeiten(BmvDaten::letztePruefung()); ?>
-                    <li><a class="nav-link <?php echo $currentPage === 'bmv_daten' ? 'active' : ''; ?>" href="bmv_daten.php">
-                        <i class="bi bi-cloud-download"></i> BMV Daten holen
-                        <?php if ($bmvNavNeu > 0): ?>
-                        <span class="badge bg-warning text-dark ms-1" title="Neue Daten im BMV"><?php echo $bmvNavNeu; ?></span>
-                        <?php endif; ?>
-                    </a></li>
-                    <?php endif; ?>
                 </ul>
             </div>
             <?php endif; ?>
@@ -809,6 +826,14 @@ function isActive($page, $pages, $current) {
             </div>
             <?php endif; ?>
 
+            <?php $hatPostfach = (bool)MailKonto::meine(); ?>
+            <?php if ($hatPostfach): ?>
+            <a href="mail.php" class="theme-toggle position-relative text-decoration-none" data-bs-toggle="tooltip" data-bs-placement="bottom" title="E-Mail">
+                <i class="bi bi-envelope"></i>
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" style="font-size:10px" data-mail-zaehler></span>
+            </a>
+            <?php endif; ?>
+
             <?php
             // Formation-Switcher: alle verfügbaren Formationen laden
             $activeFormationId = Session::getFormationId();
@@ -861,14 +886,6 @@ function isActive($page, $pages, $current) {
                     <?php endif; ?>
                 </div>
             </div>
-            <?php endif; ?>
-
-            <?php $hatPostfach = (bool)MailKonto::meine(); ?>
-            <?php if ($hatPostfach): ?>
-            <a href="mail.php" class="theme-toggle position-relative text-decoration-none" data-bs-toggle="tooltip" data-bs-placement="bottom" title="E-Mail">
-                <i class="bi bi-envelope"></i>
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none" style="font-size:10px" data-mail-zaehler></span>
-            </a>
             <?php endif; ?>
             <a href="konto.php" class="topbar-user text-decoration-none" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Mein Konto">
                 <div class="topbar-avatar"><?php echo strtoupper(substr(Session::getUsername(), 0, 1)); ?></div>

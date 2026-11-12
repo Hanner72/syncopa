@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS `formationen` (
   `beschreibung` text DEFAULT NULL,
   `aktiv` tinyint(1) NOT NULL DEFAULT 1,
   `erstellt_am` timestamp NOT NULL DEFAULT current_timestamp(),
+  `bmv_klangkoerper` varchar(10) NOT NULL DEFAULT 'gesamt',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -101,6 +102,8 @@ CREATE TABLE IF NOT EXISTS `ausrueckungen` (
   `erstellt_von` int(11) DEFAULT NULL,
   `erstellt_am` datetime DEFAULT current_timestamp(),
   `aktualisiert_am` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `bmv_anlass` varchar(20) DEFAULT NULL,
+  `probenart` varchar(10) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `erstellt_von` (`erstellt_von`)
 ) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -1333,6 +1336,7 @@ CREATE TABLE IF NOT EXISTS `finanz_kategorien` (
   `typ` enum('einnahme','ausgabe','beide') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'beide',
   `sortierung` int NOT NULL DEFAULT '100',
   `aktiv` tinyint(1) NOT NULL DEFAULT '1',
+  `bmv_posten` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -1409,6 +1413,21 @@ CREATE TABLE IF NOT EXISTS `mail_freigaben` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_token` (`token`),
   KEY `idx_ersteller` (`erstellt_von`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `bmv_jahresberichte` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `jahr` int NOT NULL,
+  `eingaben` text COLLATE utf8mb4_unicode_ci,
+  `werte` mediumtext COLLATE utf8mb4_unicode_ci,
+  `abgeschlossen_am` datetime DEFAULT NULL,
+  `abgeschlossen_von` int DEFAULT NULL,
+  `gesendet_an` varchar(190) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `gesendet_am` datetime DEFAULT NULL,
+  `pdf_datei` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `aktualisiert_am` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_jahr` (`jahr`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 COMMIT;

@@ -45,6 +45,14 @@ if ($currentRole === 'admin' || $currentRole === 'obmann') {
     $neueBenutzer = $db->fetchAll($sql);
 }
 
+// Erinnerung: BMV-Jahresbericht des Vorjahres noch nicht abgeschlossen
+$bmvVorjahr = null;
+if (Session::checkPermission('bmv', 'schreiben')) {
+    $bmvVorjahr = (int)date('Y') - 1;
+    $bmvBericht = BmvJahresbericht::laden($bmvVorjahr);
+    if ($bmvBericht && $bmvBericht['abgeschlossen_am']) $bmvVorjahr = null;
+}
+
 // Daten für Charts vorbereiten
 $registerLabels = array_column($mitgliederStats['register'] ?? [], 'name');
 $registerData = array_column($mitgliederStats['register'] ?? [], 'anzahl');
@@ -84,6 +92,17 @@ include 'includes/header.php';
         <strong>Konto noch nicht freigeschaltet!</strong><br>
         <small>Ihr Benutzerkonto muss erst von einem Administrator freigeschaltet werden.</small>
     </div>
+</div>
+<?php endif; ?>
+
+<?php if ($bmvVorjahr): ?>
+<div class="alert alert-warning alert-permanent d-flex align-items-center flex-wrap gap-2 mb-4">
+    <i class="bi bi-file-earmark-text me-2" style="font-size: 20px;"></i>
+    <div class="flex-grow-1">
+        <strong>BMV-Jahresbericht <?php echo $bmvVorjahr; ?> noch nicht erledigt</strong><br>
+        <small>Der Jahresbericht <?php echo $bmvVorjahr; ?> wurde noch nicht abgeschlossen und an den BMV gesendet.</small>
+    </div>
+    <a href="bmv_jahresbericht.php?jahr=<?php echo $bmvVorjahr; ?>" class="btn btn-sm btn-warning"><i class="bi bi-pencil-square"></i> Jetzt ausfüllen</a>
 </div>
 <?php endif; ?>
 

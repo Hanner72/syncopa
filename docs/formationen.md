@@ -53,6 +53,7 @@ Die Übersicht zeigt alle angelegten Formationen mit:
 | Kürzel | – | Kurzform für Badges und Listen, z.B. „JK", „BO" (max. 10 Zeichen) |
 | Farbe | – | Farbe, mit der die Formation überall in der Anwendung gekennzeichnet wird (z.B. bei Ausrückungen, Instrumentenzuordnung) |
 | Beschreibung | – | Freitext, z.B. Zweck oder Besonderheiten der Formation |
+| Im BMV-Jahresbericht als | – | Gesamtorchester, Ensemble / kleine Gruppe oder Jugendorchester – Spalte im [BMV-Jahresbericht](bmv-jahresbericht.md) |
 | Formation aktiv | – | Nur aktive Formationen stehen zur Auswahl (z.B. im Formations-Switcher oder bei neuen Ausrückungen) |
 
 > 💡 **Tipp:** Setze eine inaktive Formation auf „inaktiv" statt sie zu löschen – so bleiben alle bisherigen Daten (Mitglieder, Ausrückungen, Noten) erhalten, die Formation taucht aber nicht mehr in Auswahllisten auf.

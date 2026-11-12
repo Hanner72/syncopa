@@ -54,6 +54,7 @@
   * [Rollen & Berechtigungen](rollen.md)
   * [Stammdaten](stammdaten.md)
   * [Einstellungen](einstellungen.md)
+  * [BMV-Jahresbericht](bmv-jahresbericht.md)
 
 * **🔧 Technisch**
   * [Datenbankstruktur](datenbank.md)

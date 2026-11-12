@@ -139,6 +139,11 @@ class Ausrueckung {
         return $events;
     }
     
+    /** Leere Formularwerte (z. B. offenes Ende) als NULL speichern */
+    private static function leerZuNull($wert) {
+        return ($wert === null || trim((string)$wert) === '') ? null : $wert;
+    }
+
     public function create($data) {
         $formationId = $data['formation_id'] ?? Session::getFormationId();
 
@@ -154,12 +159,12 @@ class Ausrueckung {
             $data['beschreibung'] ?? null,
             $data['typ'],
             $data['start_datum'],
-            $data['ende_datum'] ?? null,
+            self::leerZuNull($data['ende_datum'] ?? null),
             $data['ganztaegig'] ?? 0,
             $data['ort'] ?? null,
             $data['adresse'] ?? null,
             $data['treffpunkt'] ?? null,
-            $data['treffpunkt_zeit'] ?? null,
+            self::leerZuNull($data['treffpunkt_zeit'] ?? null),
             $data['uniform'] ?? 1,
             $data['notizen'] ?? null,
             $data['status'] ?? 'geplant',
@@ -196,12 +201,12 @@ class Ausrueckung {
             $data['beschreibung'] ?? null,
             $data['typ'],
             $data['start_datum'],
-            $data['ende_datum'] ?? null,
+            self::leerZuNull($data['ende_datum'] ?? null),
             $data['ganztaegig'] ?? 0,
             $data['ort'] ?? null,
             $data['adresse'] ?? null,
             $data['treffpunkt'] ?? null,
-            $data['treffpunkt_zeit'] ?? null,
+            self::leerZuNull($data['treffpunkt_zeit'] ?? null),
             $data['uniform'] ?? 1,
             $data['notizen'] ?? null,
             $data['status'] ?? 'geplant',

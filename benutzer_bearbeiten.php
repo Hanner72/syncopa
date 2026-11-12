@@ -142,7 +142,7 @@ include 'includes/header.php';
                                    id="rolle_<?php echo $rolle['id']; ?>"
                                    <?php echo $checked; ?>>
                             <label class="form-check-label d-flex align-items-center gap-2" for="rolle_<?php echo $rolle['id']; ?>">
-                                <span class="badge bg-<?php echo htmlspecialchars($rolle['farbe'] ?? 'secondary'); ?>" style="font-size:10px">
+                                <span class="badge" style="<?php echo RollenFarbe::stil($rolle['farbe'] ?? null); ?>;font-size:10px">
                                     <?php echo htmlspecialchars(ucfirst($rolle['name'])); ?>
                                 </span>
                                 <?php if ($rolle['ist_admin']): ?>
