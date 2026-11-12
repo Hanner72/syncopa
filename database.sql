@@ -791,6 +791,8 @@ CREATE TABLE IF NOT EXISTS `uniform_kleidungsstuecke` (
   `name` varchar(100) NOT NULL,
   `beschreibung` text DEFAULT NULL,
   `groessen_verfuegbar` varchar(255) DEFAULT NULL,
+  `bestandsart` varchar(10) NOT NULL DEFAULT 'menge',
+  `kuerzel` varchar(5) DEFAULT NULL,
   `sortierung` int(11) DEFAULT 100,
   `aktiv` tinyint(1) DEFAULT 1,
   `erstellt_am` timestamp NULL DEFAULT current_timestamp(),
@@ -831,7 +833,9 @@ CREATE TABLE IF NOT EXISTS `uniform_zuweisungen` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `mitglied_id` int(11) NOT NULL,
   `kleidungsstueck_id` int(11) NOT NULL,
+  `stueck_id` int(11) DEFAULT NULL,
   `groesse` varchar(20) DEFAULT NULL,
+  `anzahl` int(11) NOT NULL DEFAULT 1,
   `zustand` enum('sehr gut','gut','befriedigend','schlecht') DEFAULT 'gut',
   `ausgabe_datum` date DEFAULT NULL,
   `bemerkungen` text DEFAULT NULL,
@@ -840,8 +844,45 @@ CREATE TABLE IF NOT EXISTS `uniform_zuweisungen` (
   `aktualisiert_am` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`),
   UNIQUE KEY `mitglied_kleidung` (`mitglied_id`,`kleidungsstueck_id`),
-  KEY `kleidungsstueck_id` (`kleidungsstueck_id`)
+  KEY `kleidungsstueck_id` (`kleidungsstueck_id`),
+  KEY `stueck_id` (`stueck_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=162 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Einzelstücke mit Nummer (Kleidungsstücke mit bestandsart = 'einzeln')
+CREATE TABLE IF NOT EXISTS `uniform_stuecke` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `kleidungsstueck_id` int(11) NOT NULL,
+  `nummer` varchar(30) NOT NULL,
+  `groesse` varchar(20) NOT NULL DEFAULT '',
+  `zustand` enum('sehr gut','gut','befriedigend','schlecht') NOT NULL DEFAULT 'gut',
+  `status` varchar(15) NOT NULL DEFAULT 'lager',
+  `ausgeschieden_am` date DEFAULT NULL,
+  `ausgeschieden_grund` varchar(100) DEFAULT NULL,
+  `bemerkungen` text DEFAULT NULL,
+  `erstellt_am` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `ks_nummer` (`kleidungsstueck_id`,`nummer`),
+  KEY `status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Bestandsbewegungen: zugang, ausscheiden, korrektur (Inventur) zählen zum Mengen-Bestand; ausgabe/rueckgabe nur Verlauf
+CREATE TABLE IF NOT EXISTS `uniform_bewegungen` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `kleidungsstueck_id` int(11) NOT NULL,
+  `groesse` varchar(20) NOT NULL DEFAULT '',
+  `stueck_id` int(11) DEFAULT NULL,
+  `art` varchar(15) NOT NULL,
+  `anzahl` int(11) NOT NULL DEFAULT 1,
+  `mitglied_id` int(11) DEFAULT NULL,
+  `grund` varchar(100) DEFAULT NULL,
+  `bemerkung` text DEFAULT NULL,
+  `datum` date NOT NULL,
+  `erstellt_von` int(11) DEFAULT NULL,
+  `erstellt_am` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `ks_groesse` (`kleidungsstueck_id`,`groesse`),
+  KEY `art` (`art`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
 -- FESTVERWALTUNG

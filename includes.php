@@ -1038,3 +1038,71 @@ require_once __DIR__ . '/classes/FestAbrechnung.php';
         }
     } catch (\Throwable $e) { /* Tabelle noch nicht vorhanden */ }
 })();
+
+// Uniformen: Bestand (Menge oder Einzelstücke mit Nummer) und Bewegungen
+(function() {
+    $db = Database::getInstance();
+    $spalteFehlt = function (string $tabelle, string $spalte) use ($db): bool {
+        return !$db->fetchOne("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?", [$tabelle, $spalte]);
+    };
+    try {
+        if ($spalteFehlt('uniform_kleidungsstuecke', 'bestandsart')) {
+            $db->execute("ALTER TABLE uniform_kleidungsstuecke ADD COLUMN bestandsart VARCHAR(10) NOT NULL DEFAULT 'menge' AFTER groessen_verfuegbar");
+        }
+        if ($spalteFehlt('uniform_zuweisungen', 'stueck_id')) {
+            $db->execute("ALTER TABLE uniform_zuweisungen ADD COLUMN stueck_id INT NULL AFTER kleidungsstueck_id, ADD KEY stueck_id (stueck_id)");
+        }
+    } catch (\Throwable $e) { /* bereits vorhanden */ }
+    $db->execute("CREATE TABLE IF NOT EXISTS uniform_stuecke (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        kleidungsstueck_id INT NOT NULL,
+        nummer VARCHAR(30) NOT NULL,
+        groesse VARCHAR(20) NOT NULL DEFAULT '',
+        zustand ENUM('sehr gut','gut','befriedigend','schlecht') NOT NULL DEFAULT 'gut',
+        status VARCHAR(15) NOT NULL DEFAULT 'lager',
+        ausgeschieden_am DATE NULL,
+        ausgeschieden_grund VARCHAR(100) NULL,
+        bemerkungen TEXT NULL,
+        erstellt_am TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY ks_nummer (kleidungsstueck_id, nummer),
+        KEY status (status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $db->execute("CREATE TABLE IF NOT EXISTS uniform_bewegungen (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        kleidungsstueck_id INT NOT NULL,
+        groesse VARCHAR(20) NOT NULL DEFAULT '',
+        stueck_id INT NULL,
+        art VARCHAR(15) NOT NULL,
+        anzahl INT NOT NULL DEFAULT 1,
+        mitglied_id INT NULL,
+        grund VARCHAR(100) NULL,
+        bemerkung TEXT NULL,
+        datum DATE NOT NULL,
+        erstellt_von INT NULL,
+        erstellt_am TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY ks_groesse (kleidungsstueck_id, groesse),
+        KEY art (art)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+})();
+
+// Uniformen: Kürzel je Kleidungsstück (Präfix der Stücknummer), Nummern 3-stellig
+(function() {
+    $db = Database::getInstance();
+    try {
+        if (!$db->fetchOne("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'uniform_kleidungsstuecke' AND COLUMN_NAME = 'kuerzel'")) {
+            $db->execute("ALTER TABLE uniform_kleidungsstuecke ADD COLUMN kuerzel VARCHAR(5) NULL AFTER name");
+            // bestehende rein numerische Nummern auf 3 Stellen bringen (einmalig, beim Anlegen der Spalte)
+            $db->execute("UPDATE IGNORE uniform_stuecke SET nummer = LPAD(nummer, 3, '0') WHERE nummer REGEXP '^[0-9]{1,2}$'");
+        }
+    } catch (\Throwable $e) { /* bereits vorhanden */ }
+})();
+
+// Uniformen: mehrere Stücke je Zuweisung (nur Mengen-Kleidungsstücke)
+(function() {
+    $db = Database::getInstance();
+    try {
+        if (!$db->fetchOne("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'uniform_zuweisungen' AND COLUMN_NAME = 'anzahl'")) {
+            $db->execute("ALTER TABLE uniform_zuweisungen ADD COLUMN anzahl INT NOT NULL DEFAULT 1 AFTER groesse");
+        }
+    } catch (\Throwable $e) { /* bereits vorhanden */ }
+})();

@@ -77,7 +77,9 @@ Es gibt **kein externes Migrationstool**. Neue Tabellen/Spalten werden als anony
 | `instrument_wartungen` | Wartungshistorie mit Fälligkeitsdatum |
 | `mitglied_instrumente` | Welches Mitglied spielt welches Instrument, optional formationsspezifisch (`formation_id`) |
 | `uniform_kategorien` / `uniform_kleidungsstuecke` | Uniform-Bestandteile und ihre verfügbaren Größen |
-| `uniform_zuweisungen` | Zuordnung Kleidungsstück ↔ Mitglied |
+| `uniform_zuweisungen` | Zuordnung Kleidungsstück ↔ Mitglied (eine Zeile je Mitglied und Kleidungsstück), `anzahl` = Stück bei Mengen-Kleidungsstücken, bei Einzelstücken immer 1 mit `stueck_id`; `nicht_benoetigt` = Mitglied braucht das Stück nicht |
+| `uniform_stuecke` | Einzelstücke mit Nummer (bei `uniform_kleidungsstuecke.bestandsart = 'einzeln'`): `nummer` 3-stellig (001–999, dann A00–Z99) ohne Kürzel – angezeigt mit `uniform_kleidungsstuecke.kuerzel` davor; Größe, Zustand, Status lager/ausgegeben/ausgeschieden |
+| `uniform_bewegungen` | Verlauf und Mengen-Bestand: `zugang`, `ausscheiden`, `korrektur` (Inventur) bilden den Bestand; `ausgabe`/`rueckgabe` nur Verlauf |
 
 ## Finanzen
 

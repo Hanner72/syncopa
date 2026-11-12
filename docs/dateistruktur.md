@@ -91,10 +91,8 @@ syncopa/
 ├── notenbucher.php, notenbuch_bearbeiten.php
 ├── probe.php, probe_leiter.php, probe_stimmen.php   # Notenpult (Musiker- bzw. Kapellmeister-Ansicht)
 ├── instrumente.php, instrument_bearbeiten.php, instrument_detail.php, instrument_loeschen.php
-├── uniformen.php, uniform_kleidungsstuecke.php, uniform_mitglied.php
-│   # uniform_ausgeben.php, uniform_zuruecknehmen.php, uniform_kategorien.php, uniform_detail.php,
-│   # uniform_bearbeiten.php, uniform_loeschen.php existieren noch im Dateisystem,
-│   # sind aber aktuell aus keiner Navigation/Seite mehr verlinkt (Altlasten aus einer früheren Version)
+├── uniformen.php, uniform_kleidungsstuecke.php, uniform_mitglied.php, uniform_bestand.php
+│   # uniform_kategorien.php ist aus keiner Seite mehr verlinkt (Altlast)
 ├── kalender.php, kalender_termin_bearbeiten.php, kalender_loeschen.php,
 │   kalender_export.php, kalender_abonnement.php, kalender_vorschau.php
 ├── fest_detail.php, fest_bearbeiten.php, fest_kopieren.php, fest_loeschen.php
