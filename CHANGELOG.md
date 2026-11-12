@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.13.1]
+
+### Bugs
+
+- Ausrückungen: Anmeldeliste zeigte nur Mitglieder, die beim Anlegen als aktiv galten – kommende Ausrückungen werden jetzt laufend mit den aktuellen Mitgliedern der Formation (bzw. allen aktiven Mitgliedern) abgeglichen; nach einem Formationswechsel fallen nur unberührte Einträge weg
+
 ## [2.13.0]
 
 ### Hinzugefügt

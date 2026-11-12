@@ -23,6 +23,8 @@ if (!empty($_GET['status'])) {
     $filter['status'] = $_GET['status'];
 }
 
+// Anmeldelisten kommender Ausrückungen mit den aktuellen Mitgliedern abgleichen (neue Mitglieder, Formationen)
+$ausrueckung->anwesenheitErgaenzen();
 $ausrueckungen = $ausrueckung->getAll($filter);
 // Für Mobile-Ansicht: aufsteigend nach Datum
 $ausrueckungenAsc = array_reverse($ausrueckungen);
