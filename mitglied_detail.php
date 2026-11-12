@@ -326,6 +326,49 @@ include 'includes/header.php';
             </div>
         </div>
         <?php endif; ?>
+
+        <!-- Kleidungsstücke (Uniform) -->
+        <?php if (Session::checkPermission('uniformen', 'lesen')):
+            $uniformTeile = array_values(array_filter((new Uniform())->getZuweisungenByMitglied($mitglied['id']), fn($z) => !$z['nicht_benoetigt']));
+            $zustandFarben = ['sehr gut' => 'success', 'gut' => 'info', 'befriedigend' => 'warning', 'schlecht' => 'danger']; ?>
+        <div class="card mt-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-person-badge"></i> Uniform <span class="badge bg-secondary ms-1"><?php echo array_sum(array_map(fn($u) => (int)$u['anzahl'], $uniformTeile)); ?></span></h5>
+                <a href="uniform_mitglied.php?id=<?php echo $mitglied['id']; ?>" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-<?php echo Session::checkPermission('uniformen', 'schreiben') ? 'pencil' : 'eye'; ?>"></i>
+                    <?php echo Session::checkPermission('uniformen', 'schreiben') ? 'Ausgeben / zurücknehmen' : 'Details'; ?>
+                </a>
+            </div>
+            <div class="card-body">
+                <?php if (!$uniformTeile): ?>
+                <p class="text-muted mb-0">Keine Kleidungsstücke ausgegeben.</p>
+                <?php else: ?>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr><th>Kleidungsstück</th><th>Nr.</th><th>Größe</th><th class="text-center">Anzahl</th><th>Zustand</th><th>Ausgegeben</th></tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($uniformTeile as $ut): ?>
+                            <tr>
+                                <td>
+                                    <strong><?php echo htmlspecialchars($ut['kleidungsstueck_name']); ?></strong>
+                                    <?php if ($ut['kategorie_name']): ?><br><small class="text-muted"><?php echo htmlspecialchars($ut['kategorie_name']); ?></small><?php endif; ?>
+                                </td>
+                                <td class="font-monospace"><?php echo htmlspecialchars(Uniform::nummerAnzeige($ut['kuerzel'], $ut['stueck_nummer'])) ?: '–'; ?></td>
+                                <td><?php echo htmlspecialchars($ut['groesse'] ?? '–'); ?></td>
+                                <td class="text-center"><?php echo (int)$ut['anzahl']; ?></td>
+                                <td><span class="badge bg-<?php echo $zustandFarben[$ut['zustand']] ?? 'secondary'; ?>"><?php echo htmlspecialchars(ucfirst($ut['zustand'] ?? 'gut')); ?></span></td>
+                                <td><?php echo $ut['ausgabe_datum'] ? date('d.m.Y', strtotime($ut['ausgabe_datum'])) : '–'; ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 

@@ -1,5 +1,29 @@
 # Changelog
 
+## [2.12.0]
+
+### Hinzugefügt
+
+- Uniformen: Bestand (Uniformen → Bestand)
+  - je Kleidungsstück wählbar: als Menge (z. B. Hemden, Polos) oder als Einzelstücke mit Nummer (z. B. Lederhosen)
+  - Übersicht mit Bestand, ausgegeben und im Lager je Größe; Verlauf aller Zugänge, Ausgaben, Rückgaben und Ausscheidungen
+  - Menge: Zugang, Ausscheiden und Inventur (Lager zählen, Syncopa bucht die Differenz)
+  - Einzelstücke: Stücke anlegen, ausscheiden und wieder aufnehmen; Stückliste mit aktuellem Träger
+  - Kürzel je Kleidungsstück als Präfix der Nummer (L001, H001); Nummern immer 3-stellig, fortlaufend, nach 999 mit A00–Z99
+- Uniformen: Zurücknehmen fragt „ins Lager“ oder „ausscheiden“ mit Grund; bei mehreren Stücken auch teilweise
+- Uniformen: einem Mitglied mehrere Stück eines Mengen-Kleidungsstücks geben
+- Uniformen: Größenauswahl zeigt den Lagerstand, bei Einzelstücken wird die Nummer aus dem Lager gewählt
+- Uniformen: Mitgliederliste je Kleidungsstück mit Auswahl „Nur ohne“ / „Alle aktiven“; Zustand wird bei Einzelstücken vom Stück übernommen
+- Mitglieder: Detailseite zeigt die ausgegebenen Kleidungsstücke
+
+### Geändert
+
+- Uniformen: alte, nicht mehr verlinkte Uniform-Seiten entfernt
+
+### Bugs
+
+- Uniformen: als „nicht benötigt“ markierte Kleidungsstücke wurden als ausgegebene Teile gezählt
+
 ## [2.11.0]
 
 ### Hinzugefügt
