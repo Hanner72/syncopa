@@ -50,7 +50,9 @@ syncopa/
 │   ├── notenbuch_sortierung.php    # Drag & Drop Reihenfolge in Notenbüchern
 │   ├── probe_session.php           # Notenpult: Heartbeat, Stück-/Stimmenwahl
 │   ├── probe_annotations_save.php, probe_annotations_load.php  # Zeichnungen/Notizen
+│   ├── anwesenheit_liste.php       # Aktueller Stand der Zu-/Absagen (Live-Aktualisierung)
 │   ├── anwesenheit_setzen.php      # An-/Abmeldung zu Ausrückungen
+│   ├── anwesenheit_verwalten.php   # Status/Grund eines Mitglieds sofort speichern (schreiben)
 │   ├── kalender.php, kalender_termine.php
 │   ├── uniform_mitglied.php        # Uniform-Zuordnung speichern
 │   ├── rollen_sortierung.php       # Drag & Drop Rollen-Reihenfolge

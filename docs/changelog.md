@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.13.0]
+
+### Hinzugefügt
+
+- Ausrückungen: Anmeldeliste auf der Detailseite aktualisiert sich live (alle 15 Sekunden) – inkl. Zähler und Karten „Zusagen“ / „Absagen“ nach Register; geänderte Einträge leuchten kurz auf
+- Ausrückungen: Status und Grund in der Anmeldeliste werden sofort gespeichert (mit Hinweis „Gespeichert“)
+- Ausrückungen: eigener grauer Zähler für „keine Antwort“ in Liste und Detailseite
+
+### Geändert
+
+- Ausrückungen: Anmeldeliste mit dezentem Farbstreifen je Status (grün/gelb/rot)
+- Ausrückungen: Status und Grund übersichtlicher; am Handy untereinander, „Gemeldet am“ unter dem Namen
+- Ausrückungen: Feld „Grund“ nur bei Absage oder vorhandenem Grund
+
+### Bugs
+
+- Ausrückungen: Skript der Detailseite lief nicht (Syntaxfehler, vor jQuery geladen) – „Meine Anmeldung“-Knöpfe ohne Funktion
+- Ausrückungen: Speichern der Anmeldeliste prüfte die Schreibberechtigung nicht
+
 ## [2.12.1]
 
 ### Geändert

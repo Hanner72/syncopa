@@ -55,7 +55,11 @@ class Ausrueckung {
                 (SELECT COUNT(*) FROM anwesenheit an
                  WHERE an.ausrueckung_id = a.id AND an.status = 'ungewiss'
                    AND an.id = (SELECT MAX(id) FROM anwesenheit WHERE ausrueckung_id = a.id AND mitglied_id = an.mitglied_id)
-                ) as ungewiss
+                ) as ungewiss,
+                (SELECT COUNT(*) FROM anwesenheit an
+                 WHERE an.ausrueckung_id = a.id AND an.status = 'keine_antwort'
+                   AND an.id = (SELECT MAX(id) FROM anwesenheit WHERE ausrueckung_id = a.id AND mitglied_id = an.mitglied_id)
+                ) as keine_antwort
                 FROM ausrueckungen a
                 LEFT JOIN benutzer b ON a.erstellt_von = b.id
                 LEFT JOIN formationen f ON a.formation_id = f.id
