@@ -55,6 +55,7 @@ syncopa/
 │   ├── anwesenheit_verwalten.php   # Status/Grund eines Mitglieds sofort speichern (schreiben)
 │   ├── kalender.php, kalender_termine.php
 │   ├── uniform_mitglied.php        # Uniform-Zuordnung speichern
+│   ├── finanz_sortierung.php       # Drag & Drop Reihenfolge der Konten/Kategorien im Kassabuch
 │   ├── rollen_sortierung.php       # Drag & Drop Rollen-Reihenfolge
 │   ├── system_update.php           # Versionsprüfung & Update aus GitHub
 │   ├── mail.php                    # E-Mail-Programm: Ordner, Liste, Lesen, Senden, Junk, Adressbuch

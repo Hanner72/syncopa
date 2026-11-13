@@ -694,30 +694,34 @@ function isActive($page, $pages, $current) {
             <?php endif; ?>
 
             <?php if (Session::checkPermission('bmv', 'lesen')):
+                // Der Jahresbericht ist immer erreichbar – auch ohne BMV-Anbindung oder Vereinskennung
                 $bmvApiNav = new BmvApi();
-                $bmvKennungNav = BmvJahresbericht::vereinskennung() !== '';
-                if ($bmvApiNav->istKonfiguriert() || $bmvKennungNav):
-                    $bmvNavNeu = $bmvApiNav->istKonfiguriert() ? BmvDaten::anzahlNeuigkeiten(BmvDaten::letztePruefung()) : 0; ?>
+                $bmvOnlineNav = $bmvApiNav->istKonfiguriert();
+                $bmvNavNeu = $bmvOnlineNav ? BmvDaten::anzahlNeuigkeiten(BmvDaten::letztePruefung()) : 0; ?>
             <div class="nav-group">
                 <div class="nav-label">Verband</div>
                 <ul class="nav flex-column">
-                    <li><a class="nav-link <?php echo in_array($currentPage, ['bmv_daten', 'bmv_jahresbericht']) ? 'active' : ''; ?>" href="<?php echo $bmvApiNav->istKonfiguriert() ? 'bmv_daten.php' : 'bmv_jahresbericht.php'; ?>">
+                    <?php if ($bmvOnlineNav): ?>
+                    <li><a class="nav-link <?php echo in_array($currentPage, ['bmv_daten', 'bmv_jahresbericht']) ? 'active' : ''; ?>" href="bmv_daten.php">
                         <i class="bi bi-cloud"></i> BMV Online
                         <?php if ($bmvNavNeu > 0): ?>
                         <span class="badge bg-warning text-dark ms-1" title="Neue Daten im BMV"><?php echo $bmvNavNeu; ?></span>
                         <?php endif; ?>
                     </a></li>
-                    <?php if ($bmvApiNav->istKonfiguriert()): ?>
                     <li><a class="nav-link <?php echo $currentPage === 'bmv_daten' ? 'active' : ''; ?>" href="bmv_daten.php" style="padding-left:28px;font-size:12px">
                         <i class="bi bi-cloud-download"></i> BMV Daten holen
                     </a></li>
-                    <?php endif; ?>
                     <li><a class="nav-link <?php echo $currentPage === 'bmv_jahresbericht' ? 'active' : ''; ?>" href="bmv_jahresbericht.php" style="padding-left:28px;font-size:12px">
                         <i class="bi bi-file-earmark-text"></i> Jahresbericht
                     </a></li>
+                    <?php else: ?>
+                    <li><a class="nav-link <?php echo $currentPage === 'bmv_jahresbericht' ? 'active' : ''; ?>" href="bmv_jahresbericht.php">
+                        <i class="bi bi-file-earmark-text"></i> BMV-Jahresbericht
+                    </a></li>
+                    <?php endif; ?>
                 </ul>
             </div>
-            <?php endif; endif; ?>
+            <?php endif; ?>
 
             <?php if (Session::getRole() === 'admin'): ?>
             <div class="nav-group">
