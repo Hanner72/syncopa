@@ -13,7 +13,8 @@ $canEdit = Session::checkPermission('ausrueckungen', 'schreiben');
 
 header('Content-Type: application/json');
 
-$action = $_POST['action'] ?? $_GET['action'] ?? null;
+// Ändernde Aktionen nur per POST (mit Prüfzeichen), lesen auch per GET
+$action = $_POST['action'] ?? (($_GET['action'] ?? null) === 'get' ? 'get' : null);
 $kalenderTermin = new KalenderTermin();
 
 try {

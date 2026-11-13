@@ -7,12 +7,19 @@
  *   ?include=termine  → Ausrückungen + Kalender-Termine exportieren
  *   ?download=1       → Als Datei herunterladen statt als Feed ausgeben
  *   ?formation=ID     → Nur Ausrückungen dieser Formation (+ Einträge ohne Formation)
+ *   ?schluessel=…     → persönlicher Abo-Schlüssel (Kalender-Apps senden kein Login); ohne Schlüssel nur angemeldet
  */
 require_once 'config.php';
 require_once 'includes.php';
 
-// Optional: Login erforderlich
-// Session::requireLogin();
+// Zugriff nur angemeldet oder mit dem persönlichen, geheimen Abo-Schlüssel des Benutzers
+// (Kalender-Abo → „Neuen Link erzeugen“ macht alte Links ungültig)
+if (!Session::isLoggedIn() && !Sicherheit::benutzerZuKalenderSchluessel((string)($_GET['schluessel'] ?? ''))) {
+    http_response_code(403);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo "Dieser Kalender-Link ist ungültig oder wurde erneuert. Bitte in Syncopa unter Kalender → Abonnieren den aktuellen Link holen.";
+    exit;
+}
 
 $db = Database::getInstance();
 

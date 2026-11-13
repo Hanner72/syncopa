@@ -10,7 +10,8 @@ $benutzerId  = Session::getUserId();
 $formationId = Session::getFormationId();
 
 // Notenbuch löschen
-if (isset($_GET['delete']) && (int)$_GET['delete'] > 0) {
+// nur als bestätigtes Formular (POST mit Prüfzeichen), nicht per einfachem Link
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_GET['delete']) && (int)$_GET['delete'] > 0) {
     $buchId = (int)$_GET['delete'];
     $buch   = $db->fetchOne("SELECT * FROM notenbucher WHERE id = ?", [$buchId]);
     if ($buch && ($buch['benutzer_id'] == $benutzerId || Session::isAdmin())) {

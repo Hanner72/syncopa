@@ -35,7 +35,7 @@ Der erste Administrator-Account wird bereits während der [Installation](einrich
 
 Bei Erfolg wirst du zum **Dashboard** weitergeleitet.
 
-> ⚠️ **Achtung:** Bei falschem Benutzername oder Passwort erscheint die Meldung „Ungültige Anmeldedaten". Achte auf Groß-/Kleinschreibung – beides wird exakt geprüft.
+> ⚠️ **Achtung:** Bei falschem Benutzername oder Passwort erscheint die Meldung „Ungültige Anmeldedaten". Achte auf Groß-/Kleinschreibung – beides wird exakt geprüft. Nach **5 Fehlversuchen** ist die Anmeldung für diesen Benutzer **15 Minuten gesperrt** (Schutz gegen Passwort-Raten).
 
 ---
 

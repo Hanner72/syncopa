@@ -53,6 +53,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($gewaehlteRollen)) {
             throw new Exception('Mindestens eine Rolle muss ausgewählt werden.');
         }
+        // Passwortregeln (gleich wie bei „Mein Konto“): Mindestlänge, keine bekannten Standardpasswörter
+        if ($neues_passwort !== '' && ($pwFehler = Sicherheit::passwortFehler($neues_passwort))) {
+            throw new Exception($pwFehler);
+        }
 
         // Primärrolle = erste ausgewählte Rolle
         $primaerRolleId = $gewaehlteRollen[0];

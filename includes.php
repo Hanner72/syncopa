@@ -4,6 +4,7 @@
 // Basis-Klassen
 require_once __DIR__ . '/classes/Database.php';
 require_once __DIR__ . '/classes/Session.php';
+require_once __DIR__ . '/classes/Sicherheit.php';
 
 // Feature-Klassen
 require_once __DIR__ . '/classes/Mitglied.php';
@@ -1106,3 +1107,33 @@ require_once __DIR__ . '/classes/FestAbrechnung.php';
         }
     } catch (\Throwable $e) { /* bereits vorhanden */ }
 })();
+
+// Migration: Sicherheit – Protokoll der Anmeldeversuche, persönlicher Kalender-Schlüssel, BMV-Passwort verschlüsselt
+(function() {
+    $db = Database::getInstance();
+    try {
+        $db->execute("CREATE TABLE IF NOT EXISTS login_versuche (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            benutzername VARCHAR(100) NOT NULL DEFAULT '',
+            ip VARCHAR(45) NOT NULL DEFAULT '',
+            erfolg TINYINT(1) NOT NULL DEFAULT 0,
+            zeit DATETIME NOT NULL,
+            KEY idx_benutzer (benutzername, zeit),
+            KEY idx_ip (ip, zeit)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    } catch (\Throwable $e) { /* bereits vorhanden */ }
+    try {
+        if (!$db->fetchOne("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'benutzer' AND COLUMN_NAME = 'kalender_token'")) {
+            $db->execute("ALTER TABLE benutzer ADD COLUMN kalender_token VARCHAR(64) NULL, ADD UNIQUE KEY uk_kalender_token (kalender_token)");
+        }
+    } catch (\Throwable $e) { /* bereits vorhanden */ }
+    try {
+        $pw = $db->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = 'bmv_passwort'");
+        if ($pw && $pw['wert'] !== '' && !str_starts_with((string)$pw['wert'], 'enc:')) {
+            $db->execute("UPDATE einstellungen SET wert = ? WHERE schluessel = 'bmv_passwort'", [Sicherheit::geheimVerschluesseln((string)$pw['wert'])]);
+        }
+    } catch (\Throwable $e) { /* Schlüssel nicht verfügbar – bleibt vorerst im Klartext */ }
+})();
+
+// Schutz-Kopfzeilen senden und POST-Anfragen angemeldeter Benutzer auf das Prüfzeichen prüfen
+Sicherheit::anfrageSchuetzen();

@@ -243,6 +243,8 @@ $flash = Session::getFlashMessage();
 <html lang="de" data-theme="<?= htmlspecialchars($_COOKIE['theme'] ?? 'light') ?>" data-bs-theme="<?= htmlspecialchars($_COOKIE['theme'] ?? 'light') ?>">
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="<?php echo htmlspecialchars(Sicherheit::pruefzeichen(), ENT_QUOTES); ?>">
+    <script src="assets/js/csrf.js?v=<?php echo urlencode(APP_VERSION); ?>"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Notenpult – <?= $stueck ? htmlspecialchars($stueck['titel']) : ($modus === 'auswahl' ? 'Selbst üben' : 'Kein Stück aktiv') ?></title>
     <link rel="icon" type="image/png" href="assets/favicon.png">

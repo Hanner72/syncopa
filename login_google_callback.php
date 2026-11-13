@@ -17,7 +17,7 @@ if (!defined('GOOGLE_OAUTH_ENABLED') || !GOOGLE_OAUTH_ENABLED) {
 
 // Fehler von Google prüfen
 if (isset($_GET['error'])) {
-    Session::setFlashMessage('danger', 'Google Login abgebrochen: ' . htmlspecialchars($_GET['error']));
+    Session::setFlashMessage('danger', 'Google Login abgebrochen: ' . $_GET['error']);
     header('Location: login.php');
     exit;
 }
@@ -160,6 +160,7 @@ $rollenIds = array_column($userRollen, 'id');
 $istAdmin  = !empty(array_filter($userRollen, fn($r) => $r['ist_admin']));
 
 // Login durchführen
+Sicherheit::sitzungErneuern(); // neue Sitzungskennung nach der Anmeldung
 Session::set('user_id',   $userId);
 Session::set('username',  $benutzername);
 Session::set('rolle',     $rolle);

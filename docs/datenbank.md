@@ -26,7 +26,7 @@ Es gibt **kein externes Migrationstool**. Neue Tabellen/Spalten werden als anony
 
 | Tabelle | Zweck |
 |---|---|
-| `benutzer` | Login-Konten (Benutzername, Passwort-Hash, Google-OAuth-ID, optional `mitglied_id`) |
+| `benutzer` | Login-Konten (Benutzername, Passwort-Hash, Google-OAuth-ID, optional `mitglied_id`; `kalender_token` = geheimer Schlüssel für das persönliche Kalender-Abo) |
 | `benutzer_rollen` | Pivot-Tabelle: welcher Benutzer hat welche Rolle(n) – **mehrere Rollen pro Benutzer möglich** |
 | `rollen` | Rollen-Stammdaten (Name, Farbe, Sortierung, `ist_admin`) |
 | `berechtigungen` | Rolle × Modul → `lesen`/`schreiben`/`loeschen` (UNIQUE auf `rolle`+`modul`) |
@@ -130,7 +130,8 @@ Es gibt **kein externes Migrationstool**. Neue Tabellen/Spalten werden als anony
 
 | Tabelle | Zweck |
 |---|---|
-| `einstellungen` | Key-Value-Speicher für Systemeinstellungen |
+| `einstellungen` | Key-Value-Speicher für Systemeinstellungen (`bmv_passwort` verschlüsselt mit Präfix `enc:`; `server_ok_*` = von Hand bestätigte Punkte der Server-Seite) |
+| `login_versuche` | Anmeldeversuche (Benutzername, IP, Erfolg, Zeit) für die Sperre nach Fehlversuchen; wird nach 30 Tagen aufgeräumt |
 | `dokumente` | Hochgeladene allgemeine Dokumente |
 | `aktivitaetslog` | Protokoll sicherheitsrelevanter Aktionen |
 | `uniformen`, `uniform_ausgaben` | Altlasten aus früheren Versionen, vom Code nicht mehr verwendet |

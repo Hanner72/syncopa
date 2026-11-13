@@ -59,6 +59,16 @@ Mit dem iCal-Export lässt sich der Syncopa-Kalender in externe Kalender-Apps (G
 
 Für jede Variante gibt es einen Button **„… abonnieren"** (öffnet direkt die passende Kalender-App) sowie ein Textfeld mit der Adresse zum manuellen Kopieren.
 
+### Persönliche Links
+
+Die Abo-Links gehören nur dir: Sie enthalten einen geheimen Schlüssel, weil sich Kalender-Apps nicht bei Syncopa anmelden können. Ohne gültigen Schlüssel liefert Syncopa keine Termine.
+
+- Links **nicht weitergeben** – jeder Musiker holt sich seinen eigenen Link.
+- Wurde ein Link weitergegeben oder ist ein Handy verloren gegangen: **Neue Links erzeugen**. Die alten Links funktionieren dann sofort nicht mehr; das Abo in der Kalender-App mit dem neuen Link neu einrichten.
+- Wird ein Benutzer deaktiviert, funktionieren auch seine Kalender-Links nicht mehr.
+
+> ⚠️ Seit Version 2.15.0 sind die Links persönlich. Abos, die vorher eingerichtet wurden, liefern keine Termine mehr und müssen einmal mit dem neuen Link eingerichtet werden.
+
 > 💡 **Tipp:** Gehören dir mehrere Formationen an, findest du unter „Formationsspezifische Abonnements" außerdem eigene Abo-Links je Formation – so kann sich z.B. ein Jugendkapellen-Mitglied nur die Termine der Jugendkapelle in sein Handy holen.
 
 ### Schritt für Schritt: Google Calendar

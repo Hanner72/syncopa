@@ -55,6 +55,7 @@
   * [Rollen & Berechtigungen](rollen.md)
   * [Stammdaten](stammdaten.md)
   * [Einstellungen](einstellungen.md)
+  * [Server & Sicherheit](server.md)
   * [BMV-Anbindung](einstellungen.md#bmv-anbindung)
   * [BMV Daten holen](bmv-daten.md)
   * [BMV-Jahresbericht](bmv-jahresbericht.md)

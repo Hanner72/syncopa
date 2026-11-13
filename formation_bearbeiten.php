@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($isNew) {
             $newId = $formationObj->create($data);
             Database::getInstance()->execute("UPDATE formationen SET bmv_klangkoerper = ? WHERE id = ?", [$klangkoerper, $newId]);
-            Session::setFlashMessage('success', 'Formation "' . htmlspecialchars($data['name']) . '" erstellt.');
+            Session::setFlashMessage('success', 'Formation "' . $data['name'] . '" erstellt.');
             header('Location: formation_mitglieder.php?id=' . $newId);
         } else {
             $formationObj->update($id, $data);

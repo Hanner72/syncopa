@@ -164,10 +164,12 @@ CREATE TABLE IF NOT EXISTS `benutzer` (
   `aktualisiert_am` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `mitglied_id` int(11) DEFAULT NULL,
   `google_id` varchar(100) DEFAULT NULL,
+  `kalender_token` varchar(64) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `benutzername` (`benutzername`),
   UNIQUE KEY `email` (`email`),
   UNIQUE KEY `google_id` (`google_id`),
+  UNIQUE KEY `uk_kalender_token` (`kalender_token`),
   KEY `rolle_id` (`rolle_id`),
   KEY `mitglied_id` (`mitglied_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -1469,6 +1471,18 @@ CREATE TABLE IF NOT EXISTS `bmv_jahresberichte` (
   `aktualisiert_am` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_jahr` (`jahr`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Anmeldeversuche für die Sperre nach Fehlversuchen
+CREATE TABLE IF NOT EXISTS `login_versuche` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `benutzername` varchar(100) NOT NULL DEFAULT '',
+  `ip` varchar(45) NOT NULL DEFAULT '',
+  `erfolg` tinyint(1) NOT NULL DEFAULT 0,
+  `zeit` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_benutzer` (`benutzername`,`zeit`),
+  KEY `idx_ip` (`ip`,`zeit`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 COMMIT;

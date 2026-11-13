@@ -166,7 +166,18 @@ Damit das wirkt, muss der Webserver `.htaccess`-Dateien beachten. Bei Webhosting
 </Directory>
 ```
 
-**Prüfen:** `https://eure-adresse/database.sql` muss **403 Forbidden** zeigen, die Anmeldung muss normal funktionieren.
+**Prüfen:** `https://eure-adresse/database.sql` muss **403 Forbidden** zeigen, die Anmeldung muss normal funktionieren. Bequemer geht es unter **System → [Server](server.md)** – dort prüft Syncopa alle Punkte selbst.
+
+**Nginx** beachtet keine `.htaccess`. Die gleichen Sperren dort im `server`-Block eintragen (Pfad `/syncopa/` an euren Ordner anpassen):
+
+```nginx
+location ~ ^/syncopa/(classes|includes|cron|vendor)/        { deny all; }
+location ~ ^/syncopa/uploads/(belege|bmv_jahresberichte|mail_freigaben)/ { deny all; }
+location ~ ^/syncopa/uploads/.*\.(php\d?|phtml|phar)$        { deny all; }
+location ~ ^/syncopa/(database\.sql|version_sync\.php|install\.lock|config\.example\.php|CHANGELOG\.md|README\.md)$ { deny all; }
+location ~ /\.(?!well-known)                                  { deny all; }
+autoindex off;
+```
 
 ---
 

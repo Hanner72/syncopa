@@ -12,11 +12,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $benutzername = $_POST['benutzername'] ?? '';
     $passwort = $_POST['passwort'] ?? '';
     
-    if ($benutzername && $passwort) {
+    $sperre = ($benutzername && $passwort) ? Sicherheit::anmeldungGesperrt($benutzername) : 0;
+    if ($sperre > 0) {
+        // Zu viele Fehlversuche: nicht einmal prüfen, damit Raten nichts bringt
+        $error = 'Zu viele fehlgeschlagene Anmeldeversuche. Bitte in ' . $sperre . ' ' . ($sperre === 1 ? 'Minute' : 'Minuten') . ' erneut versuchen.';
+    } elseif ($benutzername && $passwort) {
         $db = Database::getInstance();
         $user = $db->fetchOne("SELECT * FROM benutzer WHERE benutzername = ? AND aktiv = 1", [$benutzername]);
         
         if ($user && password_verify($passwort, $user['passwort_hash'])) {
+            Sicherheit::anmeldungProtokollieren($benutzername, true);
+            Sicherheit::sitzungErneuern(); // neue Sitzungskennung – eine vorher untergeschobene wird wertlos
             // Alle Rollen des Benutzers laden
             $userRollen = $db->fetchAll(
                 "SELECT r.id, r.name, r.ist_admin
@@ -61,7 +67,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->execute("INSERT INTO aktivitaetslog (benutzer_id, aktion, beschreibung, ip_adresse) VALUES (?, ?, ?, ?)",
                 [$user['id'], 'login', 'Login', $_SERVER['REMOTE_ADDR']]);
             header('Location: index.php'); exit;
-        } else { $error = 'Ungültige Anmeldedaten'; }
+        } else {
+            Sicherheit::anmeldungProtokollieren($benutzername, false);
+            $error = 'Ungültige Anmeldedaten';
+        }
     } else { $error = 'Bitte alle Felder ausfüllen'; }
 }
 ?>

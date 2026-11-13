@@ -47,7 +47,7 @@ Die Übersicht zeigt alle angelegten Benutzer-Konten:
 |---|---|---|
 | Benutzername | ✅ | Eindeutiger Login-Name |
 | E-Mail | ✅ | E-Mail-Adresse |
-| Passwort | ✅ (bei Neuanlage) | Mindestens 6 Zeichen. Beim Bearbeiten leer lassen, um es nicht zu ändern |
+| Passwort | ✅ (bei Neuanlage) | Mindestens 8 Zeichen, keine bekannten Standardpasswörter (z. B. „admin123“). Beim Bearbeiten leer lassen, um es nicht zu ändern |
 | Rollen | ✅ | Eine oder mehrere Rollen per Checkbox – siehe unten |
 | Zugeordnetes Mitglied | – | Optional, ermöglicht die Anmeldung bei Ausrückungen |
 | Benutzer ist aktiv | – | Deaktivierte Konten können sich nicht mehr einloggen |
