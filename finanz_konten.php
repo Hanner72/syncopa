@@ -63,7 +63,10 @@ include 'includes/header.php';
 
 <div class="card mb-4">
     <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <h5 class="mb-0"><i class="bi bi-bank"></i> Konten</h5>
+        <div>
+            <h5 class="mb-0"><i class="bi bi-bank"></i> Konten</h5>
+            <div class="small text-muted"><i class="bi bi-grip-vertical"></i> Zeilen ziehen zum Umsortieren – wird sofort gespeichert. <span id="konten-sort-status"></span></div>
+        </div>
         <div class="d-flex gap-2 align-items-center">
             <form method="GET" class="d-flex align-items-center gap-2">
                 <label for="jahr" class="small text-muted text-nowrap">Anfangsbestand für</label>
@@ -79,10 +82,11 @@ include 'includes/header.php';
         <input type="hidden" name="jahr" value="<?php echo $jahr; ?>">
         <div class="table-responsive">
         <table class="table mb-0 align-middle">
-            <thead class="table-light"><tr><th>Konto</th><th>Art</th><th>IBAN</th><th style="width:220px">Anfangsbestand 1.1.<?php echo $jahr; ?></th><th class="text-end">Stand Ende <?php echo $jahr; ?></th><th></th></tr></thead>
-            <tbody>
+            <thead class="table-light"><tr><th style="width:2rem"></th><th>Konto</th><th>Art</th><th>IBAN</th><th style="width:220px">Anfangsbestand 1.1.<?php echo $jahr; ?></th><th class="text-end">Stand Ende <?php echo $jahr; ?></th><th></th></tr></thead>
+            <tbody id="konten-tbody">
             <?php foreach ($alleKonten as $k): $u = current(array_filter($konten, fn($x) => $x['id'] == $k['id'])) ?: null; $automatisch = $u ? $u['anfang'] : Kassabuch::anfangsbestand((int)$k['id'], $jahr); ?>
-            <tr class="<?php echo $k['aktiv'] ? '' : 'text-muted'; ?>">
+            <tr class="<?php echo $k['aktiv'] ? '' : 'text-muted'; ?>" data-id="<?php echo (int)$k['id']; ?>">
+                <td class="drag-handle text-muted" title="Ziehen zum Umsortieren"><i class="bi bi-grip-vertical"></i></td>
                 <td><i class="bi <?php echo $artSymbol[$k['art']] ?? 'bi-wallet2'; ?>"></i> <strong><?php echo htmlspecialchars($k['name']); ?></strong>
                     <?php if (!$k['aktiv']): ?><span class="badge bg-secondary">inaktiv</span><?php endif; ?>
                     <?php if ($k['formation_name']): ?><span class="badge bg-light text-dark border"><?php echo htmlspecialchars($k['formation_name']); ?></span><?php endif; ?></td>
@@ -122,15 +126,19 @@ include 'includes/header.php';
 
 <div class="card" id="kategorien">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="bi bi-tags"></i> Kategorien</h5>
+        <div>
+            <h5 class="mb-0"><i class="bi bi-tags"></i> Kategorien</h5>
+            <div class="small text-muted"><i class="bi bi-grip-vertical"></i> Zeilen ziehen zum Umsortieren – wird sofort gespeichert. <span id="kategorien-sort-status"></span></div>
+        </div>
         <button class="btn btn-sm btn-success" data-kategorie='{}'><i class="bi bi-plus-lg"></i> Kategorie</button>
     </div>
     <div class="table-responsive">
     <table class="table mb-0 align-middle">
-        <thead class="table-light"><tr><th>Name</th><th>Für</th><th>Im BMV-Jahresbericht</th><th class="text-end">Reihenfolge</th><th class="text-end">Buchungen</th><th></th></tr></thead>
-        <tbody>
+        <thead class="table-light"><tr><th style="width:2rem"></th><th>Name</th><th>Für</th><th>Im BMV-Jahresbericht</th><th class="text-end">Buchungen</th><th></th></tr></thead>
+        <tbody id="kategorien-tbody">
         <?php foreach ($kategorien as $c): ?>
-        <tr class="<?php echo $c['aktiv'] ? '' : 'text-muted'; ?>">
+        <tr class="<?php echo $c['aktiv'] ? '' : 'text-muted'; ?>" data-id="<?php echo (int)$c['id']; ?>">
+            <td class="drag-handle text-muted" title="Ziehen zum Umsortieren"><i class="bi bi-grip-vertical"></i></td>
             <td><?php echo htmlspecialchars($c['name']); ?><?php if (!$c['aktiv']): ?> <span class="badge bg-secondary">inaktiv</span><?php endif; ?></td>
             <td><span class="badge bg-<?php echo $typLabel[$c['typ']][1]; ?>"><?php echo $typLabel[$c['typ']][0]; ?></span></td>
             <td class="small"><?php
@@ -139,7 +147,6 @@ include 'includes/header.php';
                 elseif ($c['typ'] !== 'einnahme') echo '<span class="text-muted">übrige Ausgaben</span>';
                 else echo '<span class="text-muted">–</span>';
             ?></td>
-            <td class="text-end"><?php echo (int)$c['sortierung']; ?></td>
             <td class="text-end"><?php echo (int)$c['anzahl']; ?></td>
             <td class="text-end text-nowrap">
                 <button class="btn btn-sm btn-outline-primary" title="Bearbeiten" data-kategorie='<?php echo htmlspecialchars(json_encode($c), ENT_QUOTES); ?>'><i class="bi bi-pencil"></i></button>
@@ -201,7 +208,39 @@ include 'includes/header.php';
 </div>
 
 <?php include 'includes/footer.php'; ?>
+<style>
+#konten-tbody .drag-handle, #kategorien-tbody .drag-handle { cursor: grab; user-select: none; touch-action: none; }
+#konten-tbody .sortable-ghost, #kategorien-tbody .sortable-ghost { background: rgba(var(--bs-primary-rgb), .08); }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
+// Konten und Kategorien per Drag & Drop umsortieren
+function sortierbar(art) {
+    var tbody = document.getElementById(art + '-tbody');
+    var status = document.getElementById(art + '-sort-status');
+    if (!tbody || typeof Sortable === 'undefined') return;
+    Sortable.create(tbody, {
+        handle: '.drag-handle',
+        animation: 150,
+        onEnd: function (ev) {
+            if (ev.oldIndex === ev.newIndex) return;
+            var ids = Array.from(tbody.querySelectorAll('tr[data-id]')).map(function (tr) { return parseInt(tr.dataset.id, 10); });
+            status.innerHTML = '<i class="bi bi-arrow-repeat"></i> Speichert …';
+            fetch('api/finanz_sortierung.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ art: art, ids: ids }) })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    status.innerHTML = d.success
+                        ? '<span class="text-success"><i class="bi bi-check-circle"></i> Gespeichert</span>'
+                        : '<span class="text-danger"><i class="bi bi-exclamation-circle"></i> ' + (d.error || 'Fehler') + '</span>';
+                    if (d.success) setTimeout(function () { status.innerHTML = ''; }, 2000);
+                })
+                .catch(function () { status.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-circle"></i> Verbindungsfehler</span>'; });
+        }
+    });
+}
+sortierbar('konten');
+sortierbar('kategorien');
+
 function dialogFuellen(modalId, daten, felder) {
     var m = document.getElementById(modalId), f = m.querySelector('form');
     f.reset();

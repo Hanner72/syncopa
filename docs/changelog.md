@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.13.2]
+
+### Hinzugefügt
+
+- Kassabuch: Konten und Kategorien per Drag & Drop sortieren (wird sofort gespeichert)
+
+### Bugs
+
+- BMV: Menüpunkt Jahresbericht fehlte, wenn die BMV-Anbindung deaktiviert und keine Vereinskennung eingetragen war
+
 ## [2.13.1]
 
 ### Bugs

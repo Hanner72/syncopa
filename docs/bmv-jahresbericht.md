@@ -1,6 +1,6 @@
 # BMV-Jahresbericht
 
-**Datei:** `bmv_jahresbericht.php` · **Menü:** Verband → BMV Online → Jahresbericht · **Berechtigung:** Modul „BMV Online“ in der Rechte-Matrix (Administratoren immer)
+**Datei:** `bmv_jahresbericht.php` · **Menü:** Verband → BMV Online → Jahresbericht (ohne BMV-Anbindung: Verband → BMV-Jahresbericht) · **Berechtigung:** Modul „BMV Online“ in der Rechte-Matrix (Administratoren immer)
 
 Syncopa erstellt den Jahresbericht für den Blasmusikverband auf Knopfdruck. Alles, was Syncopa aus seinen Daten kennt, wird automatisch eingetragen. Was fehlt, ist **rot markiert** und wird von Hand ergänzt. Sind alle Angaben vorhanden, wird der Bericht abgeschlossen und als PDF per E-Mail an den Verband geschickt.
 
