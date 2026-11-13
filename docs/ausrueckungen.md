@@ -109,6 +109,8 @@ Die Anmeldeliste, die Zähler und die Karten „Zusagen“ / „Absagen“ aktua
 
 **Berechtigung:** `ausrueckungen – schreiben`
 
+![Anmeldeliste am Handy](screenshots/ausrueckungen6.png)
+
 - Der Status jedes Mitglieds kann direkt in der Liste geändert werden – **die Änderung wird sofort gespeichert** („✓ Gespeichert“ unter der Zeile)
 - Ein dezenter Farbstreifen links am Status zeigt die Wahl: grün zugesagt, gelb ungewiss, rot abgesagt
 - Das Feld **Grund** erscheint nur bei einer Absage oder wenn schon ein Grund eingetragen ist; es wird kurz nach dem Tippen gespeichert

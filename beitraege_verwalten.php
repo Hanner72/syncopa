@@ -309,12 +309,10 @@ include 'includes/header.php';
 <?php endif; ?>
 
 <script>
-$(document).ready(function() {
+// jQuery und DataTables kommen erst mit dem Footer – deshalb auf DOMContentLoaded warten
+document.addEventListener('DOMContentLoaded', function() {
     $('#beitraegeTable').DataTable({
-        order: [[4, 'asc'], [1, 'asc']], // Erst nach Status (offen zuerst), dann Name
-        language: {
-            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/de-DE.json'
-        }
+        order: [[4, 'asc'], [1, 'asc']] // Erst nach Status (offen zuerst), dann Name
     });
 });
 </script>

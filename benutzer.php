@@ -244,10 +244,7 @@ include 'includes/header.php';
 <script>
 $(document).ready(function() {
     $('#benutzerTable').DataTable({
-        order: [[0, 'asc']],
-        language: {
-            url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/de-DE.json'
-        }
+        order: [[0, 'asc']]
     });
 });
 </script>

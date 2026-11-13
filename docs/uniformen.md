@@ -143,11 +143,15 @@ Kleidungsstücke, die als **„nicht benötigt“** markiert sind, stehen unter 
 **Datei:** `uniform_bestand.php` · erreichbar über **Uniformen → Bestand**  
 **Berechtigung:** ansehen `uniformen – lesen`, buchen `uniformen – schreiben`
 
+![Uniform-Bestand](screenshots/uniformen5.png)
+
 Die Übersicht zeigt je Kleidungsstück **Bestand**, **ausgegeben** und **im Lager** sowie den Lagerstand je Größe (gelb = 0, rot = negativ). Ein Klick auf **„Bestand“** öffnet die Detailseite mit den Zahlen je Größe und dem **Verlauf** aller Bewegungen (Zugang, Ausgabe, Rückgabe, Ausscheiden, Inventur – mit Datum, Mitglied, Grund und wer gebucht hat).
 
 > **Im Lager = Bestand − ausgegeben.** „Ausgegeben“ ergibt sich automatisch aus den Zuweisungen. Rückgaben ins Lager erhöhen den Lagerstand von selbst, ausgeschiedene Stücke zählen nicht mehr zum Bestand.
 
 ### Kleidungsstücke als Menge
+
+![Bestand eines Kleidungsstücks](screenshots/uniformen6.png)
 
 | Knopf | Wirkung |
 |---|---|

@@ -50,6 +50,24 @@ Falls Syncopa E-Mail-Benachrichtigungen versenden soll (z.B. bei neuen Benutzerr
 
 ---
 
+## BMV-Anbindung
+
+![Einstellungen BMV](screenshots/einstellungen2.png)
+
+Verbindung zum Datenservice des Blasmusikverbands (BMV). Syncopa liest dort nur – im BMV wird nichts geändert.
+
+| Feld | Beschreibung |
+|---|---|
+| BMV-Anbindung aktiv | Schaltet alle BMV-Funktionen auf einmal frei bzw. ab (Daten holen, Prüfung auf neue Daten). Die Zugangsdaten bleiben gespeichert. |
+| API-Link, E-Mail, Passwort | Zugang zum BMV-Datenservice. Das Passwort wird nur angezeigt als „gespeichert“; leer lassen, um es beizubehalten. |
+| Land, Bezirk, Verein | Die **Vereinskennung**, z. B. `ST` / `16` / `13`. Sie steht auch auf dem [Jahresbericht](bmv-jahresbericht.md) und lässt sich auch bei ausgeschalteter Anbindung eintragen. |
+| Auf neue Daten im BMV prüfen alle (Stunden) | z. B. 24 = einmal täglich. Geprüft wird beim Öffnen der Einstellungen; **Jetzt prüfen** prüft sofort. Gibt es Neues, erscheint oben ein Hinweis. |
+| Jahresbericht senden an | E-Mail-Adresse des Bezirks- oder Landesverbands; dorthin wird der abgeschlossene Jahresbericht als PDF geschickt |
+
+Ist die Anbindung aktiv und vollständig eingerichtet, erscheint im Menü **Verband → BMV Online** mit [BMV Daten holen](bmv-daten.md) und dem Jahresbericht. Ohne Anbindung gibt es dort nur den **BMV-Jahresbericht**.
+
+---
+
 ## Google Calendar Integration
 
 Diese Funktion ist derzeit noch in Entwicklung – „Coming soon".

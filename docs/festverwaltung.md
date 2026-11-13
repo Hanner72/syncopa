@@ -61,6 +61,8 @@ Beim Bearbeiten eines bestehenden Festes steht zusätzlich der Schnellzugriff **
 
 **Datei:** `fest_detail.php`
 
+![Fest-Dashboard](screenshots/fest1.png)
+
 Öffnet man ein Fest, erscheint oben eine durchgehende **Reiter-Navigation** (Übersicht, Stationen, Mitarbeiter, Dienstplan, Einkäufe, Verträge, Todos, Abrechnung), über die man zwischen allen Teilbereichen dieses Festes wechseln kann.
 
 Das Dashboard selbst zeigt:
@@ -143,6 +145,8 @@ Die Übersicht zeigt separate Kennzahlen für Vereinsmitglieder und externe Helf
 
 **Datei:** `fest_dienstplan.php`  
 **Berechtigung:** `fest – schreiben` zum Bearbeiten, `fest – lesen` zum Ansehen
+
+![Dienstplan](screenshots/fest2.png)
 
 Der Dienstplan zeigt für jeden Festtag eine grafische Zeitleiste: pro Station eine Zeile, darauf die eingeteilten Mitarbeiter mit ihrer jeweiligen Schichtdauer als farbiger Balken.
 
@@ -322,7 +326,7 @@ Ein bereits erfasster Posten lässt sich über das Stift-Symbol bearbeiten oder 
 
 ---
 
-## Fest kopieren {#fest-kopieren}
+## Fest kopieren
 
 **Datei:** `fest_kopieren.php`  
 **Berechtigung:** `fest – schreiben`

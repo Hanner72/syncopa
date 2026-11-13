@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.14.1]
+
+### Hinzugefügt
+
+- Dokumentation: neue Seiten „Ehrungen“ und „BMV Daten holen“; Abschnitte BMV-Anbindung (Einstellungen) und Mitgliedsarten (Stammdaten); Dateistruktur und Datenbank vervollständigt
+- Dokumentation: alle Screenshots neu, fehlende ergänzt (Ehrungen, BMV, Kassabuch, Uniform-Bestand, Formationen, Festverwaltung, Notenbücher, E-Mail u. a.)
+
+### Geändert
+
+- Dokumentation: Aussehen wie die App, mit Hell- und Dunkelmodus (gleiche Einstellung wie in der App) und einheitlicher Seitenleiste
+
+### Bugs
+
+- Menüpunkt „Dokumentation“ führte ins Leere, wenn Syncopa in einem Unterordner installiert ist
+- Mitgliedsbeiträge verwalten: Tabelle war nicht sortier- und durchsuchbar (Skript lief vor jQuery)
+- Rollenrechte bearbeiten: Lesen/Schreiben/Löschen wurden nicht mehr automatisch mitgesetzt (Skript lief vor jQuery)
+- Benutzer, Beiträge, Uniformen, Noten: Tabellentexte teils englisch – jetzt immer die mitgelieferte deutsche Übersetzung
+
 ## [2.14.0]
 
 ### Geändert

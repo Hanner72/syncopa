@@ -11,6 +11,8 @@ Das Kassabuch erfasst alle Einnahmen und Ausgaben des Vereins, getrennt nach Kon
 
 ## Übersicht
 
+![Kassabuch](screenshots/finanzen1.png)
+
 Oben stehen alle **Konten** mit ihrem Stand am Jahresende (bzw. heute) und dem Anfangsbestand am 1.1., dazu das **Jahresergebnis**. Ein Klick auf ein Konto zeigt nur dessen Buchungen, mit Anfangsbestand, **laufendem Saldo** und Endbestand – wie ein Kontoauszug.
 
 Drei Reiter gliedern die Seite:
@@ -26,6 +28,8 @@ Das Jahr wird oben rechts gewählt. Abgeschlossene Jahre sind mit einem Schloss 
 ## Konten & Kategorien
 
 **Datei:** `finanz_konten.php` · **Berechtigung:** `finanzen – schreiben`
+
+![Konten und Kategorien](screenshots/finanzen2.png)
 
 - **Konten:** beliebig viele, z. B. Handkassa, Girokonto, Sparbuch oder eine eigene Jugendkassa. Bei der Einrichtung sind **Handkassa** und **Girokonto** angelegt. Ein Konto kann einer Formation zugeordnet werden; nicht mehr benutzte Konten werden auf „inaktiv“ gesetzt.
 - **Anfangsbestand:** nur im ersten Jahr eintragen (Kassastand bzw. Kontoauszug am 1.1.). In den Folgejahren rechnet Syncopa den Anfangsbestand aus dem Vorjahr weiter. Ein eingetragener Wert hat Vorrang.

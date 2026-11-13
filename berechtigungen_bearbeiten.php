@@ -191,7 +191,8 @@ include 'includes/header.php';
 </div>
 
 <script>
-// Automatische Abhängigkeiten
+// Automatische Abhängigkeiten (jQuery kommt erst mit dem Footer – deshalb auf DOMContentLoaded warten)
+document.addEventListener('DOMContentLoaded', function() {
 $(document).on('change', '.modul-check', function() {
     const modul = $(this).data('modul');
     const type = $(this).attr('name').split('_').pop();
@@ -218,6 +219,7 @@ $(document).on('change', '.modul-check', function() {
             $('#' + modul + '_loeschen').prop('checked', false);
         }
     }
+});
 });
 </script>
 

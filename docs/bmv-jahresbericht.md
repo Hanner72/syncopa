@@ -8,7 +8,7 @@ Syncopa erstellt den Jahresbericht für den Blasmusikverband auf Knopfdruck. All
 
 ### Berechtigungen
 
-In der **Rechte-Matrix** gibt es dafür das Modul **BMV Online**. Es gilt für den Jahresbericht und für „BMV Daten holen“:
+In der **Rechte-Matrix** gibt es dafür das Modul **BMV Online**. Es gilt für den Jahresbericht und für [BMV Daten holen](bmv-daten.md):
 
 | Recht | erlaubt |
 |---|---|
@@ -19,6 +19,8 @@ In der **Rechte-Matrix** gibt es dafür das Modul **BMV Online**. Es gilt für d
 Die BMV-Zugangsdaten und die Empfängeradresse in den Einstellungen bleiben Administratoren vorbehalten.
 
 ## Ablauf
+
+![BMV-Jahresbericht](screenshots/bmvjahresbericht1.png)
 
 1. **BMV Online → Jahresbericht** öffnen und oben das Jahr wählen (vorausgewählt ist das Vorjahr)
 2. Rot markierte Felder ausfüllen und **Speichern**

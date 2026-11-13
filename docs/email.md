@@ -32,6 +32,8 @@ Unter **Mein Konto** kann jeder Benutzer außerdem seine E-Mail-Adresse und sein
 
 ## Lesen und schreiben
 
+![E-Mail](screenshots/email1.png)
+
 - **Ordnerleiste links:** alle Postfächer mit ihren Ordnern und der Zahl ungelesener Nachrichten
 - **Liste in der Mitte:** nach Datum gruppiert (Heute, Gestern, Diese Woche …), mit Suche und Filter „Ungelesen“
 - **Lesebereich rechts:** Bilder aus dem Internet werden zum Schutz der Privatsphäre erst auf Klick geladen
