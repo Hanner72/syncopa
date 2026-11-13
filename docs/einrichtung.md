@@ -8,7 +8,7 @@ Für eine leichte Installation wurde ein komplettes Installationsscript implemen
 |---|---|
 | PHP | 7.4 oder höher |
 | MySQL / MariaDB | 5.7 / 10.3 oder höher |
-| Webserver | Apache oder Nginx (Syncopa nutzt normale `.php`-Adressen, `mod_rewrite` wird nicht benötigt) |
+| Webserver | Apache oder LiteSpeed mit `mod_rewrite` und erlaubter `.htaccess` (empfohlen, für den Schutz unten); Nginx geht auch, braucht dann eigene Sperrregeln |
 | PHP-Extensions (Pflicht) | `pdo`, `pdo_mysql`, `intl`, `fileinfo` |
 | PHP-Extensions (empfohlen) | `curl` (Google-Login, automatisches System-Update), `zip` (automatisches System-Update), `openssl` und `sodium` (E-Mail-Programm) |
 
@@ -147,6 +147,26 @@ echo '*/5 * * * * www-data /usr/bin/php /var/www/html/syncopa/cron/mail_spamfilt
 ```
 
 Unter Windows geht das über die Aufgabenplanung mit `php.exe cron\mail_spamfilter.php`. Zum Testen: `php cron/mail_spamfilter.php -v`.
+
+### 3.10 Schutz durch die `.htaccess`
+
+Syncopa bringt im Hauptordner eine `.htaccess` mit. Sie wird bei jedem Update erneuert und überschreibt eine von Hand angelegte Datei an dieser Stelle. Sie sorgt dafür, dass:
+
+- immer **https** verwendet wird. Ausgenommen sind lokale Adressen (`localhost`, IP-Adressen, `*.test`) und der Betrieb hinter Cloudflare.
+- keine **Ordnerlisten** angezeigt werden.
+- **Belege, BMV-Jahresberichte und Freigabe-Dateien** nur über Syncopa mit Anmeldung abrufbar sind.
+- im Ordner `uploads/` **kein Programmcode** ausgeführt wird.
+- Programm- und Hilfsdateien gesperrt sind, z. B. `classes/`, `includes/`, `database.sql`, `version_sync.php` und versteckte Ordner wie `.git`.
+
+Damit das wirkt, muss der Webserver `.htaccess`-Dateien beachten. Bei Webhosting mit Plesk oder LiteSpeed (z. B. netcup) ist das Standard. Bei einem eigenen Apache in der Site-Konfiguration für den Syncopa-Ordner setzen und danach `sudo systemctl reload apache2`:
+
+```apache
+<Directory /var/www/html>
+    AllowOverride All
+</Directory>
+```
+
+**Prüfen:** `https://eure-adresse/database.sql` muss **403 Forbidden** zeigen, die Anmeldung muss normal funktionieren.
 
 ---
 
