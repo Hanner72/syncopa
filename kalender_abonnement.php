@@ -266,7 +266,7 @@ include 'includes/header.php';
                     <li>Füge die Kalender-URL ein</li>
                     <li>Klicke auf <strong>"Kalender hinzufügen"</strong></li>
                 </ol>
-                <div class="alert alert-success">
+                <div class="alert alert-success alert-permanent">
                     <i class="bi bi-check-circle"></i> Aktualisierung: Automatisch alle 24 Stunden
                 </div>
             </div>
@@ -289,7 +289,7 @@ include 'includes/header.php';
                     <li>Füge die Kalender-URL ein</li>
                     <li>Bestätige mit <strong>"Abonnieren"</strong></li>
                 </ol>
-                <div class="alert alert-success">
+                <div class="alert alert-success alert-permanent">
                     <i class="bi bi-check-circle"></i> Aktualisierung: Automatisch stündlich
                 </div>
             </div>
@@ -312,7 +312,7 @@ include 'includes/header.php';
                     <li>Füge die Kalender-URL ein</li>
                     <li>Klicke auf <strong>"OK"</strong></li>
                 </ol>
-                <div class="alert alert-success">
+                <div class="alert alert-success alert-permanent">
                     <i class="bi bi-check-circle"></i> Aktualisierung: Automatisch alle 3 Stunden
                 </div>
             </div>
@@ -336,7 +336,7 @@ include 'includes/header.php';
                     <li>Format: <strong>iCalendar (ICS)</strong></li>
                     <li>Füge die Kalender-URL ein</li>
                 </ol>
-                <div class="alert alert-success">
+                <div class="alert alert-success alert-permanent">
                     <i class="bi bi-check-circle"></i> Aktualisierung: Konfigurierbar (Standard: stündlich)
                 </div>
             </div>

@@ -133,6 +133,15 @@ config.php → includes.php → seite.php → includes/header.php → [Inhalt] �
 
 `includes.php` lädt alle Klassen und führt bei **jedem** Request alle Datenbank-Migrationen aus (siehe [Datenbankstruktur](datenbank.md#migrationen)).
 
+### Meldungen, Hinweise und Rückfragen
+
+`includes/footer.php` sorgt für einheitliche Rückmeldungen auf allen Seiten mit Menü:
+
+- **Toasts:** `showToast(text, 'success'|'danger'|'warning'|'info')` zeigt eine Meldung oben rechts, die über dem Inhalt schwebt. Flash-Meldungen (`Session::setFlashMessage()`) erscheinen automatisch als Toast.
+- **Grüne/rote Boxen** (`.alert-success`, `.alert-danger`, schließbare `.alert`) im Seiteninhalt werden beim Laden zu Toasts. Dauerhafte Hinweisboxen in diesen Farben brauchen die Klasse `alert-permanent`. Blaue/gelbe Hinweisboxen bleiben stehen.
+- **`alert()`** erscheint als Toast; die Farbe wird aus dem Text erkannt.
+- **`confirm()`** erscheint als Modal. Beim Klick/Absenden wird die Aktion angehalten und nach „OK“ wiederholt – bestehende `onsubmit="return confirm(…)"` funktionieren unverändert.
+
 ### Datenbankzugriff
 
 ```php
