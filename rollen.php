@@ -13,7 +13,8 @@ if (Session::getRole() !== 'admin') {
 $db = Database::getInstance();
 
 // Rolle löschen
-if (isset($_GET['delete']) && $_GET['delete'] > 0) {
+// nur als bestätigtes Formular (POST mit Prüfzeichen), nicht per einfachem Link
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && isset($_GET['delete']) && $_GET['delete'] > 0) {
     $rolle_id = $_GET['delete'];
     
     // Prüfen ob Admin-Rolle

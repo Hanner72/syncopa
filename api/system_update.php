@@ -24,7 +24,8 @@ if (!Session::isAdmin()) {
     exit;
 }
 
-$action   = $_POST['action'] ?? $_GET['action'] ?? '';
+// Update nur per POST (mit Prüfzeichen), Prüfen auch per GET
+$action   = $_POST['action'] ?? (($_GET['action'] ?? '') === 'check' ? 'check' : '');
 $appRoot  = realpath(__DIR__ . '/..');
 $repoOwner = 'Hanner72';
 $repoName  = 'syncopa';

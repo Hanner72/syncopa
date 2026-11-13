@@ -115,7 +115,7 @@ class FestVertrag {
             $mimeType = mime_content_type($file['tmp_name']);
             $erlaubteTypen = ['application/pdf', 'application/x-pdf', 'application/octet-stream'];
             if (!in_array($mimeType, $erlaubteTypen)) {
-                throw new Exception('Ungültiger Dateityp: ' . htmlspecialchars($mimeType));
+                throw new Exception('Ungültiger Dateityp: ' . $mimeType);
             }
         }
 

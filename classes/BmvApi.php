@@ -24,7 +24,7 @@ class BmvApi {
         $this->land     = strtoupper(trim($s['bmv_land'] ?? ''));
         $this->bezirk   = trim($s['bmv_bezirk'] ?? '');
         $this->vereinNr = trim($s['bmv_verein'] ?? '');
-        $this->passwort = $s['bmv_passwort'] ?? '';
+        $this->passwort = Sicherheit::geheimLesen($s['bmv_passwort'] ?? ''); // verschlüsselt gespeichert
     }
 
     /**

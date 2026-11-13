@@ -3,6 +3,13 @@ require_once 'config.php';
 require_once 'includes.php';
 
 Session::requireLogin();
+
+// Löschen nur über ein bestätigtes Formular (POST mit Prüfzeichen) – ein einfacher Link reicht nicht
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+    Session::setFlashMessage('danger', 'Bitte über die Schaltfläche „Löschen“ löschen.');
+    header('Location: noten.php');
+    exit;
+}
 Session::requirePermission('noten', 'loeschen');
 
 $id = $_GET['id'] ?? null;

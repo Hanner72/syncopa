@@ -59,6 +59,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_POST['bmv_api_url'] = $bmvUrl !== '' ? rtrim($bmvUrl, '/') : $bmvStandardUrl;
         if ($bmvPasswort === '') {
             unset($_POST['bmv_passwort']); // leer = gespeichertes Passwort behalten
+        } else {
+            $_POST['bmv_passwort'] = Sicherheit::geheimVerschluesseln($bmvPasswort); // nie im Klartext speichern
         }
     }
 }

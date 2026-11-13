@@ -12,6 +12,7 @@ syncopa/
 ├── classes/                        # PHP-Klassen (OOP, DAL-Pattern)
 │   ├── Database.php                # Datenbankverbindung (PDO, Singleton)
 │   ├── Session.php                 # Session-Management, Rollen & Berechtigungen
+│   ├── Sicherheit.php              # Prüfzeichen (CSRF), Schutz-Kopfzeilen, Login-Sperre, Passwortregeln, Kalender-Schlüssel
 │   ├── Mitglied.php                # Mitglieder-Logik
 │   ├── Formation.php                # Formationen (Musikkapelle, 7er-Partie, ...)
 │   ├── Ausrueckung.php             # Ausrückungs-Logik, Anwesenheit
@@ -88,7 +89,7 @@ syncopa/
 ├── cron/                            # Aufgaben für Cronjobs (nur Kommandozeile, vom Web gesperrt)
 │   └── mail_spamfilter.php         # Spamfilter für alle Postfächer, alle 5 Minuten
 │
-├── assets/                          # Bilder, Logo, JS/CSS für das Notenpult (assets/js/)
+├── assets/                          # Bilder, Logo, JS (Notenpult, csrf.js = Prüfzeichen an Formulare/Anfragen)
 ├── docs/                            # Diese Dokumentation (Docsify)
 │   └── screenshots/                # Screenshots für die Docs
 ├── uploads/                         # Hochgeladene Dateien (Noten-PDFs, Logo, Fest-Verträge, ...)
@@ -137,6 +138,7 @@ syncopa/
 ├── mail.php, mail_konten.php, mail_kontakte.php, konto.php   # E-Mail-Programm, Funktions-Postfächer, Kontakte, Mein Konto
 ├── freigabe.php                     # Öffentliche Downloadseite für Download-Links (ohne Anmeldung)
 ├── einstellungen.php
+├── server.php                       # System → Server: Sicherheits-Checkliste (nur Admins)
 └── version_sync.php                 # Entwickler-Werkzeug: Version aus docs/changelog.md in alle Dateien übernehmen (Git-Hook)
 ```
 

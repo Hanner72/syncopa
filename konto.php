@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $b = $db->fetchOne("SELECT passwort_hash FROM benutzer WHERE id = ?", [$benutzerId]);
                 if (!$b || !password_verify((string)($_POST['alt'] ?? ''), (string)$b['passwort_hash'])) throw new RuntimeException('Das aktuelle Passwort stimmt nicht.');
                 $neu = (string)($_POST['neu'] ?? '');
-                if (mb_strlen($neu) < 8) throw new RuntimeException('Das neue Passwort muss mindestens 8 Zeichen lang sein.');
+                if ($pwFehler = Sicherheit::passwortFehler($neu)) throw new RuntimeException($pwFehler);
                 if ($neu !== (string)($_POST['neu2'] ?? '')) throw new RuntimeException('Die beiden neuen Passwörter stimmen nicht überein.');
                 $db->execute("UPDATE benutzer SET passwort_hash = ? WHERE id = ?", [password_hash($neu, PASSWORD_DEFAULT), $benutzerId]);
                 Session::setFlashMessage('success', 'Passwort geändert.');

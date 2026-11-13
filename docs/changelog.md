@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.15.0]
+
+### Hinzugefügt
+
+- System → Server (nur Administratoren): Sicherheits-Checkliste mit Ampel (erledigt/unsicher/prüfen) und Anleitungen für netcup/Plesk und eigene Server; Prüfungen von außen laufen im Browser; organisatorische Punkte (Datensicherung, zweiter Faktor) von Hand bestätigen
+- Sicherheit: Sperre nach Fehlversuchen bei der Anmeldung (5 je Benutzer bzw. 20 je Adresse, 15 Minuten)
+- Sicherheit: Prüfzeichen gegen untergeschobene Aktionen (CSRF) für alle Formulare und Hintergrund-Anfragen; Löschen nur noch über die Schaltfläche
+- Kalender-Abo: persönliche Links mit geheimem Schlüssel, jederzeit erneuerbar
+
+### Geändert
+
+- Sicherheit: neue Sitzungskennung nach der Anmeldung; Cookie nur verschlüsselt und nur für Syncopa (SameSite); Schutz-Kopfzeilen (u. a. kein Einbetten in fremde Seiten, HSTS)
+- Passwörter: überall mindestens 8 Zeichen, bekannte Standardpasswörter werden abgelehnt; Beispiel-Zugänge der Installation bekommen zufällige Passwörter und werden deaktiviert
+- BMV-Zugangspasswort wird verschlüsselt gespeichert (bestehendes wird automatisch umgestellt)
+- Meldungen werden grundsätzlich entschärft angezeigt; Datenbankfehler zeigen keine technischen Details mehr
+- Kalender-Abo: bestehende Abos müssen einmal mit dem neuen persönlichen Link eingerichtet werden
+
 ## [2.14.2]
 
 ### Hinzugefügt

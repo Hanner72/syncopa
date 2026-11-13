@@ -7,6 +7,11 @@ class Session {
         if (session_status() === PHP_SESSION_NONE) {
             ini_set('session.cookie_httponly', 1);
             ini_set('session.use_only_cookies', 1);
+            ini_set('session.use_strict_mode', 1);        // keine vom Angreifer vorgegebenen Sitzungskennungen
+            ini_set('session.cookie_samesite', 'Lax');    // Cookie nicht bei fremden Formular-Absendungen mitschicken
+            if (class_exists('Sicherheit') && Sicherheit::istHttps()) {
+                ini_set('session.cookie_secure', 1);      // Cookie nur über verschlüsselte Verbindung
+            }
             session_start();
         }
     }
@@ -73,8 +78,12 @@ class Session {
         }
     }
     
-    public static function setFlashMessage($type, $message) {
-        self::set('flash_message', ['type' => $type, 'message' => $message]);
+    /**
+     * Meldung für die nächste Seite. Der Text wird als reiner Text angezeigt (sicher, auch mit Eingaben oder
+     * Fehlermeldungen darin). Nur für fest im Programm geschriebene Meldungen mit Formatierung $html = true setzen.
+     */
+    public static function setFlashMessage($type, $message, bool $html = false) {
+        self::set('flash_message', ['type' => $type, 'message' => $html ? $message : htmlspecialchars((string)$message, ENT_QUOTES, 'UTF-8')]);
     }
     
     public static function getFlashMessage() {

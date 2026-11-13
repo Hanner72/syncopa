@@ -76,6 +76,9 @@ function isActive($page, $pages, $current) {
     <title><?php echo APP_NAME; ?></title>
     <link rel="icon" type="image/png" href="assets/favicon.png">
     <link rel="manifest" href="manifest.json">
+    <!-- Prüfzeichen gegen untergeschobene Aktionen; csrf.js hängt es an Formulare und Anfragen an -->
+    <meta name="csrf-token" content="<?php echo htmlspecialchars(Sicherheit::pruefzeichen(), ENT_QUOTES); ?>">
+    <script src="assets/js/csrf.js?v=<?php echo urlencode(APP_VERSION); ?>"></script>
     <link rel="apple-touch-icon" href="assets/icon-192.png">
     <meta name="theme-color" content="#4471A3">
     <meta name="mobile-web-app-capable" content="yes">
@@ -765,6 +768,11 @@ function isActive($page, $pages, $current) {
                     <li><a class="nav-link <?php echo $currentPage === 'einstellungen' ? 'active' : ''; ?>" href="einstellungen.php">
                         <i class="bi bi-gear"></i> Einstellungen
                     </a></li>
+                    <?php if (Session::isAdmin()): ?>
+                    <li><a class="nav-link <?php echo $currentPage === 'server' ? 'active' : ''; ?>" href="server.php">
+                        <i class="bi bi-hdd-network"></i> Server
+                    </a></li>
+                    <?php endif; ?>
                 </ul>
             </div>
             <?php endif; ?>

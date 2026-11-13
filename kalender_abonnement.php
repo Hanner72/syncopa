@@ -4,11 +4,20 @@ require_once 'includes.php';
 
 Session::requireLogin();
 
-// Kalender-Basis-URL generieren
-$protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+// Persönlichen Abo-Link erneuern (alte Links funktionieren danach nicht mehr)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['aktion'] ?? '') === 'link_erneuern') {
+    Sicherheit::kalenderSchluessel((int)Session::getUserId(), true);
+    Session::setFlashMessage('success', 'Neue Kalender-Links erzeugt. Bitte das Abo in der Kalender-App mit dem neuen Link neu einrichten.');
+    header('Location: kalender_abonnement.php');
+    exit;
+}
+
+// Kalender-Basis-URL mit dem persönlichen, geheimen Schlüssel (Kalender-Apps können sich nicht anmelden)
+$protocol = Sicherheit::istHttps() ? 'https' : 'http';
 $host = $_SERVER['HTTP_HOST'];
-$baseUrl = $protocol . '://' . $host . dirname($_SERVER['PHP_SELF']);
-$calendarBaseUrl = $baseUrl . '/kalender_export.php';
+$baseUrl = $protocol . '://' . $host . rtrim(dirname($_SERVER['PHP_SELF']), '/');
+$kalenderSchluessel = Sicherheit::kalenderSchluessel((int)Session::getUserId());
+$calendarBaseUrl = $baseUrl . '/kalender_export.php?schluessel=' . $kalenderSchluessel;
 
 // Formationen laden
 $formationenListe = [];
@@ -33,8 +42,8 @@ foreach ($formationenListe as $f) {
 
 // Haupt-URLs: mit aktiver Formation gefiltert (oder alle wenn kein Filter)
 $fParam        = $activeFormationId ? 'formation=' . $activeFormationId : '';
-$calendarUrl   = $calendarBaseUrl . ($fParam ? '?' . $fParam : '');
-$calendarUrlKombiniert = $calendarBaseUrl . '?include=termine' . ($fParam ? '&' . $fParam : '');
+$calendarUrl   = $calendarBaseUrl . ($fParam ? '&' . $fParam : '');
+$calendarUrlKombiniert = $calendarBaseUrl . '&include=termine' . ($fParam ? '&' . $fParam : '');
 $webcalUrl             = str_replace(['http://', 'https://'], 'webcal://', $calendarUrl);
 $webcalUrlKombiniert   = str_replace(['http://', 'https://'], 'webcal://', $calendarUrlKombiniert);
 
@@ -55,6 +64,17 @@ include 'includes/header.php';
             </div>
         </div>
     </div>
+</div>
+
+<div class="alert alert-secondary alert-permanent d-flex flex-wrap align-items-center gap-2 mb-3 py-2">
+    <div class="flex-grow-1">
+        <i class="bi bi-key"></i> <strong>Persönliche Links:</strong> Die Links unten gehören nur dir und enthalten einen geheimen Schlüssel – bitte nicht weitergeben.
+        Wurde ein Link weitergegeben oder verloren, erzeuge neue; die alten funktionieren dann nicht mehr.
+    </div>
+    <form method="post" onsubmit="return confirm('Neue Kalender-Links erzeugen? Bestehende Abos funktionieren danach nicht mehr und müssen neu eingerichtet werden.')">
+        <input type="hidden" name="aktion" value="link_erneuern">
+        <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-repeat"></i> Neue Links erzeugen</button>
+    </form>
 </div>
 
 <?php if ($activeFormation): ?>
@@ -157,8 +177,8 @@ include 'includes/header.php';
                     <?php foreach ($formationenListe as $idx => $form): ?>
                     <?php
                         $fId      = (int)$form['id'];
-                        $fUrl     = $calendarBaseUrl . '?formation=' . $fId;
-                        $fUrlT    = $calendarBaseUrl . '?include=termine&formation=' . $fId;
+                        $fUrl     = $calendarBaseUrl . '&formation=' . $fId;
+                        $fUrlT    = $calendarBaseUrl . '&include=termine&formation=' . $fId;
                         $fWebcal  = str_replace(['http://', 'https://'], 'webcal://', $fUrl);
                         $fWebcalT = str_replace(['http://', 'https://'], 'webcal://', $fUrlT);
                         $isActive = ($fId === $activeFormationId);

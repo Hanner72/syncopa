@@ -164,6 +164,9 @@ function runInstallation($p) {
         $pdo->prepare("INSERT INTO `benutzer` (`benutzername`,`email`,`passwort_hash`,`rolle`,`rolle_id`,`aktiv`,`erstellt_am`) VALUES (?,?,?,'admin',1,1,NOW())")->execute(array($bname, $email, $hash));
         $adminId = (int)$pdo->lastInsertId();
         $pdo->prepare("INSERT IGNORE INTO `benutzer_rollen` (`benutzer_id`, `rolle_id`) VALUES (?, 1)")->execute(array($adminId));
+        // Mitgelieferte Beispiel-Zugänge aus database.sql: zufälliges Passwort und deaktiviert (sonst bekannte Passwörter)
+        $pdo->prepare("UPDATE `benutzer` SET `passwort_hash` = ?, `aktiv` = 0 WHERE `id` <> ?")
+            ->execute(array(password_hash(bin2hex(random_bytes(16)), PASSWORD_BCRYPT), $adminId));
 
         // Installations-ID generieren & Telemetry speichern
         $installId = bin2hex(random_bytes(16));
@@ -335,7 +338,8 @@ function insertSampleData($pdo) {
         (7,9,1,'2012-03-01'),(8,1,1,'2013-09-01'),(9,15,1,'2015-01-01'),
         (10,7,1,'2016-09-01'),(11,14,1,'2018-05-01'),(12,8,1,'2020-09-01')");
 
-    $demoHash = password_hash('admin123', PASSWORD_BCRYPT, array('cost' => 10));
+    // Beispiel-Benutzer bekommen ein zufälliges Passwort (nur Anschauungsdaten, keine Anmeldung mit bekanntem Passwort möglich)
+    $demoHash = password_hash(bin2hex(random_bytes(16)), PASSWORD_BCRYPT, array('cost' => 10));
     $stmt = $pdo->prepare("INSERT INTO `benutzer` (`benutzername`,`email`,`passwort_hash`,`rolle`,`rolle_id`,`aktiv`,`mitglied_id`,`erstellt_am`) VALUES (?,?,?,'mitglied',9,1,?,NOW())");
     $demoUsers = array(
         array('t.huber',   't.huber@example.at',   1),

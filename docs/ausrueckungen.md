@@ -140,7 +140,7 @@ Administratoren können den Status für beliebige Mitglieder auf der Ausrückung
 
 ![Ausrückungen abonieren](screenshots/ausrueckungen5.png)
 
-Mit dem iCal-Export können alle Vereinstermine in externe Kalender-Apps eingebunden werden:
+Mit dem iCal-Export können alle Vereinstermine in externe Kalender-Apps eingebunden werden. Die Links sind persönlich und enthalten einen geheimen Schlüssel – siehe [Kalender → Persönliche Links](kalender.md#persönliche-links).
 
 ### Export Auswahl
 
