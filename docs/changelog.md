@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.14.2]
+
+### Hinzugefügt
+
+- Sicherheit: `.htaccess` im Hauptordner wird mitgeliefert – erzwingt https (außer lokal und hinter Cloudflare), keine Ordnerlisten, Belege/BMV-Jahresberichte/Freigaben nur über Syncopa, kein Programmcode in `uploads/`, Programm- und Hilfsdateien (`classes/`, `includes/`, `database.sql`, `version_sync.php`, `.git` …) gesperrt
+- Dokumentation: Abschnitt „Schutz durch die .htaccess“ in der Installationsanleitung
+
+### Bugs
+
+- Dokumentation: „Weiter“/„Zurück“ unten führte auf Abschnitte derselben Seite und schien nichts zu tun
+
 ## [2.14.1]
 
 ### Hinzugefügt

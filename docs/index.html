@@ -368,6 +368,34 @@
             });
           });
         },
+        // Blättern unten: Abschnitte derselben Seite (z. B. „Kassabuch → Berichte zum Ausdrucken“) überspringen,
+        // sonst führt „Weiter“ nur auf die gerade offene Seite und scheint nichts zu tun
+        function (hook, vm) {
+          hook.doneEach(function () {
+            setTimeout(function () {
+              var pfad = function (h) { return (h || '').replace(/^#/, '').split('?')[0]; };
+              var seiten = [];
+              document.querySelectorAll('.sidebar-nav a[href^="#/"]').forEach(function (a) {
+                if (a.closest('.app-sub-sidebar')) return;
+                var p = pfad(a.getAttribute('href'));
+                if (!seiten.some(function (s) { return s.pfad === p; })) seiten.push({ pfad: p, titel: a.textContent.trim() });
+              });
+              var hier = pfad(location.hash);
+              var i = seiten.findIndex(function (s) { return s.pfad === hier; });
+              if (i < 0) return;
+              [['previous', seiten[i - 1]], ['next', seiten[i + 1]]].forEach(function (x) {
+                var item = document.querySelector('.pagination-item--' + x[0]);
+                if (!item) return;
+                if (!x[1]) { item.style.visibility = 'hidden'; return; }
+                item.style.visibility = '';
+                var a = item.querySelector('a');
+                var t = item.querySelector('.pagination-item-title');
+                if (a) a.setAttribute('href', '#' + x[1].pfad);
+                if (t) t.textContent = x[1].titel;
+              });
+            }, 0);
+          });
+        },
         // Eigene feste Leiste oben rechts: „Zur App“ und Hell/Dunkel-Schalter (gleiche Einstellung wie in der App).
         // Bewusst außerhalb der Docsify-Kopfzeile, weil diese bei jedem Seitenwechsel neu aufgebaut wird.
         function (hook) {

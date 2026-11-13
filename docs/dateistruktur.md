@@ -93,6 +93,7 @@ syncopa/
 │   └── screenshots/                # Screenshots für die Docs
 ├── uploads/                         # Hochgeladene Dateien (Noten-PDFs, Logo, Fest-Verträge, ...)
 │
+├── .htaccess                        # Schutzregeln: https, keine Ordnerlisten, Uploads/Programmteile/Hilfsdateien gesperrt
 ├── config.php                       # ⚠️ Zugangsdaten & API-Keys (nicht in Git!)
 ├── config.app.php                   # App-Konstanten (Version, Upload-Pfade, Klassen-Autoloader)
 ├── config.example.php               # Vorlage für neue Installationen
