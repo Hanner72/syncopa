@@ -23,7 +23,27 @@ if (!empty($_GET['status'])) {
     $filter['status'] = $_GET['status'];
 }
 
+// Anmeldelisten kommender Ausrückungen mit den aktuellen Mitgliedern abgleichen (neue Mitglieder, Formationen)
+$ausrueckung->anwesenheitErgaenzen();
 $ausrueckungen = $ausrueckung->getAll($filter);
+// Für Mobile-Ansicht: aufsteigend nach Datum
+$ausrueckungenAsc = array_reverse($ausrueckungen);
+
+// Eigenen Anwesenheitsstatus für alle Ausrückungen laden
+$meineMitgliedId = null;
+$meineAnwesenheiten = [];
+$db = Database::getInstance();
+$currentBenutzer = $db->fetchOne("SELECT mitglied_id FROM benutzer WHERE id = ?", [Session::getUserId()]);
+if ($currentBenutzer && $currentBenutzer['mitglied_id']) {
+    $meineMitgliedId = $currentBenutzer['mitglied_id'];
+    $rows = $db->fetchAll(
+        "SELECT ausrueckung_id, status FROM anwesenheit WHERE mitglied_id = ?",
+        [$meineMitgliedId]
+    );
+    foreach ($rows as $row) {
+        $meineAnwesenheiten[$row['ausrueckung_id']] = $row['status'];
+    }
+}
 
 include 'includes/header.php';
 ?>
@@ -44,9 +64,17 @@ include 'includes/header.php';
     </div>
 </div>
 
-<!-- Filter -->
+<!-- Filter (auf dem Handy ein-/ausklappbar, standardmäßig eingeklappt) -->
+<?php $aktiveFilter = count(array_filter([$_GET['typ'] ?? '', $_GET['status'] ?? '', $_GET['von_datum'] ?? '', $_GET['bis_datum'] ?? ''], fn($v) => $v !== '')); ?>
 <div class="card mb-4">
-    <div class="card-body">
+    <button type="button" class="btn btn-link text-decoration-none text-body d-flex d-md-none justify-content-between align-items-center w-100 px-3 py-2 collapsed"
+            data-bs-toggle="collapse" data-bs-target="#filterBereich" aria-expanded="false" aria-controls="filterBereich">
+        <span><i class="bi bi-funnel"></i> Filter
+            <?php if ($aktiveFilter): ?><span class="badge bg-primary ms-1"><?php echo $aktiveFilter; ?> aktiv</span><?php endif; ?>
+        </span>
+        <i class="bi bi-chevron-down filter-pfeil"></i>
+    </button>
+    <div class="card-body collapse d-md-block" id="filterBereich">
         <form method="GET" class="row g-3">
             <div class="col-md-3">
                 <label for="typ" class="form-label">Typ</label>
@@ -95,7 +123,8 @@ include 'includes/header.php';
     </div>
 </div>
 
-<!-- Liste -->
+<!-- Liste Desktop -->
+<div class="d-none d-md-block">
 <div class="card">
     <div class="card-body">
         <div class="table-responsive p-2">
@@ -104,17 +133,18 @@ include 'includes/header.php';
                     <tr>
                         <th>Datum/Zeit</th>
                         <th>Titel</th>
-                        <th>Typ</th>
-                        <th>Ort</th>
-                        <th>Status</th>
+                        <th class="d-none d-md-table-cell">Typ</th>
+                        <th class="d-none d-md-table-cell">Ort</th>
+                        <th class="d-none d-md-table-cell">Status</th>
+                        <th class="d-none d-md-table-cell">Formation</th>
                         <th>Anwesenheit</th>
-                        <th class="text-end no-print">Aktionen</th>
+                        <th class="text-end no-print d-none d-md-table-cell">Aktionen</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($ausrueckungen as $a): ?>
                     <tr>
-                        <td>
+                        <td data-order="<?php echo date('Y-m-d H:i', strtotime($a['start_datum'])); ?>">
                             <strong><?php echo date('d.m.Y', strtotime($a['start_datum'])); ?></strong><br>
                             <small class="text-muted">
                                 <?php echo date('H:i', strtotime($a['start_datum'])); ?> Uhr
@@ -123,10 +153,10 @@ include 'includes/header.php';
                         <td>
                             <strong><?php echo htmlspecialchars($a['titel']); ?></strong>
                             <?php if ($a['beschreibung']): ?>
-                            <br><small class="text-muted"><?php echo htmlspecialchars(substr($a['beschreibung'], 0, 50)); ?>...</small>
+                            <br><small class="text-muted d-none d-md-inline"><?php echo htmlspecialchars(substr($a['beschreibung'], 0, 50)); ?>...</small>
                             <?php endif; ?>
                         </td>
-                        <td>
+                        <td class="d-none d-md-table-cell">
                             <?php
                             $typeColors = [
                                 'Probe' => 'secondary',
@@ -142,14 +172,14 @@ include 'includes/header.php';
                                 <?php echo htmlspecialchars($a['typ']); ?>
                             </span>
                         </td>
-                        <td>
+                        <td class="d-none d-md-table-cell">
                             <?php if ($a['ort']): ?>
                                 <i class="bi bi-geo-alt"></i> <?php echo htmlspecialchars($a['ort']); ?>
                             <?php else: ?>
                                 <span class="text-muted">-</span>
                             <?php endif; ?>
                         </td>
-                        <td>
+                        <td class="d-none d-md-table-cell">
                             <?php
                             $statusColors = [
                                 'geplant' => 'warning',
@@ -167,13 +197,60 @@ include 'includes/header.php';
                                 <?php echo $statusText[$a['status']]; ?>
                             </span>
                         </td>
-                        <td>
-                            <small>
-                                <span class="text-success">✓ <?php echo $a['zugesagt'] ?? 0; ?></span> /
-                                <span class="text-danger">✗ <?php echo $a['abgesagt'] ?? 0; ?></span>
-                            </small>
+                        <td class="d-none d-md-table-cell">
+                            <?php if (!empty($a['formation_name'])): ?>
+                            <span class="badge" style="background-color:<?php echo htmlspecialchars($a['formation_farbe']); ?>;color:#fff">
+                                <?php echo htmlspecialchars($a['formation_kuerzel'] ?: $a['formation_name']); ?>
+                            </span>
+                            <?php else: ?>
+                            <span class="text-muted">–</span>
+                            <?php endif; ?>
                         </td>
-                        <td class="text-end no-print">
+                        <td>
+                            <?php
+                                $meinStatus = $meineAnwesenheiten[$a['id']] ?? null;
+                                $abgestimmt = in_array($meinStatus, ['zugesagt', 'abgesagt', 'ungewiss']);
+                            ?>
+                            <!-- Zähler mit data-Attributen für JS-Update -->
+                            <div class="anwesenheit-zaehler mb-1 d-none d-md-block" data-ausrueckung-id="<?php echo $a['id']; ?>">
+                                <small>
+                                    <span class="text-success" data-typ="zugesagt">✓ <?php echo $a['zugesagt'] ?? 0; ?></span>
+                                    <span class="text-warning mx-1" data-typ="ungewiss">? <?php echo $a['ungewiss'] ?? 0; ?></span>
+                                    <span class="text-danger" data-typ="abgesagt">✗ <?php echo $a['abgesagt'] ?? 0; ?></span>
+                                    <span class="text-secondary ms-1" data-typ="keine_antwort" title="Keine Antwort">– <?php echo $a['keine_antwort'] ?? 0; ?></span>
+                                </small>
+                            </div>
+                            <?php if ($meineMitgliedId): ?>
+                            <div class="btn-group btn-group-sm anwesenheit-buttons"
+                                 data-ausrueckung-id="<?php echo $a['id']; ?>"
+                                 data-mein-status="<?php echo htmlspecialchars($meinStatus ?? ''); ?>">
+                                <button type="button"
+                                    class="btn btn-anwesenheit <?php echo $abgestimmt && $meinStatus !== 'zugesagt' ? 'btn-outline-success dimmed' : 'btn-success'; ?>"
+                                    data-status="zugesagt" title="Ja, ich komme">
+                                    <i class="bi bi-check-lg"></i>
+                                </button>
+                                <button type="button"
+                                    class="btn btn-anwesenheit <?php echo $abgestimmt && $meinStatus !== 'ungewiss' ? 'btn-outline-warning dimmed' : 'btn-warning'; ?>"
+                                    data-status="ungewiss" title="Ungewiss">
+                                    <i class="bi bi-question-lg"></i>
+                                </button>
+                                <button type="button"
+                                    class="btn btn-anwesenheit <?php echo $abgestimmt && $meinStatus !== 'abgesagt' ? 'btn-outline-danger dimmed' : 'btn-danger'; ?>"
+                                    data-status="abgesagt" title="Nein, ich kann nicht">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
+                            <?php else: ?>
+                            <div class="btn-group btn-group-sm"
+                                 data-bs-toggle="tooltip" data-bs-placement="top"
+                                 title="Du bist mit keinem Mitglied verknüpft. Nur aktive Mitglieder können Abstimmen!">
+                                <button type="button" class="btn btn-success opacity-25" disabled><i class="bi bi-check-lg"></i></button>
+                                <button type="button" class="btn btn-warning opacity-25" disabled><i class="bi bi-question-lg"></i></button>
+                                <button type="button" class="btn btn-danger opacity-25" disabled><i class="bi bi-x-lg"></i></button>
+                            </div>
+                            <?php endif; ?>
+                        </td>
+                        <td class="text-end no-print d-none d-md-table-cell">
                             <div class="table-actions">
                                 <a href="ausrueckung_detail.php?id=<?php echo $a['id']; ?>" 
                                    class="btn btn-sm btn-info" title="Details">
@@ -201,13 +278,236 @@ include 'includes/header.php';
         </div>
     </div>
 </div>
+</div><!-- /d-none d-md-block -->
+
+<!-- Liste Mobile -->
+<div class="d-block d-md-none">
+    <?php
+    // Typ-Farben für Mobile-Badge
+    $typeColorsMobile = [
+        'Probe' => 'secondary', 'Konzert' => 'primary', 'Ausrückung' => 'success',
+        'Fest' => 'warning', 'Wertung' => 'danger', 'Sonstiges' => 'info'
+    ];
+    foreach ($ausrueckungenAsc as $a):
+        $meinStatus = $meineAnwesenheiten[$a['id']] ?? null;
+        $abgestimmt = in_array($meinStatus, ['zugesagt', 'abgesagt', 'ungewiss']);
+    ?>
+    <div class="card mb-2 <?php echo $a['status'] === 'abgesagt' ? 'border-danger' : ''; ?>">
+        <div class="card-body py-2 px-3">
+            <div class="d-flex align-items-center justify-content-between gap-2">
+                <!-- Spalte 1: Name + Datum -->
+                <div class="flex-grow-1 overflow-hidden">
+                    <div class="fw-semibold text-truncate">
+                        <a href="ausrueckung_detail.php?id=<?php echo $a['id']; ?>" class="text-decoration-none text-dark"><?php echo htmlspecialchars($a['titel']); ?></a>
+                    </div>
+                    <small class="text-muted">
+                        <i class="bi bi-calendar3"></i>
+                        <?php echo date('d.m.Y', strtotime($a['start_datum'])); ?>
+                        &nbsp;<?php echo date('H:i', strtotime($a['start_datum'])); ?> Uhr
+                    </small>
+                    <?php if (!empty($a['formation_name'])): ?>
+                    <div class="mt-1">
+                        <span class="badge" style="background-color:<?php echo htmlspecialchars($a['formation_farbe']); ?>;color:#fff;font-size:10px">
+                            <?php echo htmlspecialchars($a['formation_kuerzel'] ?: $a['formation_name']); ?>
+                        </span>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <!-- Spalte 2: 3 Buttons -->
+                <?php if ($meineMitgliedId): ?>
+                <div class="flex-shrink-0">
+                    <div class="btn-group anwesenheit-buttons"
+                         data-ausrueckung-id="<?php echo $a['id']; ?>"
+                         data-mein-status="<?php echo htmlspecialchars($meinStatus ?? ''); ?>">
+                        <button type="button"
+                            class="btn btn-anwesenheit btn-sm <?php echo $abgestimmt && $meinStatus !== 'zugesagt' ? 'btn-outline-success dimmed' : 'btn-success'; ?>"
+                            data-status="zugesagt" title="Ja">
+                            <i class="bi bi-check-lg"></i>
+                        </button>
+                        <button type="button"
+                            class="btn btn-anwesenheit btn-sm <?php echo $abgestimmt && $meinStatus !== 'ungewiss' ? 'btn-outline-warning dimmed' : 'btn-warning'; ?>"
+                            data-status="ungewiss" title="Ungewiss">
+                            <i class="bi bi-question-lg"></i>
+                        </button>
+                        <button type="button"
+                            class="btn btn-anwesenheit btn-sm <?php echo $abgestimmt && $meinStatus !== 'abgesagt' ? 'btn-outline-danger dimmed' : 'btn-danger'; ?>"
+                            data-status="abgesagt" title="Nein">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <?php else: ?>
+                <div class="flex-shrink-0"
+                     data-bs-toggle="tooltip" data-bs-placement="left"
+                     title="Du bist mit keinem Mitglied verknüpft. Nur aktive Mitglieder können Abstimmen!">
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-success opacity-25" disabled><i class="bi bi-check-lg"></i></button>
+                        <button type="button" class="btn btn-warning opacity-25" disabled><i class="bi bi-question-lg"></i></button>
+                        <button type="button" class="btn btn-danger opacity-25" disabled><i class="bi bi-x-lg"></i></button>
+                    </div>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+    <?php endforeach; ?>
+</div>
+
+<!-- Modal: Grund für Absage -->
+<div class="modal fade" id="absageModal" tabindex="-1" aria-labelledby="absageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="absageModalLabel">
+                    <i class="bi bi-x-circle"></i> Absagegrund
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3">Möchtest du einen Grund für deine Absage angeben? (optional)</p>
+                <input type="text" class="form-control" id="absage-grund-input"
+                       placeholder="z.B. Urlaub, Krankheit, anderer Termin ...">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x"></i> Abbrechen
+                </button>
+                <button type="button" class="btn btn-danger" id="absage-bestaetigen">
+                    <i class="bi bi-check-lg"></i> Absage speichern
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php include 'includes/footer.php'; ?>
 
+<style>
+[data-bs-target="#filterBereich"] .filter-pfeil { transition: transform .2s; }
+[data-bs-target="#filterBereich"]:not(.collapsed) .filter-pfeil { transform: rotate(180deg); }
+.btn-anwesenheit.dimmed {
+    opacity: 0.35;
+}
+.btn-anwesenheit {
+    transition: all 0.15s ease;
+}
+
+@media (max-width: 767.98px) {
+    .btn-anwesenheit {
+        padding: 0.45rem 0.7rem;
+        font-size: 1.05rem;
+    }
+}
+</style>
+
 <script>
 $(document).ready(function() {
+    // Tooltips initialisieren
+    $('[data-bs-toggle="tooltip"]').tooltip();
+
     $('#ausrueckungenTable').DataTable({
-        order: [[0, 'desc']]
+        order: [[0, 'asc']]
+    });
+
+    const statusMap = {
+        'zugesagt': { solid: 'btn-success',  outline: 'btn-outline-success'  },
+        'ungewiss': { solid: 'btn-warning',  outline: 'btn-outline-warning'  },
+        'abgesagt': { solid: 'btn-danger',   outline: 'btn-outline-danger'   }
+    };
+
+    // Pending-Absage zwischenspeichern bis Modal bestätigt wird
+    let pendingAbsage = null;
+
+    function updateButtons(gruppe, neuerStatus) {
+        gruppe.find('.btn-anwesenheit').each(function() {
+            const b = $(this);
+            const s = b.data('status');
+            const colors = statusMap[s];
+            b.removeClass('btn-success btn-warning btn-danger btn-outline-success btn-outline-warning btn-outline-danger dimmed');
+            if (s === neuerStatus) {
+                b.addClass(colors.solid);
+            } else {
+                b.addClass(colors.outline + ' dimmed');
+            }
+        });
+    }
+
+    function updateZaehler(ausrueckungId, alterStatus, neuerStatus) {
+        const zaehler = $('.anwesenheit-zaehler[data-ausrueckung-id="' + ausrueckungId + '"]');
+        if (!zaehler.length) return;
+
+        if (alterStatus && (statusMap[alterStatus] || alterStatus === 'keine_antwort')) {
+            const altSpan = zaehler.find('[data-typ="' + alterStatus + '"]');
+            const altVal = parseInt(altSpan.text().replace(/[^0-9]/g, '')) || 0;
+            if (altVal > 0) altSpan.text(altSpan.text().replace(/[0-9]+/, altVal - 1));
+        }
+        const neuSpan = zaehler.find('[data-typ="' + neuerStatus + '"]');
+        const neuVal = parseInt(neuSpan.text().replace(/[^0-9]/g, '')) || 0;
+        neuSpan.text(neuSpan.text().replace(/[0-9]+/, neuVal + 1));
+    }
+
+    function speichern(ausrueckungId, alterStatus, neuerStatus, grund) {
+        updateButtons(
+            $('.anwesenheit-buttons[data-ausrueckung-id="' + ausrueckungId + '"]'),
+            neuerStatus
+        );
+        updateZaehler(ausrueckungId, alterStatus, neuerStatus);
+        $('.anwesenheit-buttons[data-ausrueckung-id="' + ausrueckungId + '"]').data('mein-status', neuerStatus);
+
+        fetch('api/anwesenheit_setzen.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'ausrueckung_id=' + ausrueckungId
+                + '&status=' + encodeURIComponent(neuerStatus)
+                + '&grund=' + encodeURIComponent(grund || '')
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) console.error('Fehler beim Speichern:', data.message);
+        })
+        .catch(err => console.error('Netzwerkfehler:', err));
+    }
+
+    $(document).on('click', '.btn-anwesenheit', function() {
+        const btn = $(this);
+        const gruppe = btn.closest('.anwesenheit-buttons');
+        const ausrueckungId = gruppe.data('ausrueckung-id');
+        const neuerStatus = btn.data('status');
+        const alterStatus = gruppe.data('mein-status') || '';
+
+        if (neuerStatus === alterStatus) return;
+
+        if (neuerStatus === 'abgesagt') {
+            // Modal öffnen, Absage erst nach Bestätigung speichern
+            pendingAbsage = { ausrueckungId, alterStatus };
+            $('#absage-grund-input').val('');
+            $('#absageModal').modal('show');
+            // Focus ins Textfeld setzen
+            $('#absageModal').one('shown.bs.modal', function() {
+                $('#absage-grund-input').trigger('focus');
+            });
+        } else {
+            speichern(ausrueckungId, alterStatus, neuerStatus, '');
+        }
+    });
+
+    // Modal: Absage bestätigen
+    $('#absage-bestaetigen').on('click', function() {
+        if (!pendingAbsage) return;
+        const grund = $('#absage-grund-input').val().trim();
+        speichern(pendingAbsage.ausrueckungId, pendingAbsage.alterStatus, 'abgesagt', grund);
+        pendingAbsage = null;
+        $('#absageModal').modal('hide');
+    });
+
+    // Enter im Grundfeld = Bestätigen
+    $('#absage-grund-input').on('keydown', function(e) {
+        if (e.key === 'Enter') $('#absage-bestaetigen').trigger('click');
+    });
+
+    // Modal abgebrochen → kein Status ändern
+    $('#absageModal').on('hidden.bs.modal', function() {
+        pendingAbsage = null;
     });
 });
 </script>

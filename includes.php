@@ -11,3 +11,1098 @@ require_once __DIR__ . '/classes/Ausrueckung.php';
 require_once __DIR__ . '/classes/Noten.php';
 require_once __DIR__ . '/classes/Instrument.php';
 require_once __DIR__ . '/classes/Uniform.php';
+require_once __DIR__ . '/classes/Nummernkreis.php';
+require_once __DIR__ . '/classes/BmvApi.php';
+require_once __DIR__ . '/classes/BmvMitgliederSync.php';
+require_once __DIR__ . '/classes/BmvDaten.php';
+require_once __DIR__ . '/classes/BmvZusatzdaten.php';
+require_once __DIR__ . '/classes/Ehrungen.php';
+require_once __DIR__ . '/classes/BmvInventar.php';
+require_once __DIR__ . '/classes/BmvNoten.php';
+require_once __DIR__ . '/classes/Mitgliedsart.php';
+require_once __DIR__ . '/classes/MailKrypto.php';
+require_once __DIR__ . '/classes/MailVerbindung.php';
+require_once __DIR__ . '/classes/MailNachricht.php';
+require_once __DIR__ . '/classes/ImapClient.php';
+require_once __DIR__ . '/classes/MailSender.php';
+require_once __DIR__ . '/classes/MailKonto.php';
+require_once __DIR__ . '/classes/MailSpamfilter.php';
+require_once __DIR__ . '/classes/MailKontakt.php';
+require_once __DIR__ . '/classes/MailFreigabe.php';
+require_once __DIR__ . '/classes/Kassabuch.php';
+
+// Migration: Mehrfachrollen-Pivot-Tabelle
+(function() {
+    $db = Database::getInstance();
+    $db->execute("CREATE TABLE IF NOT EXISTS benutzer_rollen (
+        benutzer_id INT NOT NULL,
+        rolle_id    INT NOT NULL,
+        PRIMARY KEY (benutzer_id, rolle_id),
+        FOREIGN KEY (benutzer_id) REFERENCES benutzer(id) ON DELETE CASCADE,
+        FOREIGN KEY (rolle_id)    REFERENCES rollen(id)   ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    // Bestehende Benutzer migrieren (einmalig): rolle_id → benutzer_rollen
+    $db->execute("INSERT IGNORE INTO benutzer_rollen (benutzer_id, rolle_id)
+        SELECT id, rolle_id FROM benutzer WHERE rolle_id IS NOT NULL");
+
+    // Migration: Telemetry-Einstellungen für bestehende Installationen
+    $existing = $db->fetchOne("SELECT COUNT(*) as cnt FROM einstellungen WHERE schluessel = 'installation_id'");
+    if ((int)($existing['cnt'] ?? 0) === 0) {
+        $db->execute(
+            "INSERT IGNORE INTO einstellungen (schluessel, wert, beschreibung, aktualisiert_am) VALUES (?, ?, ?, NOW())",
+            ['installation_id', bin2hex(random_bytes(16)), 'Eindeutige Installations-ID']
+        );
+    }
+    $db->execute(
+        "INSERT IGNORE INTO einstellungen (schluessel, wert, beschreibung, aktualisiert_am) VALUES (?, ?, ?, NOW())",
+        ['telemetry_enabled', '1', 'Anonyme Nutzungsstatistik senden']
+    );
+})();
+
+
+// Formationen
+require_once __DIR__ . '/classes/Formation.php';
+
+// Migration-Guard: Formation-Tabellen anlegen falls noch nicht vorhanden
+(function() {
+    $db = Database::getInstance();
+    $db->execute("CREATE TABLE IF NOT EXISTS formationen (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        name        VARCHAR(100) NOT NULL,
+        kuerzel     VARCHAR(10)  NULL,
+        farbe       VARCHAR(7)   NOT NULL DEFAULT '#4471A3',
+        beschreibung TEXT        NULL,
+        aktiv       TINYINT(1)  NOT NULL DEFAULT 1,
+        erstellt_am TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $db->execute("CREATE TABLE IF NOT EXISTS mitglied_formationen (
+        id           INT AUTO_INCREMENT PRIMARY KEY,
+        mitglied_id  INT  NOT NULL,
+        formation_id INT  NOT NULL,
+        rolle        VARCHAR(50) NULL,
+        seit_datum   DATE        NULL,
+        UNIQUE KEY uk_mitglied_formation (mitglied_id, formation_id),
+        CONSTRAINT fk_mf_mitglied  FOREIGN KEY (mitglied_id)  REFERENCES mitglieder(id)  ON DELETE CASCADE,
+        CONSTRAINT fk_mf_formation FOREIGN KEY (formation_id) REFERENCES formationen(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // Spalten sicher hinzufügen. Hinweis: "ADD COLUMN IF NOT EXISTS" ist auf älteren
+    // MySQL-Versionen ein Syntaxfehler (nicht nur "Spalte existiert bereits") und wird
+    // vom try/catch stillschweigend verschluckt – die Spalte wird dann NIE angelegt.
+    // Deshalb hier stattdessen über information_schema prüfen (funktioniert auf allen Versionen).
+    $columnExists = function(string $table, string $column) use ($db): bool {
+        $row = $db->fetchOne(
+            "SELECT COUNT(*) as cnt FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?",
+            [$table, $column]
+        );
+        return (int)($row['cnt'] ?? 0) > 0;
+    };
+
+    foreach (['ausrueckungen', 'noten', 'finanzen'] as $tbl) {
+        if (!$columnExists($tbl, 'formation_id')) {
+            $db->execute("ALTER TABLE `{$tbl}` ADD COLUMN formation_id INT NULL");
+        }
+    }
+    // formation_id für formationsspezifische Instrumentenzuordnung
+    if (!$columnExists('mitglied_instrumente', 'formation_id')) {
+        $db->execute("ALTER TABLE `mitglied_instrumente` ADD COLUMN formation_id INT NULL");
+    }
+    // register_id für formationsspezifisches Register pro Mitglied
+    if (!$columnExists('mitglied_formationen', 'register_id')) {
+        $db->execute("ALTER TABLE `mitglied_formationen` ADD COLUMN register_id INT NULL");
+    }
+
+    // Berechtigungen-Tabelle: Duplikate bereinigen + UNIQUE KEY anlegen (einmalig)
+    try {
+        $db->execute("DELETE FROM berechtigungen WHERE id NOT IN (
+            SELECT id FROM (SELECT MAX(id) as id FROM berechtigungen GROUP BY rolle, modul) tmp
+        )");
+        $db->execute("ALTER TABLE berechtigungen ADD UNIQUE KEY uk_rolle_modul (rolle, modul)");
+    } catch (\Throwable $e) { /* UNIQUE KEY bereits vorhanden */ }
+
+    // Berechtigungen für Formationen-Modul (nur beim Erstinstall)
+    $formPerm = $db->fetchOne("SELECT COUNT(*) as cnt FROM berechtigungen WHERE modul = 'formationen'");
+    if ((int)($formPerm['cnt'] ?? 0) === 0) {
+        $db->execute("INSERT INTO berechtigungen (rolle, modul, lesen, schreiben, loeschen) VALUES
+            ('admin','formationen',1,1,1),('obmann','formationen',1,0,0),
+            ('kapellmeister','formationen',1,0,0),('kassier','formationen',1,0,0),
+            ('schriftfuehrer','formationen',1,0,0),('instrumentenwart','formationen',1,0,0),
+            ('trachtenwart','formationen',1,0,0),('jugendbeauftragter','formationen',1,0,0),
+            ('notenwart','formationen',1,0,0),('mitglied','formationen',1,0,0)");
+    }
+
+    // Rolle "extern" für externe Gastmusiker
+    $db->execute("INSERT IGNORE INTO rollen (id, name, beschreibung, ist_admin, farbe, sortierung, aktiv)
+        VALUES (12, 'extern', 'Externer Gastmusiker', 0, 'secondary', 998, 1)");
+    $externPerm = $db->fetchOne("SELECT COUNT(*) as cnt FROM berechtigungen WHERE rolle = 'extern'");
+    if ((int)($externPerm['cnt'] ?? 0) === 0) {
+        $db->execute("INSERT INTO berechtigungen (rolle, modul, lesen, schreiben, loeschen) VALUES
+            ('extern','ausrueckungen',1,0,0),
+            ('extern','noten',1,0,0),
+            ('extern','formationen',1,0,0)");
+    }
+})();
+
+// Formations-Kontext für eingeloggte Nicht-Admins sicherstellen (Fallback auf jeder Seite)
+if (Session::isLoggedIn() && !Session::isAdmin() && Session::getFormationId() === null) {
+    $formIds = Session::getFormationIds();
+    if (count($formIds) === 1) {
+        Session::setFormationId((int)$formIds[0]);
+    }
+}
+
+// Für "extern"-Benutzer: Zugriff sperren wenn keine Formation gesetzt werden konnte
+if (Session::isLoggedIn() && !Session::isAdmin() && Session::getFormationId() === null) {
+    $dbCheck  = Database::getInstance();
+    $uid      = Session::getUserId();
+    // Rollen direkt aus DB lesen (unabhängig vom Session-Cache)
+    $isExtern = $dbCheck->fetchOne(
+        "SELECT COUNT(*) as cnt
+         FROM benutzer_rollen br
+         JOIN rollen r ON br.rolle_id = r.id
+         WHERE br.benutzer_id = ? AND r.name = 'extern' AND r.aktiv = 1",
+        [$uid]
+    );
+    if (!empty($isExtern['cnt']) && (int)$isExtern['cnt'] > 0) {
+        $currentPage = basename($_SERVER['PHP_SELF']);
+        if (!in_array($currentPage, ['login.php', 'logout.php'])) {
+            Session::setFlashMessage('danger', 'Kein Zugriff: Ihrem Gastkonto ist keine Formation zugewiesen. Bitte wenden Sie sich an den Administrator.');
+            header('Location: login.php');
+            exit;
+        }
+    }
+}
+
+// Migration: Instrument-Pattern für Noten-Aufteilung
+(function() {
+    $db = Database::getInstance();
+    $db->execute("CREATE TABLE IF NOT EXISTS noten_instrumente_pattern (
+        id           INT AUTO_INCREMENT PRIMARY KEY,
+        name         VARCHAR(100)  NOT NULL,
+        pattern      VARCHAR(500)  NOT NULL,
+        sortierung   INT           NOT NULL DEFAULT 100,
+        aktiv        TINYINT(1)    NOT NULL DEFAULT 1,
+        beschreibung TEXT          NULL,
+        erstellt_am  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $cnt = $db->fetchOne("SELECT COUNT(*) as cnt FROM noten_instrumente_pattern");
+    if ((int)($cnt['cnt'] ?? 0) === 0) {
+        $defaults = [
+            [10,  'Piccolo / Piccoloflöte',   'Piccolo(?:fl[öu]te)?',       'Matcht "Piccolo" und "Piccoloflöte"'],
+            [20,  'Querflöte',                 'Querfl[öu]te[n]?',           ''],
+            [22,  'Bassflöte',                 'Bassfl[öu]te',               'Vor allgemeiner Flöte einordnen'],
+            [25,  'Flöte',                     'Fl[öu]te[n]?',              ''],
+            [30,  'Bassklarinette',            'Bassklarinette',             'Vor Klarinette einordnen'],
+            [35,  'Klarinette',                'Klarinette[n]?',            ''],
+            [40,  'Englischhorn',              'Englisch(?:es)?\s*Horn',    'Matcht "Englischhorn" und "Englisches Horn"'],
+            [45,  'Oboe',                      'Oboe[n]?',                  ''],
+            [48,  'Kontrafagott',              'Kontrafagott',               'Vor Fagott einordnen'],
+            [50,  'Fagott',                    'Fagott[e]?',                ''],
+            [55,  'Sopransaxophon',            'Sopransaxophon',            'Vor allgemeinem Saxophon'],
+            [56,  'Altsaxophon',               'Altsaxophon',               'Vor allgemeinem Saxophon'],
+            [57,  'Tenorsaxophon',             'Tenorsaxophon',             'Vor allgemeinem Saxophon'],
+            [58,  'Baritonsaxophon',           'Baritonsaxophon',           'Vor allgemeinem Saxophon'],
+            [59,  'Basssaxophon',              'Basssaxophon',              'Vor allgemeinem Saxophon'],
+            [60,  'Saxophon',                  'Saxophon[e]?',              ''],
+            [70,  'Flügelhorn',                'Fl[üu]gelhorn(?:er)?',     ''],
+            [72,  'Cornet',                    'Cornet(?:te)?',             ''],
+            [75,  'Trompete',                  'Trompete[n]?',              ''],
+            [80,  'Tenorhorn',                 'Tenorhorn(?:er)?',           'Vor Horn einordnen!'],
+            [82,  'Waldhorn',                  'Waldhorn(?:er)?',            'Vor Horn einordnen!'],
+            [85,  'Horn',                      'Horn(?:er)?',               'Nach Tenorhorn und Waldhorn einordnen'],
+            [88,  'Bariton / Baryton',         'Bar[iy]ton[e]?',            'Matcht "Bariton" und österr. "Baryton"'],
+            [90,  'Euphonium',                 'Euphonium',                 ''],
+            [93,  'Kontrabassposaune',         'Kontrabassposaune',          'Vor Bassposaune einordnen'],
+            [95,  'Bassposaune',               'Bassposaune',                'Vor Posaune einordnen'],
+            [100, 'Posaune',                   'Posaune[n]?',               ''],
+            [103, 'Kontrabasstuba',            'Kontrabasstuba',             'Vor Basstuba und Tuba einordnen'],
+            [105, 'Basstuba',                  'Basstuba',                   'Vor Tuba einordnen'],
+            [108, 'Tuba',                      'Tuba[s]?',                  ''],
+            [110, 'Bass (Schlüssel-Präfix)',   '(?:Es|[A-H])-Bass',         'Matcht "Es-Bass", "B-Bass", "C-Bass" etc.'],
+            [112, 'Bass (Schlüssel-Suffix)',   'Bass-(?:Es|[A-H])',          'Matcht "Bass-C", "Bass-B", "Bass-Es" etc.'],
+            [115, 'Bass',                      'Bass',                       'Allgemeines Bass-Pattern – nach spezifischeren einordnen'],
+            [120, 'Schlagzeug',                'Schlagzeug',                ''],
+            [122, 'Drumset',                   'Drumset',                   ''],
+            [124, 'Kleine Trommel',            'Kleine\s*Trommel',          ''],
+            [126, 'Große Trommel',             'Grosse?\s*Trommel',         'Matcht "Große" und "Grosse Trommel"'],
+            [128, 'Pauke',                     'Pauken?',                   ''],
+            [130, 'Becken',                    'Becken',                    ''],
+            [132, 'Glockenspiel',              'Glockenspiel',              ''],
+            [134, 'Xylophon',                  'Xylophon',                  ''],
+            [136, 'Vibraphon',                 'Vibraphon',                 ''],
+            [138, 'Marimba',                   'Marimba',                   ''],
+            [140, 'Percussion',                'Percussion',                ''],
+            [150, 'Partitur',                  'Partitur',                  ''],
+            [152, 'Direktion',                 'Direktion',                 ''],
+            [154, 'Score',                     'Score',                     ''],
+            [160, 'Kontrabass',                'Kontrabass',                ''],
+            [165, 'Akkordeon',                 'Akkordeon',                 ''],
+            [170, 'Klavier',                   'Klavier',                   ''],
+            [175, 'Orgel',                     'Orgel',                     ''],
+            [180, 'Gitarre',                   'Gitarre',                   ''],
+        ];
+        foreach ($defaults as [$sort, $name, $pattern, $beschr]) {
+            $db->execute(
+                "INSERT INTO noten_instrumente_pattern (sortierung, name, pattern, beschreibung) VALUES (?,?,?,?)",
+                [$sort, $name, $pattern, $beschr ?: null]
+            );
+        }
+    }
+})();
+
+// Probe-Modul (GigSheet Integration)
+(function() {
+    $db = Database::getInstance();
+
+    $db->execute("CREATE TABLE IF NOT EXISTS noten_stimmen (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        noten_id    INT NOT NULL,
+        datei_id    INT NULL,
+        name        VARCHAR(100) NOT NULL,
+        seite_von   INT NOT NULL DEFAULT 1,
+        seite_bis   INT NOT NULL DEFAULT 1,
+        register_id INT NULL,
+        reihenfolge INT NOT NULL DEFAULT 0,
+        UNIQUE KEY uk_noten_stimme (noten_id, name),
+        FOREIGN KEY (noten_id) REFERENCES noten(id) ON DELETE CASCADE,
+        FOREIGN KEY (datei_id) REFERENCES noten_dateien(id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $db->execute("CREATE TABLE IF NOT EXISTS probe_session (
+        id               INT AUTO_INCREMENT PRIMARY KEY,
+        noten_id         INT NOT NULL,
+        formation_id     INT NULL,
+        kapellmeister_id INT NOT NULL,
+        aktiv            TINYINT(1) NOT NULL DEFAULT 1,
+        gestartet_am     TIMESTAMP  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (noten_id)         REFERENCES noten(id),
+        FOREIGN KEY (kapellmeister_id) REFERENCES benutzer(id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $db->execute("CREATE TABLE IF NOT EXISTS probe_session_spieler (
+        id           INT AUTO_INCREMENT PRIMARY KEY,
+        session_id   INT NOT NULL,
+        benutzer_id  INT NOT NULL,
+        stimme_id    INT NULL,
+        joined_am    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (session_id)  REFERENCES probe_session(id) ON DELETE CASCADE,
+        FOREIGN KEY (benutzer_id) REFERENCES benutzer(id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $db->execute("CREATE TABLE IF NOT EXISTS probe_session_viewer (
+        benutzer_id  INT NOT NULL,
+        noten_id     INT NOT NULL,
+        updated_at   DATETIME NOT NULL,
+        PRIMARY KEY (benutzer_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $db->execute("CREATE TABLE IF NOT EXISTS noten_annotationen (
+        id           INT AUTO_INCREMENT PRIMARY KEY,
+        benutzer_id  INT NOT NULL,
+        stimme_id    INT NOT NULL,
+        seite_number INT NOT NULL,
+        datei_path   VARCHAR(255) NULL,
+        erstellt_am  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        geaendert_am TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_annotation (benutzer_id, stimme_id, seite_number),
+        FOREIGN KEY (benutzer_id) REFERENCES benutzer(id),
+        FOREIGN KEY (stimme_id)   REFERENCES noten_stimmen(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $db->execute("CREATE TABLE IF NOT EXISTS noten_favoriten (
+        benutzer_id INT NOT NULL,
+        stimme_id   INT NOT NULL,
+        PRIMARY KEY (benutzer_id, stimme_id),
+        FOREIGN KEY (benutzer_id) REFERENCES benutzer(id)      ON DELETE CASCADE,
+        FOREIGN KEY (stimme_id)   REFERENCES noten_stimmen(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // Probe-Berechtigungen (nur beim Erstinstall)
+    $probePerm = $db->fetchOne("SELECT COUNT(*) as cnt FROM berechtigungen WHERE modul = 'probe'");
+    if ((int)($probePerm['cnt'] ?? 0) === 0) {
+        $db->execute("INSERT INTO berechtigungen (rolle, modul, lesen, schreiben, loeschen) VALUES
+            ('admin',              'probe', 1, 1, 1),
+            ('kapellmeister',      'probe', 1, 1, 1),
+            ('jugendbeauftragter', 'probe', 1, 1, 0),
+            ('notenwart',          'probe', 1, 1, 0),
+            ('obmann',             'probe', 1, 0, 0),
+            ('schriftfuehrer',     'probe', 1, 0, 0),
+            ('kassier',            'probe', 1, 0, 0),
+            ('instrumentenwart',   'probe', 1, 0, 0),
+            ('trachtenwart',       'probe', 1, 0, 0),
+            ('mitglied',           'probe', 1, 1, 0),
+            ('extern',             'probe', 1, 0, 0)");
+    }
+})();
+
+// Migration: last_seen für Anwesenheitserkennung in Probe-Session
+(function() {
+    $db = Database::getInstance();
+    $col = $db->fetchOne(
+        "SELECT COUNT(*) as cnt FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'probe_session_spieler' AND COLUMN_NAME = 'last_seen'"
+    );
+    if ((int)($col['cnt'] ?? 0) === 0) {
+        $db->execute("ALTER TABLE probe_session_spieler ADD COLUMN last_seen DATETIME NULL");
+    }
+})();
+
+// Notenbücher
+(function() {
+    $db = Database::getInstance();
+
+    $db->execute("CREATE TABLE IF NOT EXISTS notenbucher (
+        id           INT AUTO_INCREMENT PRIMARY KEY,
+        name         VARCHAR(150) NOT NULL,
+        beschreibung TEXT NULL,
+        benutzer_id  INT NOT NULL,
+        typ          ENUM('privat','geteilt') NOT NULL DEFAULT 'privat',
+        formation_id INT NULL,
+        erstellt_am  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (benutzer_id) REFERENCES benutzer(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $db->execute("CREATE TABLE IF NOT EXISTS notenbuch_noten (
+        id           INT AUTO_INCREMENT PRIMARY KEY,
+        notenbuch_id INT NOT NULL,
+        noten_id     INT NOT NULL,
+        reihenfolge  INT NOT NULL DEFAULT 0,
+        UNIQUE KEY uk_notenbuch_note (notenbuch_id, noten_id),
+        FOREIGN KEY (notenbuch_id) REFERENCES notenbucher(id) ON DELETE CASCADE,
+        FOREIGN KEY (noten_id)     REFERENCES noten(id)       ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+})();
+
+// Festverwaltung
+require_once __DIR__ . '/classes/Fest.php';
+require_once __DIR__ . '/classes/FestStation.php';
+require_once __DIR__ . '/classes/FestMitarbeiter.php';
+require_once __DIR__ . '/classes/FestDienstplan.php';
+require_once __DIR__ . '/classes/FestEinkauf.php';
+require_once __DIR__ . '/classes/FestVertrag.php';
+require_once __DIR__ . '/classes/FestTodo.php';
+require_once __DIR__ . '/classes/FestKopieren.php';
+require_once __DIR__ . '/classes/FestAbrechnung.php';
+
+// Migration: Festverwaltung-Tabellen (bislang nur in database.sql, nie für Bestandsinstallationen
+// nachgezogen worden – siehe fest_todos.php-Absturz "Table 'fest_todos' doesn't exist")
+(function() {
+    $db = Database::getInstance();
+
+    $db->execute("CREATE TABLE IF NOT EXISTS feste (
+        id           INT AUTO_INCREMENT PRIMARY KEY,
+        name         VARCHAR(100) NOT NULL,
+        jahr         YEAR NOT NULL,
+        datum_von    DATE NOT NULL,
+        datum_bis    DATE NULL,
+        ort          VARCHAR(100) NULL,
+        adresse      VARCHAR(255) NULL,
+        beschreibung TEXT NULL,
+        status       ENUM('geplant','aktiv','abgeschlossen','abgesagt') NOT NULL DEFAULT 'geplant',
+        erstellt_von INT NULL,
+        erstellt_am  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY erstellt_von (erstellt_von)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $db->execute("CREATE TABLE IF NOT EXISTS fest_einkauf_kategorien (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        name        VARCHAR(80) NOT NULL,
+        sortierung  INT NOT NULL DEFAULT 0,
+        erstellt_am DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $db->execute("CREATE TABLE IF NOT EXISTS fest_stationen (
+        id                INT AUTO_INCREMENT PRIMARY KEY,
+        fest_id           INT NOT NULL,
+        name              VARCHAR(100) NOT NULL,
+        beschreibung      TEXT NULL,
+        oeffnung_von      TIME NULL,
+        oeffnung_bis      TIME NULL,
+        benoetigte_helfer INT NOT NULL DEFAULT 1,
+        farbe             VARCHAR(20) NULL DEFAULT 'primary',
+        sortierung        INT NOT NULL DEFAULT 0,
+        erstellt_am       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (fest_id) REFERENCES feste(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $db->execute("CREATE TABLE IF NOT EXISTS fest_mitarbeiter (
+        id           INT AUTO_INCREMENT PRIMARY KEY,
+        fest_id      INT NOT NULL,
+        mitglied_id  INT NULL,
+        vorname      VARCHAR(50) NULL,
+        nachname     VARCHAR(50) NULL,
+        telefon      VARCHAR(30) NULL,
+        email        VARCHAR(100) NULL,
+        funktion     VARCHAR(100) NULL,
+        ist_extern   TINYINT(1) NOT NULL DEFAULT 0,
+        notizen      TEXT NULL,
+        erstellt_am  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (fest_id)     REFERENCES feste(id) ON DELETE CASCADE,
+        FOREIGN KEY (mitglied_id) REFERENCES mitglieder(id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $db->execute("CREATE TABLE IF NOT EXISTS fest_station_tage (
+        id                INT AUTO_INCREMENT PRIMARY KEY,
+        station_id        INT NOT NULL,
+        datum             DATE NOT NULL,
+        aktiv             TINYINT(1) NOT NULL DEFAULT 1,
+        oeffnung_von      TIME NULL,
+        oeffnung_bis      TIME NULL,
+        benoetigte_helfer INT NOT NULL DEFAULT 1,
+        UNIQUE KEY station_datum (station_id, datum),
+        FOREIGN KEY (station_id) REFERENCES fest_stationen(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $db->execute("CREATE TABLE IF NOT EXISTS fest_dienstplaene (
+        id             INT AUTO_INCREMENT PRIMARY KEY,
+        fest_id        INT NOT NULL,
+        station_id     INT NOT NULL,
+        mitarbeiter_id INT NOT NULL,
+        datum          DATE NOT NULL,
+        zeit_von       TIME NULL,
+        zeit_bis       TIME NULL,
+        notizen        TEXT NULL,
+        erstellt_am    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (fest_id)        REFERENCES feste(id) ON DELETE CASCADE,
+        FOREIGN KEY (station_id)     REFERENCES fest_stationen(id) ON DELETE CASCADE,
+        FOREIGN KEY (mitarbeiter_id) REFERENCES fest_mitarbeiter(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // preis_gesamt (NICHT preis) - muss zum von classes/Fest.php, FestEinkauf.php,
+    // FestKopieren.php und FestAbrechnung.php erwarteten Spaltennamen passen.
+    $db->execute("CREATE TABLE IF NOT EXISTS fest_einkauefe (
+        id            INT AUTO_INCREMENT PRIMARY KEY,
+        fest_id       INT NOT NULL,
+        kategorie_id  INT NULL,
+        station_id    INT NULL,
+        bezeichnung   VARCHAR(255) NOT NULL,
+        menge         INT NOT NULL DEFAULT 1,
+        einheit       VARCHAR(20) NULL,
+        preis_gesamt  DECIMAL(10,2) NULL,
+        lieferant     VARCHAR(100) NULL,
+        status        ENUM('geplant','bestellt','erhalten','storniert') NOT NULL DEFAULT 'geplant',
+        ist_vorlage   TINYINT(1) NOT NULL DEFAULT 0,
+        notizen       TEXT NULL,
+        erstellt_von  INT NULL,
+        erstellt_am   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (fest_id)      REFERENCES feste(id) ON DELETE CASCADE,
+        FOREIGN KEY (kategorie_id) REFERENCES fest_einkauf_kategorien(id) ON DELETE SET NULL,
+        FOREIGN KEY (station_id)   REFERENCES fest_stationen(id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // zahlungsstatus nutzt 'teilweise' (NICHT 'angezahlt') - siehe classes/FestVertrag.php
+    // und fest_vertrag_bearbeiten.php.
+    $db->execute("CREATE TABLE IF NOT EXISTS fest_vertraege (
+        id             INT AUTO_INCREMENT PRIMARY KEY,
+        fest_id        INT NOT NULL,
+        band_name      VARCHAR(150) NOT NULL,
+        vertrags_datum DATE NULL,
+        auftritt_datum DATE NULL,
+        auftritt_zeit  TIME NULL,
+        honorar        DECIMAL(10,2) NULL,
+        zahlungsstatus ENUM('offen','teilweise','bezahlt','storniert') NOT NULL DEFAULT 'offen',
+        zahlungsdatum  DATE NULL,
+        dokument_pfad  VARCHAR(255) NULL,
+        dokument_name  VARCHAR(255) NULL,
+        notizen        TEXT NULL,
+        erstellt_von   INT NULL,
+        erstellt_am    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (fest_id) REFERENCES feste(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    // Bei „teilweise bezahlt“: bereits bezahlter Betrag (Rest gilt als offen)
+    if (!$db->fetchOne("SHOW COLUMNS FROM fest_vertraege LIKE 'bezahlt_betrag'")) {
+        try { $db->execute("ALTER TABLE fest_vertraege ADD COLUMN bezahlt_betrag DECIMAL(10,2) NULL AFTER zahlungsstatus"); } catch (\Throwable $e) {}
+    }
+
+    // status nutzt 'in_arbeit'/'abgebrochen' (NICHT 'in_bearbeitung') - siehe
+    // classes/FestTodo.php::updateStatus() und die fest_todos*.php Toggle-Logik.
+    $db->execute("CREATE TABLE IF NOT EXISTS fest_todos (
+        id            INT AUTO_INCREMENT PRIMARY KEY,
+        fest_id       INT NOT NULL,
+        titel         VARCHAR(255) NOT NULL,
+        beschreibung  TEXT NULL,
+        prioritaet    ENUM('niedrig','normal','hoch','kritisch') NOT NULL DEFAULT 'normal',
+        status        ENUM('offen','in_arbeit','erledigt','abgebrochen') NOT NULL DEFAULT 'offen',
+        faellig_am    DATE NULL,
+        zustaendig_id INT NULL,
+        erstellt_von  INT NULL,
+        erstellt_am   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        erledigt_am   DATETIME NULL,
+        FOREIGN KEY (fest_id)       REFERENCES feste(id) ON DELETE CASCADE,
+        FOREIGN KEY (zustaendig_id) REFERENCES benutzer(id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $db->execute("CREATE TABLE IF NOT EXISTS fest_abrechnung_posten (
+        id           INT AUTO_INCREMENT PRIMARY KEY,
+        fest_id      INT NOT NULL,
+        typ          ENUM('einnahme','ausgabe') NOT NULL,
+        kategorie    VARCHAR(80) NOT NULL DEFAULT 'sonstiges',
+        bezeichnung  VARCHAR(255) NOT NULL,
+        betrag       DECIMAL(10,2) NOT NULL DEFAULT 0,
+        station_id   INT NULL,
+        notizen      TEXT NULL,
+        erstellt_von INT NULL,
+        erstellt_am  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (fest_id)    REFERENCES feste(id) ON DELETE CASCADE,
+        FOREIGN KEY (station_id) REFERENCES fest_stationen(id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // aktualisiert_am fehlte in der ursprünglichen CREATE-TABLE-Definition, wird aber von
+    // fest_detail.php angezeigt und soll sich bei jedem UPDATE automatisch aktualisieren.
+    try {
+        $db->execute("ALTER TABLE feste ADD COLUMN aktualisiert_am DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER erstellt_am");
+    } catch (\Throwable $e) { /* Spalte existiert bereits */ }
+
+    // Berechtigungen für Festverwaltung-Modul (nur beim Erstinstall)
+    $festPerm = $db->fetchOne("SELECT COUNT(*) as cnt FROM berechtigungen WHERE modul = 'fest'");
+    if ((int)($festPerm['cnt'] ?? 0) === 0) {
+        $db->execute("INSERT INTO berechtigungen (rolle, modul, lesen, schreiben, loeschen) VALUES
+            ('admin','fest',1,1,1),('obmann','fest',1,1,1),
+            ('kassier','fest',1,1,0),('schriftfuehrer','fest',1,1,0),
+            ('jugendbeauftragter','fest',1,1,0),('kapellmeister','fest',1,0,0),
+            ('notenwart','fest',1,0,0),('instrumentenwart','fest',1,0,0),
+            ('trachtenwart','fest',1,0,0),('mitglied','fest',1,0,0)");
+    }
+})();
+
+// BMV-Abgleich: Zuordnung der Mitglieder zum BMV-Datensatz
+(function() {
+    $db = Database::getInstance();
+    $spalten = [
+        "ALTER TABLE mitglieder ADD COLUMN bmv_id VARCHAR(36) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_status VARCHAR(10) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_abgeglichen_am DATETIME NULL",
+        "ALTER TABLE mitglieder ADD KEY bmv_id (bmv_id)",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_anrede VARCHAR(50) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_titel VARCHAR(100) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_titeln VARCHAR(100) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_telefon2 VARCHAR(50) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_fax VARCHAR(50) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_telefon_firma VARCHAR(50) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_email2 VARCHAR(150) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_beruf VARCHAR(150) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_firma VARCHAR(150) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_bemerkung TEXT NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_kategorien VARCHAR(255) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_exp_telnr1 TINYINT(1) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_exp_telnr2 TINYINT(1) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_exp_email1 TINYINT(1) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_exp_email2 TINYINT(1) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_exp_adresse TINYINT(1) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_exp_internet TINYINT(1) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_foto MEDIUMTEXT NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_aenderung VARCHAR(50) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_pcanmeldename VARCHAR(100) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_pcipadresse VARCHAR(50) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_verein_id INT NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_nicht_uebertragen TINYINT(1) NOT NULL DEFAULT 0",
+        "ALTER TABLE mitglieder MODIFY COLUMN status ENUM('aktiv','passiv','ausgetreten','ehrenmitglied','ueberpruefen') DEFAULT 'aktiv'",
+    ];
+    foreach ($spalten as $sql) {
+        try {
+            $db->execute($sql);
+        } catch (\Throwable $e) { /* bereits vorhanden */ }
+    }
+})();
+
+// BMV-Zusatzdaten je Mitglied (Funktionen, Ehrungen, Instrumente, Prüfungen, Mitgliedsarten),
+// Bezeichnungen zu den BMV-Nummern und Regeln für anstehende Ehrungen
+(function() {
+    $db = Database::getInstance();
+    $db->execute("CREATE TABLE IF NOT EXISTS bmv_mitglied_daten (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        bmv_eintrag_id VARCHAR(36) NOT NULL,
+        mitglied_id INT NOT NULL,
+        art VARCHAR(20) NOT NULL,
+        code INT NULL,
+        bereich_code INT NULL,
+        instrument_code INT NULL,
+        von DATE NULL,
+        bis DATE NULL,
+        stimme VARCHAR(50) NULL,
+        ergebnis VARCHAR(255) NULL,
+        ergebnistext TEXT NULL,
+        bemerkung VARCHAR(255) NULL,
+        bmv_status VARCHAR(10) NULL,
+        bmv_aenderung VARCHAR(50) NULL,
+        UNIQUE KEY uk_bmv_eintrag (art, bmv_eintrag_id),
+        KEY idx_mitglied_art (mitglied_id, art),
+        CONSTRAINT fk_bmv_daten_mitglied FOREIGN KEY (mitglied_id) REFERENCES mitglieder(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $db->execute("CREATE TABLE IF NOT EXISTS bmv_bezeichnungen (
+        art VARCHAR(20) NOT NULL,
+        code INT NOT NULL,
+        name VARCHAR(150) NOT NULL DEFAULT '',
+        PRIMARY KEY (art, code)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $db->execute("CREATE TABLE IF NOT EXISTS ehrungsregeln (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        ehrung_code INT NOT NULL,
+        jahre INT NOT NULL,
+        aktiv TINYINT(1) NOT NULL DEFAULT 1,
+        UNIQUE KEY uk_ehrung (ehrung_code)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // Eigene Einträge (nicht aus dem BMV) und Vorbereitung für das spätere Schreiben in den BMV:
+    // bmv_eintrag_id leer = nur in Syncopa; sync_status 'neu' = muss später an den BMV übertragen werden
+    $spalte = function (string $tabelle, string $name) use ($db): bool {
+        return (int)($db->fetchOne(
+            "SELECT COUNT(*) AS c FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?",
+            [$tabelle, $name]
+        )['c'] ?? 0) > 0;
+    };
+    if (!$spalte('bmv_mitglied_daten', 'sync_status')) {
+        $db->execute("ALTER TABLE bmv_mitglied_daten
+            MODIFY bmv_eintrag_id VARCHAR(36) NULL,
+            ADD COLUMN sync_status VARCHAR(20) NULL,
+            ADD COLUMN erstellt_am DATETIME NULL");
+    }
+    if (!$spalte('mitglied_instrumente', 'bmv_eintrag_id')) {
+        $db->execute("ALTER TABLE mitglied_instrumente
+            ADD COLUMN bmv_eintrag_id VARCHAR(36) NULL,
+            ADD COLUMN stimme VARCHAR(50) NULL,
+            ADD COLUMN sync_status VARCHAR(20) NULL,
+            ADD COLUMN bmv_aenderung VARCHAR(50) NULL,
+            ADD UNIQUE KEY uk_mi_bmv_eintrag (bmv_eintrag_id)");
+        // Instrumente lagen bisher zusätzlich in bmv_mitglied_daten; sie werden jetzt in mitglied_instrumente geführt
+        // und beim nächsten „BMV Daten holen“ dort neu übernommen. Bestehende eigene Einträge: für den BMV vormerken.
+        $db->execute("DELETE FROM bmv_mitglied_daten WHERE art = 'instrument'");
+        $db->execute("UPDATE mitglied_instrumente SET sync_status = 'neu' WHERE bmv_eintrag_id IS NULL");
+    }
+    // BMV-Instrumentnummer je Eintrag; welche Syncopa-Instrumentart zu einer BMV-Nummer gehört, steht bei der Bezeichnung
+    if (!$spalte('mitglied_instrumente', 'bmv_code')) {
+        $db->execute("ALTER TABLE mitglied_instrumente ADD COLUMN bmv_code INT NULL");
+    }
+    if (!$spalte('bmv_bezeichnungen', 'instrument_typ_id')) {
+        $db->execute("ALTER TABLE bmv_bezeichnungen ADD COLUMN instrument_typ_id INT NULL");
+    }
+    // Beim Holen automatisch angelegte Instrumentarten (dürfen nach dem Umzuordnen wieder entfernt werden)
+    if (!$spalte('instrument_typen', 'bmv_automatisch')) {
+        $db->execute("ALTER TABLE instrument_typen ADD COLUMN bmv_automatisch TINYINT(1) NOT NULL DEFAULT 0");
+    }
+
+    // Vereinsinventar aus dem CSV-Export des BMV-Portals (nur Herkunftsangaben; das Inventar wird danach in Syncopa gepflegt)
+    if (!$spalte('instrumente', 'bmv_inventar_id')) {
+        $db->execute("ALTER TABLE instrumente
+            ADD COLUMN bmv_inventar_id VARCHAR(36) NULL,
+            ADD COLUMN bmv_bezeichnung VARCHAR(150) NULL,
+            ADD COLUMN bmv_anmerkung TEXT NULL,
+            ADD COLUMN bmv_aenderung VARCHAR(50) NULL,
+            ADD COLUMN bmv_import_am DATETIME NULL,
+            ADD COLUMN lieferant VARCHAR(150) NULL,
+            ADD UNIQUE KEY uk_bmv_inventar (bmv_inventar_id)");
+    }
+    // Noten aus dem BMV (einmalig übernommen, danach in Syncopa gepflegt; BMV-Nummer nur als Zusatzinfo)
+    if (!$spalte('noten', 'bmv_noten_id')) {
+        $db->execute("ALTER TABLE noten
+            ADD COLUMN bmv_noten_id VARCHAR(36) NULL,
+            ADD COLUMN bmv_nummer VARCHAR(20) NULL,
+            ADD COLUMN bmv_notenmaterial TINYINT(1) NULL,
+            ADD COLUMN bmv_letzte_auffuehrung DATE NULL,
+            ADD COLUMN bmv_anmerkung TEXT NULL,
+            ADD COLUMN bmv_aenderung VARCHAR(50) NULL,
+            ADD COLUMN bmv_import_am DATETIME NULL,
+            ADD UNIQUE KEY uk_bmv_noten (bmv_noten_id)");
+    }
+    // Mitgliedsarten (ersetzen den früheren Mitgliedsstatus): Katalog mit Eigenschaften, aktuelle Art je Mitglied
+    $db->execute("CREATE TABLE IF NOT EXISTS mitgliedsarten (
+        code INT NOT NULL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        aktiv TINYINT(1) NOT NULL DEFAULT 1,
+        beitragspflichtig TINYINT(1) NOT NULL DEFAULT 0,
+        beitrag DECIMAL(10,2) NULL,
+        farbe VARCHAR(20) NOT NULL DEFAULT 'secondary',
+        sortierung INT NOT NULL DEFAULT 100
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    if (!$spalte('mitglieder', 'mitgliedsart_code')) {
+        $db->execute("ALTER TABLE mitglieder ADD COLUMN mitgliedsart_code INT NULL, ADD KEY idx_mitgliedsart (mitgliedsart_code)");
+    }
+    // Gast (kein Vereinsmitglied): spielt nur in seiner Formation mit, nie im BMV, keine Beiträge/Ehrungen/Statistik
+    if (!$spalte('mitgliedsarten', 'gast')) {
+        $db->execute("ALTER TABLE mitgliedsarten ADD COLUMN gast TINYINT(1) NOT NULL DEFAULT 0");
+    }
+    Mitgliedsart::einmaligUebernehmen();
+    Mitgliedsart::gastArtAnlegen();
+    Mitgliedsart::aktualisierenFallsNoetig(); // einmal am Tag: laufende Zeiträume ändern sich mit dem Datum
+
+    // E-Mail: Postfächer der Benutzer (benutzer_id gesetzt) und Funktions-Postfächer (benutzer_id leer, für Rollen freigegeben).
+    // Das Passwort wird mit MailKrypto verschlüsselt gespeichert.
+    $db->execute("CREATE TABLE IF NOT EXISTS mail_konten (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        benutzer_id INT NULL,
+        bezeichnung VARCHAR(100) NOT NULL,
+        email VARCHAR(190) NOT NULL,
+        anzeigename VARCHAR(150) NULL,
+        benutzername VARCHAR(190) NOT NULL,
+        passwort_enc TEXT NOT NULL,
+        imap_host VARCHAR(190) NOT NULL,
+        imap_port INT NOT NULL DEFAULT 993,
+        imap_sicherheit VARCHAR(10) NOT NULL DEFAULT 'ssl',
+        smtp_host VARCHAR(190) NOT NULL,
+        smtp_port INT NOT NULL DEFAULT 465,
+        smtp_sicherheit VARCHAR(10) NOT NULL DEFAULT 'ssl',
+        signatur TEXT NULL,
+        sortierung INT NOT NULL DEFAULT 100,
+        erstellt_am DATETIME NULL,
+        KEY idx_benutzer (benutzer_id),
+        CONSTRAINT fk_mail_konto_benutzer FOREIGN KEY (benutzer_id) REFERENCES benutzer(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $db->execute("CREATE TABLE IF NOT EXISTS mail_konto_rollen (
+        konto_id INT NOT NULL,
+        rolle_id INT NOT NULL,
+        PRIMARY KEY (konto_id, rolle_id),
+        CONSTRAINT fk_mkr_konto FOREIGN KEY (konto_id) REFERENCES mail_konten(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // Spamfilter je Postfach: sichere/blockierte Absender, gelernte Wörter (Bayes), Stand der Prüfung, Protokoll
+    if (!$spalte('mail_konten', 'spamfilter')) {
+        $db->execute("ALTER TABLE mail_konten ADD COLUMN spamfilter TINYINT(1) NOT NULL DEFAULT 1");
+    }
+    $db->execute("CREATE TABLE IF NOT EXISTS mail_spam_absender (
+        konto_id INT NOT NULL,
+        muster VARCHAR(190) NOT NULL,
+        art VARCHAR(10) NOT NULL,
+        erstellt_am DATETIME NULL,
+        PRIMARY KEY (konto_id, muster),
+        CONSTRAINT fk_spam_absender_konto FOREIGN KEY (konto_id) REFERENCES mail_konten(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $db->execute("CREATE TABLE IF NOT EXISTS mail_spam_woerter (
+        konto_id INT NOT NULL,
+        wort VARCHAR(64) NOT NULL,
+        spam INT NOT NULL DEFAULT 0,
+        ham INT NOT NULL DEFAULT 0,
+        PRIMARY KEY (konto_id, wort),
+        CONSTRAINT fk_spam_woerter_konto FOREIGN KEY (konto_id) REFERENCES mail_konten(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin");
+    $db->execute("CREATE TABLE IF NOT EXISTS mail_spam_stand (
+        konto_id INT NOT NULL PRIMARY KEY,
+        spam_mails INT NOT NULL DEFAULT 0,
+        ham_mails INT NOT NULL DEFAULT 0,
+        letzte_uid INT NOT NULL DEFAULT 0,
+        angelernt TINYINT(1) NOT NULL DEFAULT 0,
+        letzter_lauf DATETIME NULL,
+        CONSTRAINT fk_spam_stand_konto FOREIGN KEY (konto_id) REFERENCES mail_konten(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    if (!$spalte('mail_spam_stand', 'ham_uid')) {
+        $db->execute("ALTER TABLE mail_spam_stand ADD COLUMN ham_uid INT NOT NULL DEFAULT 0 AFTER letzte_uid");
+    }
+    $db->execute("CREATE TABLE IF NOT EXISTS mail_spam_protokoll (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        konto_id INT NOT NULL,
+        message_id VARCHAR(250) NULL,
+        absender VARCHAR(190) NULL,
+        betreff VARCHAR(250) NULL,
+        grund VARCHAR(250) NOT NULL,
+        zeit DATETIME NOT NULL,
+        KEY idx_konto_msg (konto_id, message_id(100)),
+        CONSTRAINT fk_spam_protokoll_konto FOREIGN KEY (konto_id) REFERENCES mail_konten(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // Welche Syncopa-Instrumentart zu einer BMV-Inventarbezeichnung gehört (z. B. „B-Bariton“ => Bariton)
+    $db->execute("CREATE TABLE IF NOT EXISTS bmv_inventar_zuordnung (
+        bezeichnung VARCHAR(150) NOT NULL PRIMARY KEY,
+        instrument_typ_id INT NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+})();
+
+// Migration: Kassabuch mit Konten, Kategorien, Umbuchungen, Belegen, Budget, Kassasturz und Jahresabschluss
+(function() {
+    $db = Database::getInstance();
+    $spalte = fn($t, $s) => (int)($db->fetchOne("SELECT COUNT(*) AS c FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?", [$t, $s])['c'] ?? 0) > 0;
+
+    $db->execute("CREATE TABLE IF NOT EXISTS finanz_konten (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        art ENUM('kassa','bank','sparbuch','sonstig') NOT NULL DEFAULT 'bank',
+        iban VARCHAR(40) NULL,
+        formation_id INT NULL,
+        sortierung INT NOT NULL DEFAULT 100,
+        aktiv TINYINT(1) NOT NULL DEFAULT 1,
+        erstellt_am DATETIME NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $db->execute("CREATE TABLE IF NOT EXISTS finanz_anfangsbestaende (
+        konto_id INT NOT NULL,
+        jahr INT NOT NULL,
+        betrag DECIMAL(12,2) NOT NULL DEFAULT 0,
+        PRIMARY KEY (konto_id, jahr),
+        CONSTRAINT fk_fa_konto FOREIGN KEY (konto_id) REFERENCES finanz_konten(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $db->execute("CREATE TABLE IF NOT EXISTS finanz_kategorien (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        typ ENUM('einnahme','ausgabe','beide') NOT NULL DEFAULT 'beide',
+        sortierung INT NOT NULL DEFAULT 100,
+        aktiv TINYINT(1) NOT NULL DEFAULT 1
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $db->execute("CREATE TABLE IF NOT EXISTS finanz_budget (
+        jahr INT NOT NULL,
+        kategorie_id INT NOT NULL,
+        betrag DECIMAL(12,2) NOT NULL DEFAULT 0,
+        PRIMARY KEY (jahr, kategorie_id),
+        CONSTRAINT fk_fb_kategorie FOREIGN KEY (kategorie_id) REFERENCES finanz_kategorien(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $db->execute("CREATE TABLE IF NOT EXISTS finanz_kassasturz (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        konto_id INT NOT NULL,
+        datum DATETIME NOT NULL,
+        zaehlung TEXT NULL,
+        ist_betrag DECIMAL(12,2) NOT NULL,
+        soll_betrag DECIMAL(12,2) NOT NULL,
+        bemerkung TEXT NULL,
+        gezaehlt_von VARCHAR(150) NULL,
+        erstellt_von INT NULL,
+        CONSTRAINT fk_fk_konto FOREIGN KEY (konto_id) REFERENCES finanz_konten(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $db->execute("CREATE TABLE IF NOT EXISTS finanz_abschluesse (
+        jahr INT NOT NULL PRIMARY KEY,
+        pruefer1 VARCHAR(150) NULL,
+        pruefer2 VARCHAR(150) NULL,
+        pruef_datum DATE NULL,
+        feststellungen TEXT NULL,
+        abgeschlossen TINYINT(1) NOT NULL DEFAULT 0,
+        abgeschlossen_am DATETIME NULL,
+        abgeschlossen_von INT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // Buchungen erweitern
+    try { $db->execute("ALTER TABLE finanzen MODIFY typ ENUM('einnahme','ausgabe','umbuchung') NOT NULL"); } catch (\Throwable $e) {}
+    foreach ([
+        'konto_id'      => "INT NULL AFTER typ",
+        'gegenkonto_id' => "INT NULL AFTER konto_id",
+        'kategorie_id'  => "INT NULL AFTER kategorie",
+        'beleg_datei'   => "VARCHAR(255) NULL AFTER beleg_nummer",
+        'beleg_name'    => "VARCHAR(255) NULL AFTER beleg_datei",
+        'beitrag_id'    => "INT NULL",
+        'fest_id'       => "INT NULL",
+    ] as $s => $def) {
+        if (!$spalte('finanzen', $s)) {
+            try { $db->execute("ALTER TABLE finanzen ADD COLUMN $s $def"); } catch (\Throwable $e) {}
+        }
+    }
+
+    // Aus Freitext übernommene Kategorien (Reihenfolge 500, „beides“): Typ aus den Buchungen ableiten
+    $db->execute("UPDATE finanz_kategorien c
+                  JOIN (SELECT kategorie_id, MIN(typ) a, MAX(typ) b FROM finanzen WHERE kategorie_id IS NOT NULL AND typ IN ('einnahme','ausgabe') GROUP BY kategorie_id) x
+                    ON x.kategorie_id = c.id AND x.a = x.b
+                  SET c.typ = x.a, c.sortierung = 499
+                  WHERE c.typ = 'beide' AND c.sortierung = 500");
+
+    // Einmalig: Vorlagen und Übernahme der bisherigen Buchungen
+    if ($db->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = 'kassabuch_eingerichtet'")) return;
+    if (!(int)$db->fetchOne("SELECT COUNT(*) c FROM finanz_konten")['c']) {
+        $db->execute("INSERT INTO finanz_konten (name, art, sortierung, erstellt_am) VALUES ('Handkassa', 'kassa', 10, NOW()), ('Girokonto', 'bank', 20, NOW())");
+    }
+    if (!(int)$db->fetchOne("SELECT COUNT(*) c FROM finanz_kategorien")['c']) {
+        $vorlage = [
+            ['Mitgliedsbeiträge', 'einnahme'], ['Spenden und unterstützende Mitglieder', 'einnahme'], ['Subvention Gemeinde', 'einnahme'],
+            ['Subvention Land, Bund, Verband', 'einnahme'], ['Konzerte und Eintritte', 'einnahme'], ['Ausrückungen und Auftritte', 'einnahme'],
+            ['Feste und Veranstaltungen', 'beide'], ['Sponsoring und Werbung', 'einnahme'], ['Zinsen', 'einnahme'], ['Sonstige Einnahmen', 'einnahme'],
+            ['Noten', 'ausgabe'], ['Instrumente Anschaffung', 'ausgabe'], ['Instrumente Reparatur und Wartung', 'ausgabe'], ['Trachten und Uniformen', 'ausgabe'],
+            ['Jugendarbeit und Ausbildung', 'ausgabe'], ['Kapellmeister und Dirigent', 'ausgabe'], ['Verbandsbeiträge und AKM', 'ausgabe'],
+            ['Versicherungen', 'ausgabe'], ['Musikheim und Betriebskosten', 'ausgabe'], ['Kameradschaft und Bewirtung', 'ausgabe'],
+            ['Ehrungen und Geschenke', 'ausgabe'], ['Verwaltung, Büro und Porto', 'ausgabe'], ['Bankspesen', 'ausgabe'], ['Sonstige Ausgaben', 'ausgabe'],
+        ];
+        foreach ($vorlage as $i => [$name, $typ]) {
+            $db->execute("INSERT INTO finanz_kategorien (name, typ, sortierung) VALUES (?, ?, ?)", [$name, $typ, ($i + 1) * 10]);
+        }
+    }
+    $kassa = $db->fetchOne("SELECT id FROM finanz_konten WHERE art = 'kassa' ORDER BY sortierung, id LIMIT 1")['id'] ?? null;
+    $bank  = $db->fetchOne("SELECT id FROM finanz_konten WHERE art <> 'kassa' ORDER BY sortierung, id LIMIT 1")['id'] ?? $kassa;
+    $db->execute("UPDATE finanzen SET konto_id = ? WHERE konto_id IS NULL AND zahlungsart = 'bar'", [$kassa]);
+    $db->execute("UPDATE finanzen SET konto_id = ? WHERE konto_id IS NULL", [$bank]);
+    // Freitext-Kategorien zuordnen, unbekannte als neue Kategorie anlegen
+    foreach ($db->fetchAll("SELECT DISTINCT TRIM(kategorie) k FROM finanzen WHERE kategorie_id IS NULL AND kategorie IS NOT NULL AND TRIM(kategorie) <> ''") as $r) {
+        $kat = $db->fetchOne("SELECT id FROM finanz_kategorien WHERE LOWER(name) = LOWER(?)", [$r['k']]);
+        if (!$kat) {
+            $db->execute("INSERT INTO finanz_kategorien (name, typ, sortierung) VALUES (?, 'beide', 500)", [mb_substr($r['k'], 0, 100)]);
+            $katId = (int)$db->lastInsertId();
+        } else {
+            $katId = (int)$kat['id'];
+        }
+        $db->execute("UPDATE finanzen SET kategorie_id = ? WHERE kategorie_id IS NULL AND TRIM(kategorie) = ?", [$katId, $r['k']]);
+    }
+    $db->execute("INSERT INTO einstellungen (schluessel, wert, beschreibung) VALUES ('kassabuch_eingerichtet', '1', 'Kassabuch: Konten und Kategorien eingerichtet')
+                  ON DUPLICATE KEY UPDATE wert = '1'");
+})();
+
+// Migration: Kontakte für das E-Mail-Programm (privat oder für alle mit E-Mail-Zugang)
+(function() {
+    $db = Database::getInstance();
+    $db->execute("CREATE TABLE IF NOT EXISTS mail_kontakte (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        vorname VARCHAR(100) NULL,
+        nachname VARCHAR(100) NULL,
+        organisation VARCHAR(150) NULL,
+        funktion VARCHAR(150) NULL,
+        email VARCHAR(190) NOT NULL,
+        telefon VARCHAR(50) NULL,
+        adresse VARCHAR(250) NULL,
+        notizen TEXT NULL,
+        oeffentlich TINYINT(1) NOT NULL DEFAULT 0,
+        erstellt_von INT NULL,
+        erstellt_am DATETIME NULL,
+        aktualisiert_am DATETIME NULL,
+        KEY idx_email (email),
+        KEY idx_ersteller (erstellt_von)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+})();
+
+// Migration: Download-Links für große E-Mail-Anhänge
+(function() {
+    Database::getInstance()->execute("CREATE TABLE IF NOT EXISTS mail_freigaben (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        token CHAR(40) NOT NULL,
+        dateiname VARCHAR(255) NOT NULL,
+        datei VARCHAR(100) NOT NULL,
+        groesse BIGINT NOT NULL,
+        typ VARCHAR(150) NULL,
+        fertig TINYINT(1) NOT NULL DEFAULT 0,
+        erstellt_von INT NULL,
+        erstellt_am DATETIME NOT NULL,
+        gueltig_bis DATETIME NULL,
+        downloads INT NOT NULL DEFAULT 0,
+        letzter_download DATETIME NULL,
+        UNIQUE KEY uk_token (token),
+        KEY idx_ersteller (erstellt_von)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+})();
+
+// Migration: BMV-Jahresbericht (Zuordnungen für Kassabuch, Ausrückungen, Formationen und gespeicherte Berichte)
+(function() {
+    $db = Database::getInstance();
+    $spalte = fn(string $t, string $s) => (int)$db->fetchOne(
+        "SELECT COUNT(*) c FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?", [$t, $s]
+    )['c'] > 0;
+    foreach ([
+        ['finanz_kategorien', 'bmv_posten', "VARCHAR(20) NULL"],
+        ['ausrueckungen', 'bmv_anlass', "VARCHAR(20) NULL"],
+        ['ausrueckungen', 'probenart', "VARCHAR(10) NULL"],
+        ['formationen', 'bmv_klangkoerper', "VARCHAR(10) NOT NULL DEFAULT 'gesamt'"],
+    ] as [$t, $s, $def]) {
+        if (!$spalte($t, $s)) {
+            try { $db->execute("ALTER TABLE `$t` ADD COLUMN `$s` $def"); } catch (\Throwable $e) {}
+        }
+    }
+    $db->execute("CREATE TABLE IF NOT EXISTS bmv_jahresberichte (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        jahr INT NOT NULL,
+        eingaben TEXT NULL,
+        werte MEDIUMTEXT NULL,
+        abgeschlossen_am DATETIME NULL,
+        abgeschlossen_von INT NULL,
+        gesendet_an VARCHAR(190) NULL,
+        gesendet_am DATETIME NULL,
+        pdf_datei VARCHAR(100) NULL,
+        aktualisiert_am DATETIME NULL,
+        UNIQUE KEY uk_jahr (jahr)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    // Einmalig: Kassabuch-Kategorien den Zeilen des Jahresberichts zuordnen, fehlende Kategorien anlegen
+    if ($db->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = 'bmv_posten_eingerichtet'")) return;
+    $umbenennen = ['Subvention Land, Bund, Verband' => 'Subvention Land', 'Verbandsbeiträge und AKM' => 'Verbandsbeiträge'];
+    foreach ($umbenennen as $alt => $neu) {
+        if (!$db->fetchOne("SELECT id FROM finanz_kategorien WHERE name = ?", [$neu])) {
+            $db->execute("UPDATE finanz_kategorien SET name = ? WHERE name = ?", [$neu, $alt]);
+        }
+    }
+    $neu = [['Subvention Bund', 'einnahme', 42], ['Subvention NPO', 'einnahme', 44], ['AKM-Gebühren', 'ausgabe', 175], ['Musikheim Neubau', 'ausgabe', 195]];
+    foreach ($neu as [$name, $typ, $sort]) {
+        if (!$db->fetchOne("SELECT id FROM finanz_kategorien WHERE name = ?", [$name])) {
+            $db->execute("INSERT INTO finanz_kategorien (name, typ, sortierung) VALUES (?, ?, ?)", [$name, $typ, $sort]);
+        }
+    }
+    $zuordnung = [
+        'Subvention Land' => 'sub_land', 'Subvention Gemeinde' => 'sub_gemeinde', 'Subvention Bund' => 'sub_bund', 'Subvention NPO' => 'sub_npo',
+        'Instrumente Anschaffung' => 'aus_instr_neu', 'Instrumente Reparatur und Wartung' => 'aus_instr_rep', 'Noten' => 'aus_noten',
+        'Trachten und Uniformen' => 'aus_bekleidung', 'Musikheim Neubau' => 'aus_neubau', 'Musikheim und Betriebskosten' => 'aus_erhaltung',
+        'AKM-Gebühren' => 'aus_akm', 'Jugendarbeit und Ausbildung' => 'aus_ausbildung',
+    ];
+    foreach ($zuordnung as $name => $posten) {
+        $db->execute("UPDATE finanz_kategorien SET bmv_posten = ? WHERE name = ? AND bmv_posten IS NULL", [$posten, $name]);
+    }
+    $db->execute("INSERT INTO einstellungen (schluessel, wert, beschreibung) VALUES ('bmv_posten_eingerichtet', '1', 'BMV-Jahresbericht: Kategorien zugeordnet')
+                  ON DUPLICATE KEY UPDATE wert = '1'");
+})();
+
+// Rollenfarben: frühere Bootstrap-Farbnamen in Hex-Werte umwandeln (frei wählbare Farben)
+(function() {
+    try {
+        $db = Database::getInstance();
+        foreach (RollenFarbe::ALT as $name => $hex) {
+            $db->execute("UPDATE rollen SET farbe = ? WHERE farbe = ?", [$hex, $name]);
+        }
+    } catch (\Throwable $e) { /* Tabelle noch nicht vorhanden */ }
+})();
+
+// Uniformen: Bestand (Menge oder Einzelstücke mit Nummer) und Bewegungen
+(function() {
+    $db = Database::getInstance();
+    $spalteFehlt = function (string $tabelle, string $spalte) use ($db): bool {
+        return !$db->fetchOne("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?", [$tabelle, $spalte]);
+    };
+    try {
+        if ($spalteFehlt('uniform_kleidungsstuecke', 'bestandsart')) {
+            $db->execute("ALTER TABLE uniform_kleidungsstuecke ADD COLUMN bestandsart VARCHAR(10) NOT NULL DEFAULT 'menge' AFTER groessen_verfuegbar");
+        }
+        if ($spalteFehlt('uniform_zuweisungen', 'stueck_id')) {
+            $db->execute("ALTER TABLE uniform_zuweisungen ADD COLUMN stueck_id INT NULL AFTER kleidungsstueck_id, ADD KEY stueck_id (stueck_id)");
+        }
+    } catch (\Throwable $e) { /* bereits vorhanden */ }
+    $db->execute("CREATE TABLE IF NOT EXISTS uniform_stuecke (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        kleidungsstueck_id INT NOT NULL,
+        nummer VARCHAR(30) NOT NULL,
+        groesse VARCHAR(20) NOT NULL DEFAULT '',
+        zustand ENUM('sehr gut','gut','befriedigend','schlecht') NOT NULL DEFAULT 'gut',
+        status VARCHAR(15) NOT NULL DEFAULT 'lager',
+        ausgeschieden_am DATE NULL,
+        ausgeschieden_grund VARCHAR(100) NULL,
+        bemerkungen TEXT NULL,
+        erstellt_am TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY ks_nummer (kleidungsstueck_id, nummer),
+        KEY status (status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    $db->execute("CREATE TABLE IF NOT EXISTS uniform_bewegungen (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        kleidungsstueck_id INT NOT NULL,
+        groesse VARCHAR(20) NOT NULL DEFAULT '',
+        stueck_id INT NULL,
+        art VARCHAR(15) NOT NULL,
+        anzahl INT NOT NULL DEFAULT 1,
+        mitglied_id INT NULL,
+        grund VARCHAR(100) NULL,
+        bemerkung TEXT NULL,
+        datum DATE NOT NULL,
+        erstellt_von INT NULL,
+        erstellt_am TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+        KEY ks_groesse (kleidungsstueck_id, groesse),
+        KEY art (art)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+})();
+
+// Uniformen: Kürzel je Kleidungsstück (Präfix der Stücknummer), Nummern 3-stellig
+(function() {
+    $db = Database::getInstance();
+    try {
+        if (!$db->fetchOne("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'uniform_kleidungsstuecke' AND COLUMN_NAME = 'kuerzel'")) {
+            $db->execute("ALTER TABLE uniform_kleidungsstuecke ADD COLUMN kuerzel VARCHAR(5) NULL AFTER name");
+            // bestehende rein numerische Nummern auf 3 Stellen bringen (einmalig, beim Anlegen der Spalte)
+            $db->execute("UPDATE IGNORE uniform_stuecke SET nummer = LPAD(nummer, 3, '0') WHERE nummer REGEXP '^[0-9]{1,2}$'");
+        }
+    } catch (\Throwable $e) { /* bereits vorhanden */ }
+})();
+
+// Uniformen: mehrere Stücke je Zuweisung (nur Mengen-Kleidungsstücke)
+(function() {
+    $db = Database::getInstance();
+    try {
+        if (!$db->fetchOne("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'uniform_zuweisungen' AND COLUMN_NAME = 'anzahl'")) {
+            $db->execute("ALTER TABLE uniform_zuweisungen ADD COLUMN anzahl INT NOT NULL DEFAULT 1 AFTER groesse");
+        }
+    } catch (\Throwable $e) { /* bereits vorhanden */ }
+})();

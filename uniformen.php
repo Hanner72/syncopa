@@ -15,11 +15,16 @@ include 'includes/header.php';
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h2"><i class="bi bi-person-badge"></i> Uniformenverwaltung</h1>
     <?php if (Session::checkPermission('uniformen', 'schreiben')): ?>
-    <div>
+    <div class="d-flex gap-2">
+        <a href="uniform_bestand.php" class="btn btn-outline-primary">
+            <i class="bi bi-boxes"></i> Bestand
+        </a>
         <a href="uniform_kleidungsstuecke.php" class="btn btn-outline-primary">
             <i class="bi bi-tags"></i> Kleidungsstücke verwalten
         </a>
     </div>
+    <?php else: ?>
+    <a href="uniform_bestand.php" class="btn btn-outline-primary"><i class="bi bi-boxes"></i> Bestand</a>
     <?php endif; ?>
 </div>
 
@@ -199,8 +204,8 @@ include 'includes/header.php';
                             
                             html += '<tr>';
                             html += '<td><span class="badge bg-secondary">' + (z.kategorie_name || '-') + '</span></td>';
-                            html += '<td><strong>' + z.kleidungsstueck_name + '</strong></td>';
-                            html += '<td>' + (z.groesse || '-') + '</td>';
+                            html += '<td><strong>' + z.kleidungsstueck_name + '</strong>' + (z.stueck_nummer ? ' <span class="badge text-bg-light border font-monospace">' + (z.kuerzel || '') + z.stueck_nummer + '</span>' : '') + '</td>';
+                            html += '<td>' + (z.groesse || '-') + (z.anzahl > 1 ? ' <span class="badge bg-primary">' + z.anzahl + '×</span>' : '') + '</td>';
                             html += '<td><span class="badge bg-' + color + '">' + (z.zustand || 'gut') + '</span></td>';
                             html += '</tr>';
                         });

@@ -1,20 +1,4 @@
 <?php
-
-// === DEBUG START ===
-if (isset($_GET['debug'])) {
-    echo "<h3>Debug-Informationen</h3>";
-    echo "<pre>";
-    echo "Mitglied ID: " . $id . "\n";
-    echo "Hat Schreibrecht: " . (Session::checkPermission('mitglieder', 'schreiben') ? 'JA' : 'NEIN') . "\n";
-    echo "\nInstrumente:\n";
-    var_dump($instrumente);
-    echo "\nInstrumententypen verfügbar: " . count($instrumentTypen ?? []) . "\n";
-    echo "\nPOST-Daten:\n";
-    var_dump($_POST);
-    echo "</pre>";
-}
-// === DEBUG ENDE ===
-
 // mitglied_detail.php
 require_once 'config.php';
 require_once 'includes.php';
@@ -37,47 +21,20 @@ if (!$mitglied) {
     exit;
 }
 
-$instrumente = $mitgliedObj->getInstrumente($id);
-
-// Instrument hinzufügen
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_instrument'])) {
-    if (Session::checkPermission('mitglieder', 'schreiben')) {
-        try {
-            $seitDatum = !empty($_POST['seit_datum']) ? $_POST['seit_datum'] : null;
-            $mitgliedObj->addInstrument($id, $_POST['instrument_typ_id'], isset($_POST['hauptinstrument']) ? 1 : 0, $seitDatum);
-            Session::setFlashMessage('success', 'Instrument hinzugefügt');
-            header('Location: mitglied_detail.php?id=' . $id);
-            exit;
-        } catch (Exception $e) {
-            $error = $e->getMessage();
-        }
-    }
-}
-
-// Instrument entfernen
-if (isset($_GET['remove_instrument'])) {
-    if (Session::checkPermission('mitglieder', 'schreiben')) {
-        try {
-            $mitgliedObj->removeInstrument($_GET['remove_instrument']);
-            Session::setFlashMessage('success', 'Instrument entfernt');
-            header('Location: mitglied_detail.php?id=' . $id);
-            exit;
-        } catch (Exception $e) {
-            Session::setFlashMessage('danger', 'Fehler: ' . $e->getMessage());
-            header('Location: mitglied_detail.php?id=' . $id);
-            exit;
-        }
-    }
-}
-
 // Verfügbare Instrumententypen laden
 $db = Database::getInstance();
 $instrumentTypen = $db->fetchAll("
-    SELECT it.*, r.name as register_name 
+    SELECT it.*, r.name as register_name
     FROM instrument_typen it
     LEFT JOIN register r ON it.register_id = r.id
     ORDER BY r.sortierung, it.name
 ");
+
+// Formationen für Modal laden
+$alleFormationen = [];
+try {
+    $alleFormationen = (new Formation())->getAll(true);
+} catch (\Throwable $e) {}
 
 // Ausgeliehene Instrumente des Mitglieds laden
 $ausgelieheneInstrumente = $db->fetchAll("
@@ -92,8 +49,20 @@ include 'includes/header.php';
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h2">
-        <i class="bi bi-person"></i> <?php echo htmlspecialchars($mitglied['vorname'] . ' ' . $mitglied['nachname']); ?>
+    <h1 class="h2 d-flex align-items-center gap-3">
+        <?php if (!empty($mitglied['foto']) || !empty($mitglied['bmv_foto'])): ?>
+        <img src="api/mitglied_foto.php?id=<?php echo (int)$mitglied['id']; ?>&amp;v=<?php echo strtotime($mitglied['aktualisiert_am']); ?>" alt="Foto"
+             class="rounded border" style="width:64px;height:64px;object-fit:cover">
+        <?php else: ?>
+        <i class="bi bi-person"></i>
+        <?php endif; ?>
+        <?php
+        $anzeigeName = trim(($mitglied['bmv_titel'] ?? '') . ' ' . $mitglied['vorname'] . ' ' . $mitglied['nachname']);
+        if (!empty($mitglied['bmv_titeln'])) {
+            $anzeigeName .= ', ' . $mitglied['bmv_titeln'];
+        }
+        echo htmlspecialchars($anzeigeName);
+        ?>
     </h1>
     <div>
         <a href="mitglieder.php" class="btn btn-secondary">
@@ -119,13 +88,15 @@ include 'includes/header.php';
                     <dt class="col-sm-5">Mitgliedsnr.:</dt>
                     <dd class="col-sm-7"><strong><?php echo htmlspecialchars($mitglied['mitgliedsnummer']); ?></strong></dd>
                     
-                    <dt class="col-sm-5">Status:</dt>
+                    <dt class="col-sm-5">Mitgliedsart:</dt>
                     <dd class="col-sm-7">
-                        <?php
-                        $statusColors = ['aktiv' => 'success', 'passiv' => 'warning', 'ausgetreten' => 'secondary', 'ehrenmitglied' => 'primary'];
-                        $color = $statusColors[$mitglied['status']] ?? 'secondary';
-                        ?>
-                        <span class="badge bg-<?php echo $color; ?>"><?php echo ucfirst($mitglied['status']); ?></span>
+                        <?php echo Mitgliedsart::badge($mitglied['mitgliedsart_code']); ?>
+                        <?php if ($mitglied['mitgliedsart_code'] !== null && ($artSeit = Mitgliedsart::seit((int)$mitglied['id']))): ?>
+                        <br><small class="text-muted">seit <?php echo date('d.m.Y', strtotime($artSeit)); ?></small>
+                        <?php endif; ?>
+                        <?php if (Mitgliedsart::istGast($mitglied['mitgliedsart_code'])): ?>
+                        <br><small class="text-muted">Gast – kein Vereinsmitglied, spielt in den zugeordneten Formationen mit, wird nicht an den BMV übertragen.</small>
+                        <?php endif; ?>
                     </dd>
                     
                     <?php if ($mitglied['geburtsdatum']): ?>
@@ -153,6 +124,23 @@ include 'includes/header.php';
                     <?php if ($mitglied['register_name']): ?>
                     <dt class="col-sm-5">Register:</dt>
                     <dd class="col-sm-7"><span class="badge bg-info"><?php echo htmlspecialchars($mitglied['register_name']); ?></span></dd>
+                    <?php endif; ?>
+
+                    <?php foreach (['bmv_anrede' => 'Anrede', 'bmv_beruf' => 'Beruf', 'bmv_firma' => 'Firma'] as $feld => $label):
+                        if (empty($mitglied[$feld])) continue; ?>
+                    <dt class="col-sm-5"><?php echo $label; ?>:</dt>
+                    <dd class="col-sm-7"><?php echo htmlspecialchars($mitglied[$feld]); ?></dd>
+                    <?php endforeach; ?>
+
+                    <?php // Kategorien kommen vom BMV als „;A;B;“
+                    $kategorien = array_filter(array_map('trim', explode(';', (string)($mitglied['bmv_kategorien'] ?? ''))));
+                    if ($kategorien): ?>
+                    <dt class="col-sm-5">Kategorien:</dt>
+                    <dd class="col-sm-7">
+                        <?php foreach ($kategorien as $kategorie): ?>
+                        <span class="badge bg-light text-dark border mb-1"><?php echo htmlspecialchars($kategorie); ?></span>
+                        <?php endforeach; ?>
+                    </dd>
                     <?php endif; ?>
                 </dl>
             </div>
@@ -194,88 +182,107 @@ include 'includes/header.php';
                 </p>
                 <?php endif; ?>
                 
-                <?php if ($mitglied['email']): ?>
-                <p class="mb-0">
-                    <i class="bi bi-envelope"></i>
-                    <a href="mailto:<?php echo htmlspecialchars($mitglied['email']); ?>">
-                        <?php echo htmlspecialchars($mitglied['email']); ?>
-                    </a>
+                <?php foreach (['bmv_telefon2' => ['bi-telephone', 'Telefon 2'], 'bmv_telefon_firma' => ['bi-building', 'Telefon Firma']] as $feld => [$icon, $titel]):
+                    if (empty($mitglied[$feld])) continue; ?>
+                <p class="mb-2" title="<?php echo $titel; ?>">
+                    <i class="bi <?php echo $icon; ?>"></i>
+                    <a href="tel:<?php echo htmlspecialchars($mitglied[$feld]); ?>"><?php echo htmlspecialchars($mitglied[$feld]); ?></a>
+                    <small class="text-muted">(<?php echo $titel; ?>)</small>
+                </p>
+                <?php endforeach; ?>
+
+                <?php if (!empty($mitglied['bmv_fax'])): ?>
+                <p class="mb-2">
+                    <i class="bi bi-printer"></i> <?php echo htmlspecialchars($mitglied['bmv_fax']); ?> <small class="text-muted">(Fax)</small>
                 </p>
                 <?php endif; ?>
+
+                <?php foreach (['email', 'bmv_email2'] as $feld):
+                    if (empty($mitglied[$feld])) continue; ?>
+                <p class="mb-2">
+                    <i class="bi bi-envelope"></i>
+                    <a href="mailto:<?php echo htmlspecialchars($mitglied[$feld]); ?>">
+                        <?php echo htmlspecialchars($mitglied[$feld]); ?>
+                    </a>
+                </p>
+                <?php endforeach; ?>
             </div>
         </div>
         
-        <?php if ($mitglied['notizen']): ?>
-        <div class="card">
+        <?php if ($mitglied['notizen'] || !empty($mitglied['bmv_bemerkung'])): ?>
+        <div class="card mb-3">
             <div class="card-header">
                 <h5 class="mb-0">Notizen</h5>
             </div>
             <div class="card-body">
+                <?php if ($mitglied['notizen']): ?>
                 <p class="mb-0"><?php echo nl2br(htmlspecialchars($mitglied['notizen'])); ?></p>
+                <?php endif; ?>
+                <?php if (!empty($mitglied['bmv_bemerkung'])): ?>
+                <p class="mb-0 <?php echo $mitglied['notizen'] ? 'mt-2' : ''; ?>">
+                    <small class="text-muted d-block">Bemerkung (BMV)</small>
+                    <?php echo nl2br(htmlspecialchars($mitglied['bmv_bemerkung'])); ?>
+                </p>
+                <?php endif; ?>
             </div>
         </div>
         <?php endif; ?>
+
+        <!-- BMV-Details (zugeklappt) -->
+        <div class="card mb-3">
+            <div class="card-header p-0">
+                <button class="btn btn-link w-100 text-start text-decoration-none d-flex justify-content-between align-items-center px-3 py-2 collapsed"
+                        type="button" data-bs-toggle="collapse" data-bs-target="#bmvDetails" aria-expanded="false" aria-controls="bmvDetails">
+                    <span class="h5 mb-0"><i class="bi bi-cloud"></i> BMV-Details</span>
+                    <i class="bi bi-chevron-down"></i>
+                </button>
+            </div>
+            <div class="collapse" id="bmvDetails">
+                <div class="card-body small">
+                    <h6>Datenschutz-Freigaben</h6>
+                    <ul class="list-unstyled mb-3">
+                        <?php foreach ([
+                            'bmv_exp_telnr1' => 'Telefon 1 darf exportiert werden',
+                            'bmv_exp_telnr2' => 'Telefon 2 darf exportiert werden',
+                            'bmv_exp_email1' => 'E-Mail 1 darf exportiert werden',
+                            'bmv_exp_email2' => 'E-Mail 2 darf exportiert werden',
+                            'bmv_exp_adresse' => 'Adresse darf exportiert werden',
+                            'bmv_exp_internet' => 'Im Internet veröffentlichen',
+                        ] as $feld => $label): ?>
+                        <li>
+                            <?php if (!empty($mitglied[$feld])): ?>
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            <?php else: ?>
+                            <i class="bi bi-x-circle text-muted"></i>
+                            <?php endif; ?>
+                            <?php echo $label; ?>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
+
+                    <h6>Vom BMV</h6>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">BMV-ID</dt>
+                        <dd class="col-sm-7 text-break"><?php echo htmlspecialchars($mitglied['bmv_id'] ?? '–'); ?></dd>
+                        <dt class="col-sm-5">BMV-Status</dt>
+                        <dd class="col-sm-7"><?php echo htmlspecialchars($mitglied['bmv_status'] ?? '–'); ?></dd>
+                        <dt class="col-sm-5">Verein-ID</dt>
+                        <dd class="col-sm-7"><?php echo htmlspecialchars((string)($mitglied['bmv_verein_id'] ?? '–')); ?></dd>
+                        <dt class="col-sm-5">Letzte Änderung</dt>
+                        <dd class="col-sm-7"><?php echo !empty($mitglied['bmv_aenderung']) ? date('d.m.Y H:i', strtotime($mitglied['bmv_aenderung'])) : '–'; ?></dd>
+                        <dt class="col-sm-5">Angelegt von</dt>
+                        <dd class="col-sm-7 text-break"><?php echo htmlspecialchars($mitglied['bmv_pcanmeldename'] ?? '–'); ?></dd>
+                        <dt class="col-sm-5">Zuletzt geholt</dt>
+                        <dd class="col-sm-7"><?php echo !empty($mitglied['bmv_abgeglichen_am']) ? date('d.m.Y H:i', strtotime($mitglied['bmv_abgeglichen_am'])) : '–'; ?></dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
     </div>
     
     <div class="col-lg-8">
-        <!-- Instrumente die das Mitglied spielt -->
-        <div class="card mb-3">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Gespielte Instrumente</h5>
-                <?php if (Session::checkPermission('mitglieder', 'schreiben')): ?>
-                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addInstrumentModal">
-                    <i class="bi bi-plus"></i> Instrument hinzufügen
-                </button>
-                <?php endif; ?>
-            </div>
-            <div class="card-body">
-                <?php if (empty($instrumente)): ?>
-                <p class="text-muted">Keine Instrumente zugeordnet</p>
-                <?php else: ?>
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Instrument</th>
-                                <th>Register</th>
-                                <th>Hauptinstrument</th>
-                                <th>Seit</th>
-                                <?php if (Session::checkPermission('mitglieder', 'schreiben')): ?>
-                                <th>Aktion</th>
-                                <?php endif; ?>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($instrumente as $instr): ?>
-                            <tr>
-                                <td><strong><?php echo htmlspecialchars($instr['instrument_name']); ?></strong></td>
-                                <td><?php echo htmlspecialchars($instr['register_name'] ?? '-'); ?></td>
-                                <td>
-                                    <?php if ($instr['hauptinstrument']): ?>
-                                    <span class="badge bg-success"><i class="bi bi-star-fill"></i> Ja</span>
-                                    <?php else: ?>
-                                    <span class="text-muted">Nein</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td><?php echo $instr['seit_datum'] ? date('d.m.Y', strtotime($instr['seit_datum'])) : '-'; ?></td>
-                                <?php if (Session::checkPermission('mitglieder', 'schreiben')): ?>
-                                <td>
-                                    <a href="?id=<?php echo $id; ?>&remove_instrument=<?php echo $instr['id']; ?>" 
-                                       class="btn btn-sm btn-danger"
-                                       onclick="return confirm('Instrumentenzuordnung wirklich entfernen?')">
-                                        <i class="bi bi-trash"></i>
-                                    </a>
-                                </td>
-                                <?php endif; ?>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-                <?php endif; ?>
-            </div>
-        </div>
-        
+        <?php include 'includes/mitglied_laufbahn.php'; ?>
+
         <!-- Ausgeliehene Instrumente (aus Inventar) -->
         <?php if (!empty($ausgelieheneInstrumente)): ?>
         <div class="card">
@@ -319,65 +326,50 @@ include 'includes/header.php';
             </div>
         </div>
         <?php endif; ?>
-    </div>
-</div>
 
-<!-- Instrument hinzufügen Modal -->
-<?php if (Session::checkPermission('mitglieder', 'schreiben')): ?>
-<div class="modal fade" id="addInstrumentModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form method="POST">
-                <div class="modal-header">
-                    <h5 class="modal-title">Instrument hinzufügen</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="instrument_typ_id" class="form-label">Instrument *</label>
-                        <select class="form-select" id="instrument_typ_id" name="instrument_typ_id" required>
-                            <option value="">Bitte wählen</option>
-                            <?php 
-                            $currentRegister = null;
-                            foreach ($instrumentTypen as $typ): 
-                                if ($currentRegister !== $typ['register_name']):
-                                    if ($currentRegister !== null) echo '</optgroup>';
-                                    $currentRegister = $typ['register_name'];
-                                    echo '<optgroup label="' . htmlspecialchars($typ['register_name'] ?? 'Ohne Register') . '">';
-                                endif;
-                            ?>
-                            <option value="<?php echo $typ['id']; ?>">
-                                <?php echo htmlspecialchars($typ['name']); ?>
-                            </option>
+        <!-- Kleidungsstücke (Uniform) -->
+        <?php if (Session::checkPermission('uniformen', 'lesen')):
+            $uniformTeile = array_values(array_filter((new Uniform())->getZuweisungenByMitglied($mitglied['id']), fn($z) => !$z['nicht_benoetigt']));
+            $zustandFarben = ['sehr gut' => 'success', 'gut' => 'info', 'befriedigend' => 'warning', 'schlecht' => 'danger']; ?>
+        <div class="card mt-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-person-badge"></i> Uniform <span class="badge bg-secondary ms-1"><?php echo array_sum(array_map(fn($u) => (int)$u['anzahl'], $uniformTeile)); ?></span></h5>
+                <a href="uniform_mitglied.php?id=<?php echo $mitglied['id']; ?>" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-<?php echo Session::checkPermission('uniformen', 'schreiben') ? 'pencil' : 'eye'; ?>"></i>
+                    <?php echo Session::checkPermission('uniformen', 'schreiben') ? 'Ausgeben / zurücknehmen' : 'Details'; ?>
+                </a>
+            </div>
+            <div class="card-body">
+                <?php if (!$uniformTeile): ?>
+                <p class="text-muted mb-0">Keine Kleidungsstücke ausgegeben.</p>
+                <?php else: ?>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead>
+                            <tr><th>Kleidungsstück</th><th>Nr.</th><th>Größe</th><th class="text-center">Anzahl</th><th>Zustand</th><th>Ausgegeben</th></tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($uniformTeile as $ut): ?>
+                            <tr>
+                                <td>
+                                    <strong><?php echo htmlspecialchars($ut['kleidungsstueck_name']); ?></strong>
+                                    <?php if ($ut['kategorie_name']): ?><br><small class="text-muted"><?php echo htmlspecialchars($ut['kategorie_name']); ?></small><?php endif; ?>
+                                </td>
+                                <td class="font-monospace"><?php echo htmlspecialchars(Uniform::nummerAnzeige($ut['kuerzel'], $ut['stueck_nummer'])) ?: '–'; ?></td>
+                                <td><?php echo htmlspecialchars($ut['groesse'] ?? '–'); ?></td>
+                                <td class="text-center"><?php echo (int)$ut['anzahl']; ?></td>
+                                <td><span class="badge bg-<?php echo $zustandFarben[$ut['zustand']] ?? 'secondary'; ?>"><?php echo htmlspecialchars(ucfirst($ut['zustand'] ?? 'gut')); ?></span></td>
+                                <td><?php echo $ut['ausgabe_datum'] ? date('d.m.Y', strtotime($ut['ausgabe_datum'])) : '–'; ?></td>
+                            </tr>
                             <?php endforeach; ?>
-                            <?php if ($currentRegister !== null) echo '</optgroup>'; ?>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="seit_datum" class="form-label">Spielt seit</label>
-                        <input type="date" class="form-control" id="seit_datum" name="seit_datum" 
-                               value="<?php echo date('Y-m-d'); ?>">
-                        <small class="text-muted">Wird auf heute gesetzt, falls leer</small>
-                    </div>
-                    
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="hauptinstrument" name="hauptinstrument">
-                        <label class="form-check-label" for="hauptinstrument">
-                            Als Hauptinstrument markieren
-                        </label>
-                    </div>
+                        </tbody>
+                    </table>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
-                    <button type="submit" name="add_instrument" class="btn btn-primary">
-                        <i class="bi bi-save"></i> Hinzufügen
-                    </button>
-                </div>
-            </form>
+                <?php endif; ?>
+            </div>
         </div>
+        <?php endif; ?>
     </div>
 </div>
-<?php endif; ?>
 
 <?php include 'includes/footer.php'; ?>

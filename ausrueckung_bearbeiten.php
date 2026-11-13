@@ -7,7 +7,20 @@ Session::requireLogin();
 
 $ausrueckungObj = new Ausrueckung();
 $notenObj = new Noten();
+$formationObj = new Formation();
 $db = Database::getInstance();
+
+// Verfügbare Formationen für Dropdown
+if (Session::isAdmin()) {
+    $alleFormationen = $formationObj->getAll(true);
+} else {
+    $fids = Session::getFormationIds();
+    $alleFormationen = [];
+    foreach ($fids as $fid) {
+        $f = $formationObj->getById($fid);
+        if ($f && $f['aktiv']) $alleFormationen[] = $f;
+    }
+}
 
 $id = $_GET['id'] ?? null;
 $isEdit = !empty($id);
@@ -28,19 +41,20 @@ if ($isEdit) {
 // Formular verarbeiten
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = [
-        'titel' => $_POST['titel'],
-        'beschreibung' => $_POST['beschreibung'] ?? null,
-        'typ' => $_POST['typ'],
-        'start_datum' => $_POST['start_datum'],
-        'ende_datum' => $_POST['ende_datum'] ?? null,
-        'ganztaegig' => isset($_POST['ganztaegig']) ? 1 : 0,
-        'ort' => $_POST['ort'] ?? null,
-        'adresse' => $_POST['adresse'] ?? null,
-        'treffpunkt' => $_POST['treffpunkt'] ?? null,
+        'formation_id'   => !empty($_POST['formation_id']) ? (int)$_POST['formation_id'] : null,
+        'titel'          => $_POST['titel'],
+        'beschreibung'   => $_POST['beschreibung'] ?? null,
+        'typ'            => $_POST['typ'],
+        'start_datum'    => $_POST['start_datum'],
+        'ende_datum'     => $_POST['ende_datum'] ?? null,
+        'ganztaegig'     => isset($_POST['ganztaegig']) ? 1 : 0,
+        'ort'            => $_POST['ort'] ?? null,
+        'adresse'        => $_POST['adresse'] ?? null,
+        'treffpunkt'     => $_POST['treffpunkt'] ?? null,
         'treffpunkt_zeit' => $_POST['treffpunkt_zeit'] ?? null,
-        'uniform' => isset($_POST['uniform']) ? 1 : 0,
-        'notizen' => $_POST['notizen'] ?? null,
-        'status' => $_POST['status'] ?? 'geplant'
+        'uniform'        => isset($_POST['uniform']) ? 1 : 0,
+        'notizen'        => $_POST['notizen'] ?? null,
+        'status'         => $_POST['status'] ?? 'geplant'
     ];
     
     try {
@@ -51,6 +65,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = $ausrueckungObj->create($data);
             Session::setFlashMessage('success', 'Ausrückung erfolgreich erstellt');
         }
+        // Angaben für den BMV-Jahresbericht
+        $anlass = $_POST['bmv_anlass'] ?? '';
+        $anlass = isset(BmvJahresbericht::ANLAESSE[$anlass]) || isset(BmvJahresbericht::ANLAESSE_EXTRA[$anlass]) ? $anlass : null;
+        $probenart = isset(BmvJahresbericht::PROBENARTEN[$_POST['probenart'] ?? '']) ? $_POST['probenart'] : null;
+        if ($data['typ'] === 'Probe') { $anlass = null; } else { $probenart = null; }
+        Database::getInstance()->execute("UPDATE ausrueckungen SET bmv_anlass = ?, probenart = ? WHERE id = ?", [$anlass, $probenart, $id]);
         header('Location: ausrueckung_detail.php?id=' . $id);
         exit;
     } catch (Exception $e) {
@@ -102,6 +122,68 @@ include 'includes/header.php';
                 </div>
             </div>
             
+            <?php if (!empty($alleFormationen)): ?>
+            <div class="mb-3">
+                <label for="formation_id" class="form-label">Formation</label>
+                <select class="form-select" id="formation_id" name="formation_id">
+                    <?php if (Session::isAdmin()): ?>
+                    <option value="">– Alle Formationen –</option>
+                    <?php endif; ?>
+                    <?php
+                    $selFormationId = $ausrueckung['formation_id'] ?? Session::getFormationId();
+                    foreach ($alleFormationen as $f):
+                    ?>
+                    <option value="<?php echo $f['id']; ?>"
+                        <?php echo $selFormationId == $f['id'] ? 'selected' : ''; ?>>
+                        <?php echo htmlspecialchars($f['name']); ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+                <div class="form-text">Nur Mitglieder dieser Formation werden zur Anwesenheit eingeladen.</div>
+            </div>
+            <?php endif; ?>
+
+            <!-- BMV-Jahresbericht -->
+            <div class="row">
+                <div class="col-md-8 mb-3" id="bmv-anlass-feld">
+                    <label for="bmv_anlass" class="form-label">BMV-Anlass <span class="text-muted small">(für den Jahresbericht)</span></label>
+                    <select class="form-select" id="bmv_anlass" name="bmv_anlass">
+                        <option value="">automatisch aus dem Typ</option>
+                        <optgroup label="Ausrückung">
+                        <?php foreach (BmvJahresbericht::ANLAESSE as $av => $al): ?>
+                        <option value="<?php echo $av; ?>" <?php echo ($ausrueckung['bmv_anlass'] ?? '') === $av ? 'selected' : ''; ?>><?php echo htmlspecialchars($al); ?></option>
+                        <?php endforeach; ?>
+                        </optgroup>
+                        <optgroup label="Sonstiges">
+                        <?php foreach (BmvJahresbericht::ANLAESSE_EXTRA as $av => $al): ?>
+                        <option value="<?php echo $av; ?>" <?php echo ($ausrueckung['bmv_anlass'] ?? '') === $av ? 'selected' : ''; ?>><?php echo htmlspecialchars($al); ?></option>
+                        <?php endforeach; ?>
+                        </optgroup>
+                    </select>
+                    <div class="form-text" id="bmv-anlass-hinweis"></div>
+                </div>
+                <div class="col-md-4 mb-3" id="probenart-feld">
+                    <label for="probenart" class="form-label">Probenart</label>
+                    <select class="form-select" id="probenart" name="probenart">
+                        <?php foreach (BmvJahresbericht::PROBENARTEN as $pv => $pl): ?>
+                        <option value="<?php echo $pv; ?>" <?php echo ($ausrueckung['probenart'] ?? 'voll') === $pv ? 'selected' : ''; ?>><?php echo $pl; ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+            <script>
+            (function () {
+                var typ = document.getElementById('typ'), standard = <?php echo json_encode(array_map(fn($t) => BmvJahresbericht::ANLAESSE[BmvJahresbericht::anlassStandard($t)] ?? '', ['Konzert' => 'Konzert', 'Ausrückung' => 'Ausrückung', 'Fest' => 'Fest', 'Wertung' => 'Wertung', 'Sonstiges' => 'Sonstiges']), JSON_UNESCAPED_UNICODE); ?>;
+                function zeigen() {
+                    var probe = typ.value === 'Probe';
+                    document.getElementById('bmv-anlass-feld').style.display = probe || !typ.value ? 'none' : '';
+                    document.getElementById('probenart-feld').style.display = probe ? '' : 'none';
+                    document.getElementById('bmv-anlass-hinweis').textContent = standard[typ.value] ? 'Automatisch: „' + standard[typ.value] + '“' : '';
+                }
+                typ.addEventListener('change', zeigen); zeigen();
+            })();
+            </script>
+
             <div class="row">
                 <!-- Start Datum/Zeit -->
                 <div class="col-md-6 mb-3">
@@ -189,7 +271,7 @@ include 'includes/header.php';
                 <textarea class="form-control" id="notizen" name="notizen" rows="3"><?php echo htmlspecialchars($ausrueckung['notizen'] ?? ''); ?></textarea>
             </div>
             
-            <div class="d-flex justify-content-between">
+            <div class="d-flex justify-content-between page-actions-sticky">
                 <a href="ausrueckungen.php" class="btn btn-secondary">
                     <i class="bi bi-x"></i> Abbrechen
                 </a>

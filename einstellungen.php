@@ -19,7 +19,51 @@ foreach ($einstellungen as $e) {
 }
 
 // Speichern
+$bmvStandardUrl = 'https://datenservice.blasmusik.at';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $bmvLand     = strtoupper(trim($_POST['bmv_land'] ?? ''));
+    $bmvBezirk   = trim($_POST['bmv_bezirk'] ?? '');
+    $bmvVerein   = trim($_POST['bmv_verein'] ?? '');
+    $bmvEmail    = trim($_POST['bmv_email'] ?? '');
+    $bmvUrl      = trim($_POST['bmv_api_url'] ?? '');
+    $bmvPasswort = $_POST['bmv_passwort'] ?? '';
+
+    $bmvFehler = null;
+    if ($bmvLand !== '' && !preg_match('/^[A-Z]{2}$/', $bmvLand)) {
+        $bmvFehler = 'BMV Land: bitte genau 2 Buchstaben eingeben (z.B. ST).';
+    } elseif ($bmvBezirk !== '' && !preg_match('/^\d{1,2}$/', $bmvBezirk)) {
+        $bmvFehler = 'BMV Bezirk: bitte eine 1- bis 2-stellige Zahl eingeben.';
+    } elseif ($bmvVerein !== '' && !preg_match('/^\d{1,2}$/', $bmvVerein)) {
+        $bmvFehler = 'BMV Verein: bitte eine 1- bis 2-stellige Zahl eingeben.';
+    } elseif (($bmvLand !== '' || $bmvBezirk !== '' || $bmvVerein !== '') && ($bmvLand === '' || $bmvBezirk === '' || $bmvVerein === '')) {
+        $bmvFehler = 'BMV Zugangsdaten: Land, Bezirk und Verein müssen vollständig ausgefüllt sein.';
+    } elseif ($bmvEmail !== '' && !filter_var($bmvEmail, FILTER_VALIDATE_EMAIL)) {
+        $bmvFehler = 'BMV E-Mail: die Adresse ist ungültig.';
+    } elseif ($bmvUrl !== '' && !filter_var($bmvUrl, FILTER_VALIDATE_URL)) {
+        $bmvFehler = 'BMV API-Link: die Adresse ist ungültig.';
+    } elseif (trim($_POST['bmv_jahresbericht_email'] ?? '') !== '' && !filter_var(trim($_POST['bmv_jahresbericht_email']), FILTER_VALIDATE_EMAIL)) {
+        $bmvFehler = 'Jahresbericht senden an: die Adresse ist ungültig.';
+    }
+
+    if ($bmvFehler) {
+        $error = $bmvFehler;
+        $settings['bmv_land']    = $bmvLand;
+        $settings['bmv_bezirk']  = $bmvBezirk;
+        $settings['bmv_verein']  = $bmvVerein;
+        $settings['bmv_email']   = $bmvEmail;
+        $settings['bmv_api_url'] = $bmvUrl;
+    } else {
+        $_POST['bmv_land']    = $bmvLand;
+        $_POST['bmv_bezirk']  = $bmvBezirk !== '' ? str_pad($bmvBezirk, 2, '0', STR_PAD_LEFT) : '';
+        $_POST['bmv_verein']  = $bmvVerein !== '' ? str_pad($bmvVerein, 2, '0', STR_PAD_LEFT) : '';
+        $_POST['bmv_api_url'] = $bmvUrl !== '' ? rtrim($bmvUrl, '/') : $bmvStandardUrl;
+        if ($bmvPasswort === '') {
+            unset($_POST['bmv_passwort']); // leer = gespeichertes Passwort behalten
+        }
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($error)) {
     try {
         // Normale Einstellungen
         foreach ($_POST as $key => $value) {
@@ -30,9 +74,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
             }
         }
-        
+
         // Checkboxen (die nicht in POST sind wenn nicht angeklickt)
-        $checkboxen = ['beitrag_aktiv', 'beitrag_passiv', 'beitrag_ehrenmitglied', 'beitrag_ausgetreten'];
+        $checkboxen = ['telemetry_enabled', 'bmv_aktiv'];
         foreach ($checkboxen as $checkbox) {
             $wert = isset($_POST[$checkbox]) ? '1' : '0';
             $db->execute(
@@ -40,7 +84,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 [$checkbox, $wert, $wert]
             );
         }
-        
+
+        // Geänderte BMV-Zugangsdaten: alte Prüfung verwerfen, damit beim nächsten Laden neu geprüft wird
+        $bmvZugang = ['bmv_api_url', 'bmv_email', 'bmv_land', 'bmv_bezirk', 'bmv_verein'];
+        $zugangGeaendert = isset($_POST['bmv_passwort'])
+            || (isset($_POST['bmv_aktiv']) ? '1' : '0') !== ($settings['bmv_aktiv'] ?? '0');
+        foreach ($bmvZugang as $schluessel) {
+            if (isset($_POST[$schluessel]) && (string)$_POST[$schluessel] !== (string)($settings[$schluessel] ?? '')) {
+                $zugangGeaendert = true;
+            }
+        }
+        if ($zugangGeaendert) {
+            $db->execute("DELETE FROM einstellungen WHERE schluessel = 'bmv_pruefung'");
+        }
+
         Session::setFlashMessage('success', 'Einstellungen gespeichert');
         header('Location: einstellungen.php');
         exit;
@@ -49,12 +106,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// BMV: regelmäßig prüfen, ob es dort neue Daten gibt (nur lesend), für den Hinweis unten
+$bmvApi = new BmvApi();
+if (isset($_GET['bmv_pruefen']) && $bmvApi->istKonfiguriert()) {
+    BmvDaten::pruefen($bmvApi);
+    header('Location: einstellungen.php');
+    exit;
+}
+$bmvPruefung = BmvDaten::pruefenFallsFaellig();
+$bmvNeuigkeiten = BmvDaten::anzahlNeuigkeiten($bmvPruefung);
+
 include 'includes/header.php';
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h2"><i class="bi bi-gear"></i> Einstellungen</h1>
 </div>
+
+<?php if ($bmvPruefung && isset($bmvPruefung['fehler'])): ?>
+<div class="alert alert-permanent alert-secondary small py-2">
+    <i class="bi bi-cloud-slash"></i>
+    BMV konnte nicht geprüft werden: <?php echo htmlspecialchars($bmvPruefung['fehler']); ?>
+    <a href="einstellungen.php?bmv_pruefen=1" class="ms-1">Erneut prüfen</a>
+</div>
+<?php elseif ($bmvNeuigkeiten > 0): ?>
+<div class="alert alert-permanent alert-warning small py-2 d-flex flex-wrap align-items-center gap-2">
+    <i class="bi bi-cloud-arrow-down"></i>
+    <span>
+        <strong>Neue Daten im BMV:</strong>
+        <?php
+        $teile = [];
+        if (($bmvPruefung['verein'] ?? 0) > 0) $teile[] = '<a href="bmv_daten.php?bereich=verein">Vereinsdaten geändert</a>';
+        $neu = (int)($bmvPruefung['mitglieder_neu'] ?? 0);
+        $geaendert = (int)($bmvPruefung['mitglieder_geaendert'] ?? 0);
+        if ($neu > 0) $teile[] = '<a href="bmv_daten.php?bereich=mitglieder">' . $neu . ($neu === 1 ? ' neues Mitglied' : ' neue Mitglieder') . '</a>';
+        if ($geaendert > 0) $teile[] = '<a href="bmv_daten.php?bereich=mitglieder">' . $geaendert . ($geaendert === 1 ? ' geändertes Mitglied' : ' geänderte Mitglieder') . '</a>';
+        $zusatz = (int)($bmvPruefung['zusatz'] ?? 0);
+        if ($zusatz > 0) $teile[] = '<a href="bmv_daten.php?bereich=mitglieder">' . $zusatz . ' Änderungen bei Ehrungen, Funktionen u. a.</a>';
+        $notenNeu = (int)($bmvPruefung['noten_neu'] ?? 0);
+        if ($notenNeu > 0) $teile[] = '<a href="bmv_daten.php?bereich=noten">' . $notenNeu . ($notenNeu === 1 ? ' neues Stück' : ' neue Stücke') . ' im Notenarchiv</a>';
+        echo implode(' · ', $teile);
+        ?>
+    </span>
+    <span class="text-muted ms-auto">Geprüft <?php echo htmlspecialchars(date('d.m.Y H:i', strtotime($bmvPruefung['zeitpunkt']))); ?></span>
+</div>
+<?php endif; ?>
 
 <?php if (isset($error)): ?>
 <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
@@ -67,17 +163,94 @@ include 'includes/header.php';
             <h5 class="mb-0">Allgemeine Einstellungen</h5>
         </div>
         <div class="card-body">
+            <p class="text-muted small mb-3">
+                Änderungen hier werden nur in Syncopa gespeichert, nicht im BMV.
+                Die Vereinsdaten aus dem BMV holst du unter <a href="bmv_daten.php?bereich=verein">BMV Daten holen</a>.
+            </p>
+
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="verein_name" class="form-label">Vereinsname</label>
-                    <input type="text" class="form-control" id="verein_name" name="verein_name" 
+                    <input type="text" class="form-control" id="verein_name" name="verein_name"
                            value="<?php echo htmlspecialchars($settings['verein_name'] ?? ''); ?>">
                 </div>
-                
+
                 <div class="col-md-6 mb-3">
+                    <label for="verein_kontaktperson" class="form-label">Kontaktperson</label>
+                    <input type="text" class="form-control" id="verein_kontaktperson" name="verein_kontaktperson"
+                           value="<?php echo htmlspecialchars($settings['verein_kontaktperson'] ?? ''); ?>">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="verein_adresse" class="form-label">Straße</label>
+                    <input type="text" class="form-control" id="verein_adresse" name="verein_adresse"
+                           value="<?php echo htmlspecialchars($settings['verein_adresse'] ?? ''); ?>">
+                </div>
+
+                <div class="col-md-2 mb-3">
+                    <label for="verein_plz" class="form-label">PLZ</label>
+                    <input type="text" class="form-control" id="verein_plz" name="verein_plz"
+                           value="<?php echo htmlspecialchars($settings['verein_plz'] ?? ''); ?>">
+                </div>
+
+                <div class="col-md-4 mb-3">
                     <label for="verein_ort" class="form-label">Ort</label>
-                    <input type="text" class="form-control" id="verein_ort" name="verein_ort" 
+                    <input type="text" class="form-control" id="verein_ort" name="verein_ort"
                            value="<?php echo htmlspecialchars($settings['verein_ort'] ?? ''); ?>">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="verein_gemeinde" class="form-label">Gemeinde</label>
+                    <input type="text" class="form-control" id="verein_gemeinde" name="verein_gemeinde"
+                           value="<?php echo htmlspecialchars($settings['verein_gemeinde'] ?? ''); ?>">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="verein_email" class="form-label">E-Mail</label>
+                    <input type="email" class="form-control" id="verein_email" name="verein_email"
+                           value="<?php echo htmlspecialchars($settings['verein_email'] ?? ''); ?>">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="verein_telefon" class="form-label">Telefon</label>
+                    <input type="text" class="form-control" id="verein_telefon" name="verein_telefon"
+                           value="<?php echo htmlspecialchars($settings['verein_telefon'] ?? ''); ?>">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="verein_website" class="form-label">Website</label>
+                    <input type="text" class="form-control" id="verein_website" name="verein_website"
+                           value="<?php echo htmlspecialchars($settings['verein_website'] ?? ''); ?>">
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label for="verein_zvr_nr" class="form-label">ZVR-Nummer</label>
+                    <input type="text" class="form-control" id="verein_zvr_nr" name="verein_zvr_nr"
+                           value="<?php echo htmlspecialchars($settings['verein_zvr_nr'] ?? ''); ?>">
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label for="verein_gruendungsjahr" class="form-label">Gründungsjahr</label>
+                    <input type="text" class="form-control" id="verein_gruendungsjahr" name="verein_gruendungsjahr"
+                           value="<?php echo htmlspecialchars($settings['verein_gruendungsjahr'] ?? ''); ?>">
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label for="verein_kontoname" class="form-label">Kontobezeichnung</label>
+                    <input type="text" class="form-control" id="verein_kontoname" name="verein_kontoname"
+                           value="<?php echo htmlspecialchars($settings['verein_kontoname'] ?? ''); ?>">
+                </div>
+
+                <div class="col-md-8 mb-3">
+                    <label for="verein_iban" class="form-label">IBAN</label>
+                    <input type="text" class="form-control" id="verein_iban" name="verein_iban"
+                           value="<?php echo htmlspecialchars($settings['verein_iban'] ?? ''); ?>">
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label for="verein_bic" class="form-label">BIC</label>
+                    <input type="text" class="form-control" id="verein_bic" name="verein_bic"
+                           value="<?php echo htmlspecialchars($settings['verein_bic'] ?? ''); ?>">
                 </div>
             </div>
         </div>
@@ -89,74 +262,21 @@ include 'includes/header.php';
             <h5 class="mb-0">Mitgliedsbeiträge</h5>
         </div>
         <div class="card-body">
-            <div class="alert alert-info">
+            <div class="alert alert-permanent alert-info small">
                 <i class="bi bi-info-circle"></i>
-                <strong>Hinweis:</strong> Hier konfigurierst du die Mitgliedsbeiträge nach Status.
-                Unter <a href="beitraege_verwalten.php" class="alert-link">Beiträge verwalten</a> 
-                kannst du dann automatisch Beiträge für alle Mitglieder generieren.
+                Welche Mitglieder Beitrag zahlen und wie viel, steht bei der Mitgliedsart unter
+                <a href="stammdaten.php?tab=mitgliedsarten" class="alert-link">Stammdaten → Mitgliedsarten</a>.
+                Unter <a href="beitraege_verwalten.php" class="alert-link">Beiträge verwalten</a> erzeugst du dann die Beiträge eines Jahres.
             </div>
-            
-            <div class="mb-3">
-                <label for="mitgliedsbeitrag_jahr" class="form-label">
-                    Beitrag für aktive Mitglieder pro Jahr (€)
-                </label>
-                <input type="number" class="form-control" id="mitgliedsbeitrag_jahr" name="mitgliedsbeitrag_jahr" 
-                       step="0.01" value="<?php echo htmlspecialchars($settings['mitgliedsbeitrag_jahr'] ?? '120.00'); ?>">
-                <small class="text-muted">Dieser Betrag gilt für aktive Mitglieder (Standard)</small>
-            </div>
-            
-            <hr>
-            <h6>Beitragspflicht nach Mitgliederstatus</h6>
-            <p class="text-muted small">Wähle aus, welche Mitgliederkategorien Beiträge zahlen müssen:</p>
-            
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="beitrag_aktiv" name="beitrag_aktiv" 
-                               <?php echo ($settings['beitrag_aktiv'] ?? '1') ? 'checked' : ''; ?>>
-                        <label class="form-check-label" for="beitrag_aktiv">
-                            <strong>Aktive Mitglieder</strong>
-                        </label>
-                    </div>
-                    
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="beitrag_passiv" name="beitrag_passiv" 
-                               <?php echo ($settings['beitrag_passiv'] ?? '0') ? 'checked' : ''; ?>>
-                        <label class="form-check-label" for="beitrag_passiv">
-                            <strong>Passive Mitglieder</strong>
-                        </label>
-                    </div>
-                </div>
-                
-                <div class="col-md-6">
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="beitrag_ehrenmitglied" name="beitrag_ehrenmitglied" 
-                               <?php echo ($settings['beitrag_ehrenmitglied'] ?? '0') ? 'checked' : ''; ?>>
-                        <label class="form-check-label" for="beitrag_ehrenmitglied">
-                            <strong>Ehrenmitglieder</strong>
-                        </label>
-                    </div>
-                    
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" id="beitrag_ausgetreten" name="beitrag_ausgetreten" 
-                               <?php echo ($settings['beitrag_ausgetreten'] ?? '0') ? 'checked' : ''; ?>>
-                        <label class="form-check-label" for="beitrag_ausgetreten">
-                            <strong>Ausgetretene Mitglieder</strong>
-                        </label>
-                    </div>
-                </div>
-            </div>
-            
-            <hr>
-            
+
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label for="beitrag_passiv_betrag" class="form-label">Beitrag für Passive (€)</label>
-                    <input type="number" class="form-control" id="beitrag_passiv_betrag" name="beitrag_passiv_betrag" 
-                           step="0.01" value="<?php echo htmlspecialchars($settings['beitrag_passiv_betrag'] ?? '60.00'); ?>">
-                    <small class="text-muted">Falls abweichend vom Standardbeitrag</small>
+                    <label for="mitgliedsbeitrag_jahr" class="form-label">Standardbeitrag pro Jahr (€)</label>
+                    <input type="number" class="form-control" id="mitgliedsbeitrag_jahr" name="mitgliedsbeitrag_jahr"
+                           step="0.01" value="<?php echo htmlspecialchars($settings['mitgliedsbeitrag_jahr'] ?? '120.00'); ?>">
+                    <small class="text-muted">Gilt für beitragspflichtige Mitgliedsarten ohne eigenen Beitrag</small>
                 </div>
-                
+
                 <div class="col-md-6 mb-3">
                     <label for="beitrag_faelligkeit_monat" class="form-label">Fälligkeit im Monat</label>
                     <select class="form-select" id="beitrag_faelligkeit_monat" name="beitrag_faelligkeit_monat">
@@ -229,16 +349,191 @@ include 'includes/header.php';
         </div>
     </div>
     
-    <!-- System-Informationen -->
+    <!-- BMV Zugangsdaten -->
     <div class="card mb-3">
         <div class="card-header">
+            <h5 class="mb-0">BMV Zugangsdaten</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small mb-3">
+                Zugangsdaten für den Datenservice des Blasmusikverbands. Syncopa holt damit nur Daten aus dem BMV,
+                im BMV wird nichts geändert. Ohne Eingabe funktioniert Syncopa wie bisher.
+            </p>
+
+            <div class="p-3 border rounded mb-3">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="bmv_aktiv" name="bmv_aktiv" value="1"
+                           <?php echo ($settings['bmv_aktiv'] ?? '0') === '1' ? 'checked' : ''; ?>>
+                    <label class="form-check-label fw-semibold" for="bmv_aktiv">BMV-Anbindung aktiv</label>
+                </div>
+                <div class="text-muted small mt-1">
+                    Schaltet alle BMV-Funktionen auf einmal frei bzw. ab (Daten holen und Prüfung auf neue Daten).
+                    Die Zugangsdaten bleiben dabei gespeichert.
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <label for="bmv_api_url" class="form-label">API-Link</label>
+                    <input type="url" class="form-control" id="bmv_api_url" name="bmv_api_url"
+                           value="<?php echo htmlspecialchars(($settings['bmv_api_url'] ?? '') ?: $bmvStandardUrl); ?>">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="bmv_email" class="form-label">E-Mail</label>
+                    <input type="email" class="form-control" id="bmv_email" name="bmv_email" autocomplete="off"
+                           value="<?php echo htmlspecialchars($settings['bmv_email'] ?? ''); ?>">
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="bmv_passwort" class="form-label">Passwort</label>
+                    <input type="password" class="form-control" id="bmv_passwort" name="bmv_passwort" autocomplete="new-password"
+                           placeholder="<?php echo !empty($settings['bmv_passwort']) ? 'gespeichert – leer lassen zum Beibehalten' : ''; ?>">
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label for="bmv_land" class="form-label">Land</label>
+                    <input type="text" class="form-control text-uppercase" id="bmv_land" name="bmv_land"
+                           maxlength="2" placeholder="ST"
+                           value="<?php echo htmlspecialchars($settings['bmv_land'] ?? ''); ?>">
+                    <small class="text-muted">2 Buchstaben, z.B. ST</small>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label for="bmv_bezirk" class="form-label">Bezirk</label>
+                    <input type="text" class="form-control" id="bmv_bezirk" name="bmv_bezirk"
+                           inputmode="numeric" maxlength="2" placeholder="16"
+                           value="<?php echo htmlspecialchars($settings['bmv_bezirk'] ?? ''); ?>">
+                    <small class="text-muted">2-stellige Zahl, z.B. 16</small>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label for="bmv_verein" class="form-label">Verein</label>
+                    <input type="text" class="form-control" id="bmv_verein" name="bmv_verein"
+                           inputmode="numeric" maxlength="2" placeholder="13"
+                           value="<?php echo htmlspecialchars($settings['bmv_verein'] ?? ''); ?>">
+                    <small class="text-muted">2-stellige Zahl, z.B. 13</small>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <label for="bmv_sync_intervall_stunden" class="form-label">Auf neue Daten im BMV prüfen alle (Stunden)</label>
+                    <input type="number" class="form-control" id="bmv_sync_intervall_stunden" name="bmv_sync_intervall_stunden"
+                           min="1" max="168" value="<?php echo htmlspecialchars($settings['bmv_sync_intervall_stunden'] ?? '24'); ?>">
+                    <small class="text-muted">z.B. 24 = einmal täglich. Geprüft wird beim Öffnen der Einstellungen. Gibt es Neues, erscheint oben ein Hinweis.</small>
+                </div>
+
+                <div class="col-md-8 mb-3">
+                    <label for="bmv_jahresbericht_email" class="form-label">Jahresbericht senden an</label>
+                    <input type="email" class="form-control" id="bmv_jahresbericht_email" name="bmv_jahresbericht_email"
+                           placeholder="E-Mail-Adresse des Bezirks- oder Landesverbands"
+                           value="<?php echo htmlspecialchars($settings['bmv_jahresbericht_email'] ?? ''); ?>">
+                    <small class="text-muted">An diese Adresse wird der abgeschlossene <a href="bmv_jahresbericht.php">Jahresbericht</a> als PDF geschickt.</small>
+                </div>
+            </div>
+
+            <div class="alert alert-permanent alert-secondary mb-3">
+                <i class="bi bi-person-badge"></i>
+                Vereinskennung (Teil des API-Logins): <strong id="bmv_login_vorschau">–</strong>
+            </div>
+
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <a href="bmv_daten.php" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-cloud-download"></i> BMV Daten holen
+                </a>
+                <?php if ($bmvPruefung && !isset($bmvPruefung['fehler'])): ?>
+                <span class="text-muted small">
+                    Zuletzt geprüft: <?php echo htmlspecialchars(date('d.m.Y H:i', strtotime($bmvPruefung['zeitpunkt']))); ?>
+                    <?php echo $bmvNeuigkeiten === 0 ? '– keine neuen Daten.' : ''; ?>
+                </span>
+                <?php endif; ?>
+                <?php if ($bmvApi->istKonfiguriert()): ?>
+                <a href="einstellungen.php?bmv_pruefen=1" class="small">Jetzt prüfen</a>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+    <script>
+    (function() {
+        var land   = document.getElementById('bmv_land');
+        var bezirk = document.getElementById('bmv_bezirk');
+        var verein = document.getElementById('bmv_verein');
+        var vorschau = document.getElementById('bmv_login_vorschau');
+        function aktualisieren() {
+            var l = land.value.trim().toUpperCase();
+            var b = bezirk.value.trim();
+            var v = verein.value.trim();
+            if (!l || !b || !v) { vorschau.textContent = '–'; return; }
+            vorschau.textContent = l + '-' + b.padStart(2, '0') + '-' + v.padStart(3, '0');
+        }
+        [land, bezirk, verein].forEach(function(el) { el.addEventListener('input', aktualisieren); });
+        aktualisieren();
+    })();
+    </script>
+
+    <!-- Telemetrie -->
+    <div class="card mb-3">
+        <div class="card-header">
+            <h5 class="mb-0">Nutzungsstatistik</h5>
+        </div>
+        <div class="card-body">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="telemetry_enabled" name="telemetry_enabled"
+                       value="1" <?php echo ($settings['telemetry_enabled'] ?? '0') === '1' ? 'checked' : ''; ?>>
+                <label class="form-check-label" for="telemetry_enabled">
+                    Anonyme Nutzungsstatistik senden
+                </label>
+            </div>
+            <div class="text-muted small mt-1">
+                Sendet einmal täglich die Versionsnummer und den Vereinsnamen anonym an den Syncopa-Server.
+                Keine personenbezogenen Daten. Kann jederzeit deaktiviert werden.
+            </div>
+        </div>
+    </div>
+
+    <!-- Noten / PDF-Aufteilung -->
+    <div class="card mb-3">
+        <div class="card-header">
+            <h5 class="mb-0">Noten-Aufteilung</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-3">Definiere, welche Instrumente beim automatischen PDF-Aufteilen erkannt werden sollen und in welcher Reihenfolge die Muster geprüft werden.</p>
+            <a href="noten_instrumente.php" class="btn btn-outline-primary">
+                <i class="bi bi-music-note"></i> Instrument-Pattern verwalten
+            </a>
+        </div>
+    </div>
+
+    <!-- Rollen & Berechtigungen -->
+    <div class="card mb-3">
+        <div class="card-header">
+            <h5 class="mb-0">Rollen &amp; Berechtigungen</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted mb-3">Verwalte Rollen und lege fest, welche Rolle auf welche Module zugreifen darf.</p>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="rollen.php" class="btn btn-outline-secondary">
+                    <i class="bi bi-shield-lock"></i> Rollen verwalten
+                </a>
+                <a href="berechtigungen_matrix.php" class="btn btn-outline-primary">
+                    <i class="bi bi-grid-3x3-gap"></i> Berechtigungs-Matrix
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- System-Informationen -->
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">System-Informationen</h5>
+            <a href="update.php" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-cloud-download"></i> System-Update
+            </a>
         </div>
         <div class="card-body">
             <dl class="row">
                 <dt class="col-sm-3">PHP Version:</dt>
                 <dd class="col-sm-9"><?php echo PHP_VERSION; ?></dd>
-                
+
                 <dt class="col-sm-3">MySQL Version:</dt>
                 <dd class="col-sm-9">
                     <?php
@@ -246,10 +541,15 @@ include 'includes/header.php';
                     echo htmlspecialchars($version['version']);
                     ?>
                 </dd>
-                
+
                 <dt class="col-sm-3">Anwendungs-Version:</dt>
-                <dd class="col-sm-9"><?php echo APP_VERSION; ?></dd>
-                
+                <dd class="col-sm-9">
+                    <?php echo APP_VERSION; ?>
+                    <a href="update.php" class="ms-2 badge bg-primary text-decoration-none">
+                        <i class="bi bi-cloud-download"></i> Update prüfen
+                    </a>
+                </dd>
+
                 <dt class="col-sm-3">Upload-Verzeichnis:</dt>
                 <dd class="col-sm-9">
                     <?php echo UPLOAD_DIR; ?>

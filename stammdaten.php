@@ -1,5 +1,5 @@
 <?php
-// stammdaten.php - Verwaltung von Registern, Ausrückungstypen, Instrumententypen
+// stammdaten.php - Verwaltung von Registern, Ausrückungstypen, Instrumententypen, Mitgliedsarten
 require_once 'config.php';
 require_once 'includes.php';
 
@@ -17,6 +17,29 @@ $error = null;
 $success = null;
 
 // ===================== VERARBEITUNG =====================
+
+// Mitgliedsarten verarbeiten (ersetzen den früheren Mitgliedsstatus, siehe classes/Mitgliedsart.php)
+if (in_array($action, ['mitgliedsarten_speichern', 'mitgliedsart_loeschen'], true)) {
+    try {
+        if ($action === 'mitgliedsart_loeschen') {
+            Mitgliedsart::loeschen((int)($_POST['code'] ?? 0));
+            Session::setFlashMessage('success', 'Mitgliedsart gelöscht.');
+        } else {
+            foreach ($_POST['art'] ?? [] as $alterCode => $e) {
+                Mitgliedsart::speichern($e, (int)$alterCode);
+            }
+            $neu = $_POST['neu'] ?? [];
+            if (trim((string)($neu['name'] ?? '')) !== '') {
+                Mitgliedsart::speichern($neu);
+            }
+            Session::setFlashMessage('success', 'Mitgliedsarten gespeichert.');
+        }
+    } catch (RuntimeException $e) {
+        Session::setFlashMessage('danger', $e->getMessage());
+    }
+    header('Location: stammdaten.php?tab=mitgliedsarten');
+    exit;
+}
 
 // Register verarbeiten
 if ($action === 'register_save') {
@@ -97,6 +120,44 @@ if ($action === 'instrumenttyp_delete') {
     $tab = 'instrumenttypen';
 }
 
+// Nummernkreise verarbeiten
+if ($action === 'nummernkreise_save') {
+    $typen = ['mitglieder', 'noten', 'instrumente', 'finanzen'];
+    try {
+        foreach ($typen as $typ) {
+            $prefix  = trim($_POST['prefix_' . $typ]  ?? '');
+            $stellen = (int)($_POST['stellen_' . $typ] ?? 3);
+            $stellen = max(1, min(10, $stellen));
+
+            // Prefix speichern (Y/y als Platzhalter behalten – wird bei Nummerngenerierung aufgelöst)
+            $db->execute(
+                "INSERT INTO einstellungen (schluessel, wert, beschreibung)
+                 VALUES (?, ?, ?)
+                 ON DUPLICATE KEY UPDATE wert = VALUES(wert)",
+                [
+                    'nummernkreis_' . $typ . '_prefix',
+                    $prefix,
+                    'Nummernkreis ' . ucfirst($typ) . ' – Präfix'
+                ]
+            );
+            $db->execute(
+                "INSERT INTO einstellungen (schluessel, wert, beschreibung)
+                 VALUES (?, ?, ?)
+                 ON DUPLICATE KEY UPDATE wert = VALUES(wert)",
+                [
+                    'nummernkreis_' . $typ . '_stellen',
+                    (string)$stellen,
+                    'Nummernkreis ' . ucfirst($typ) . ' – Stellen'
+                ]
+            );
+        }
+        $success = 'Nummernkreise erfolgreich gespeichert';
+    } catch (Exception $e) {
+        $error = 'Fehler beim Speichern: ' . $e->getMessage();
+    }
+    $tab = 'nummernkreise';
+}
+
 // ===================== DATEN LADEN =====================
 
 $register = $db->fetchAll("SELECT r.*, 
@@ -110,6 +171,27 @@ $instrumentTypen = $db->fetchAll("SELECT it.*, r.name as register_name,
     FROM instrument_typen it
     LEFT JOIN register r ON it.register_id = r.id
     ORDER BY r.sortierung, it.name");
+
+// Nummernkreise aus einstellungen laden
+$nkTypen = ['mitglieder', 'noten', 'instrumente', 'finanzen'];
+$nkConfig = [];
+foreach ($nkTypen as $typ) {
+    $pRow = $db->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = ?", ['nummernkreis_' . $typ . '_prefix']);
+    $sRow = $db->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = ?", ['nummernkreis_' . $typ . '_stellen']);
+    $nkConfig[$typ] = [
+        'prefix'  => $pRow ? $pRow['wert'] : ($typ === 'finanzen' ? 'Y-' : ''),
+        'stellen' => $sRow ? (int)$sRow['wert'] : 3,
+    ];
+}
+
+// Hilfsfunktion: Y/y → aktuelles Jahr auflösen (für Vorschau)
+function resolvePrefix(string $prefix): string {
+    $year = date('Y');
+    $yearShort = date('y');
+    $prefix = str_replace('Y', $year,      $prefix);
+    $prefix = str_replace('y', $yearShort, $prefix);
+    return $prefix;
+}
 
 include 'includes/header.php';
 ?>
@@ -147,6 +229,16 @@ include 'includes/header.php';
     <li class="nav-item">
         <a class="nav-link <?php echo $tab === 'ausrueckungstypen' ? 'active' : ''; ?>" href="?tab=ausrueckungstypen">
             <i class="bi bi-calendar-event"></i> Ausrückungstypen
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?php echo $tab === 'mitgliedsarten' ? 'active' : ''; ?>" href="?tab=mitgliedsarten">
+            <i class="bi bi-person-vcard"></i> Mitgliedsarten
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?php echo $tab === 'nummernkreise' ? 'active' : ''; ?>" href="?tab=nummernkreise">
+            <i class="bi bi-123"></i> Nummernkreise
         </a>
     </li>
 </ul>
@@ -351,7 +443,7 @@ include 'includes/header.php';
     </div>
 </div>
 
-<?php else: ?>
+<?php elseif ($tab === 'ausrueckungstypen'): ?>
 <!-- ==================== AUSRÜCKUNGSTYPEN ==================== -->
 <div class="row">
     <div class="col-lg-8">
@@ -395,6 +487,259 @@ include 'includes/header.php';
         </div>
     </div>
 </div>
+
+<?php elseif ($tab === 'mitgliedsarten'):
+    $arten = Mitgliedsart::alle();
+    $anzahl = Mitgliedsart::anzahlJeArt();
+    $farbAuswahl = function (string $name, string $wert) {
+        $html = '<select class="form-select form-select-sm" name="' . $name . '">';
+        foreach (Mitgliedsart::FARBEN as $f => $text) {
+            $html .= '<option value="' . $f . '"' . ($f === $wert ? ' selected' : '') . '>' . $text . '</option>';
+        }
+        return $html . '</select>';
+    };
+?>
+<!-- ==================== MITGLIEDSARTEN ==================== -->
+<div class="alert alert-permanent alert-secondary small">
+    <i class="bi bi-info-circle"></i>
+    Die Mitgliedsart ersetzt den früheren Status (aktiv, passiv …). Welche Art ein Mitglied gerade hat, steht beim Mitglied
+    im Reiter <strong>Mitgliedsart</strong> – aus dem BMV oder selbst eingetragen. Ohne laufende Mitgliedsart gilt ein Mitglied als ausgetreten.<br>
+    <strong>Gast</strong> = kein Vereinsmitglied, z. B. Gastmusiker/innen: Sie spielen nur in den Formationen mit, denen sie zugeordnet sind,
+    werden nie an den BMV übertragen und zählen nicht bei Beiträgen, Ehrungen und Statistik.<br>
+    <strong>Nr.</strong> ist die Nummer im BMV. Für Arten, die es im BMV (noch) nicht gibt, eine eigene Nummer ab <?php echo Mitgliedsart::EIGENE_NUMMERN_AB; ?>
+    verwenden; sie lässt sich später auf die BMV-Nummer ändern, alle Einträge werden mit umgestellt.
+</div>
+
+<form method="POST">
+    <input type="hidden" name="action" value="mitgliedsarten_speichern">
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-3" style="width:90px">Nr.</th>
+                        <th>Name</th>
+                        <th class="text-center" data-bs-toggle="tooltip" title="Erscheint bei Proben, Ausrückungen, Instrument- und Uniformausgabe, Festen und in der Statistik">Zählt als aktiv <i class="bi bi-question-circle text-muted"></i></th>
+                        <th class="text-center">Beitragspflichtig</th>
+                        <th class="text-center" data-bs-toggle="tooltip" title="Kein Vereinsmitglied (z. B. Gastmusiker/in): spielt nur in den zugeordneten Formationen mit, wird nie an den BMV übertragen, zählt nicht bei Beiträgen, Ehrungen und Statistik">Gast <i class="bi bi-question-circle text-muted"></i></th>
+                        <th style="width:130px" data-bs-toggle="tooltip" title="Leer = Standardbeitrag aus den Einstellungen">Beitrag € <i class="bi bi-question-circle text-muted"></i></th>
+                        <th style="width:130px">Farbe</th>
+                        <th style="width:90px">Reihenf.</th>
+                        <th class="text-end">Mitglieder</th>
+                        <th class="pe-3"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach ($arten as $code => $a): $f = "art[$code]"; ?>
+                <tr>
+                    <td class="ps-3"><input type="number" min="1" class="form-control form-control-sm" name="<?php echo $f; ?>[code]" value="<?php echo $code; ?>"></td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm" name="<?php echo $f; ?>[name]" value="<?php echo htmlspecialchars($a['name']); ?>" maxlength="100" required>
+                    </td>
+                    <td class="text-center"><input type="checkbox" class="form-check-input" name="<?php echo $f; ?>[aktiv]" value="1" <?php echo $a['aktiv'] ? 'checked' : ''; ?>></td>
+                    <td class="text-center"><input type="checkbox" class="form-check-input" name="<?php echo $f; ?>[beitragspflichtig]" value="1" <?php echo $a['beitragspflichtig'] ? 'checked' : ''; ?>></td>
+                    <td class="text-center"><input type="checkbox" class="form-check-input" name="<?php echo $f; ?>[gast]" value="1" <?php echo $a['gast'] ? 'checked' : ''; ?>></td>
+                    <td><input type="number" step="0.01" min="0" class="form-control form-control-sm" name="<?php echo $f; ?>[beitrag]" value="<?php echo $a['beitrag'] !== null ? htmlspecialchars($a['beitrag']) : ''; ?>" placeholder="Standard"></td>
+                    <td><?php echo $farbAuswahl($f . '[farbe]', $a['farbe']); ?></td>
+                    <td><input type="number" class="form-control form-control-sm" name="<?php echo $f; ?>[sortierung]" value="<?php echo (int)$a['sortierung']; ?>"></td>
+                    <td class="text-end">
+                        <?php echo Mitgliedsart::badge($code); ?>
+                        <span class="ms-1"><?php echo (int)($anzahl[$code] ?? 0); ?></span>
+                    </td>
+                    <td class="pe-3 text-end">
+                        <button type="submit" form="artLoeschen<?php echo $code; ?>" class="btn btn-sm btn-link text-danger p-0" title="Löschen"
+                                onclick="return confirm('Mitgliedsart „<?php echo htmlspecialchars(addslashes($a['name'])); ?>“ löschen?');"><i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+                <tr class="table-light">
+                    <td class="ps-3"><input type="number" min="1" class="form-control form-control-sm" name="neu[code]" placeholder="<?php echo Mitgliedsart::naechsteEigeneNummer(); ?>" value="<?php echo Mitgliedsart::naechsteEigeneNummer(); ?>"></td>
+                    <td><input type="text" class="form-control form-control-sm" name="neu[name]" maxlength="100" placeholder="Neue Mitgliedsart, z. B. Ehrenobmann"></td>
+                    <td class="text-center"><input type="checkbox" class="form-check-input" name="neu[aktiv]" value="1"></td>
+                    <td class="text-center"><input type="checkbox" class="form-check-input" name="neu[beitragspflichtig]" value="1"></td>
+                    <td class="text-center"><input type="checkbox" class="form-check-input" name="neu[gast]" value="1"></td>
+                    <td><input type="number" step="0.01" min="0" class="form-control form-control-sm" name="neu[beitrag]" placeholder="Standard"></td>
+                    <td><?php echo $farbAuswahl('neu[farbe]', 'secondary'); ?></td>
+                    <td><input type="number" class="form-control form-control-sm" name="neu[sortierung]" value="100"></td>
+                    <td colspan="2" class="text-muted small pe-3">wird beim Speichern angelegt</td>
+                </tr>
+                </tbody>
+            </table>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex justify-content-end mt-3 page-actions-sticky">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Mitgliedsarten speichern</button>
+    </div>
+</form>
+<?php foreach ($arten as $code => $a): ?>
+<form method="POST" id="artLoeschen<?php echo $code; ?>" class="d-none">
+    <input type="hidden" name="action" value="mitgliedsart_loeschen">
+    <input type="hidden" name="code" value="<?php echo $code; ?>">
+</form>
+<?php endforeach; ?>
+
+<?php else: ?>
+<!-- ==================== NUMMERNKREISE ==================== -->
+<?php
+$nkBadgeClass = [
+    'mitglieder' => 'bg-secondary',
+    'noten'      => 'bg-primary',
+    'instrumente'=> 'bg-warning text-dark',
+    'finanzen'   => 'bg-success',
+];
+$nkLabel = [
+    'mitglieder' => 'Mitglieder',
+    'noten'      => 'Noten',
+    'instrumente'=> 'Instrumente',
+    'finanzen'   => 'Belege (Kassabuch)',
+];
+$nkIcon = [
+    'mitglieder' => 'bi-people',
+    'noten'      => 'bi-music-note-list',
+    'instrumente'=> 'bi-trumpet',
+    'finanzen'   => 'bi-receipt',
+];
+?>
+<form method="POST">
+    <input type="hidden" name="action" value="nummernkreise_save">
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-123"></i> Nummernkreise konfigurieren
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-4">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Präfix-Platzhalter:</strong>
+                        <code>Y</code> = aktuelles Jahr 4-stellig (<?php echo date('Y'); ?>),
+                        <code>y</code> = aktuelles Jahr 2-stellig (<?php echo date('y'); ?>).
+                        Beispiel: <code>Iy</code> ergibt <code>I<?php echo date('y'); ?>001</code>
+                    </div>
+
+                    <table class="table align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:160px">Bereich</th>
+                                <th>Präfix</th>
+                                <th style="width:140px">Stellen (Zahl)</th>
+                                <th>Vorschau nächste Nr.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($nkTypen as $typ): ?>
+                            <?php
+                                $prefix  = $nkConfig[$typ]['prefix'];
+                                $stellen = $nkConfig[$typ]['stellen'];
+                                $resolvedPrefix = resolvePrefix($prefix);
+                                $preview = $resolvedPrefix . str_pad('1', $stellen, '0', STR_PAD_LEFT);
+                            ?>
+                            <tr>
+                                <td>
+                                    <span class="badge <?php echo $nkBadgeClass[$typ]; ?>">
+                                        <i class="bi <?php echo $nkIcon[$typ]; ?>"></i>
+                                        <?php echo $nkLabel[$typ]; ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm" style="max-width:180px">
+                                        <input type="text"
+                                               class="form-control nk-prefix-input"
+                                               name="prefix_<?php echo $typ; ?>"
+                                               value="<?php echo htmlspecialchars($prefix); ?>"
+                                               data-typ="<?php echo $typ; ?>"
+                                               maxlength="20"
+                                               placeholder="z.B. M, NY, Iy">
+                                    </div>
+                                </td>
+                                <td>
+                                    <input type="number"
+                                           class="form-control form-control-sm nk-stellen-input"
+                                           name="stellen_<?php echo $typ; ?>"
+                                           value="<?php echo $stellen; ?>"
+                                           data-typ="<?php echo $typ; ?>"
+                                           min="1" max="10"
+                                           style="width:90px">
+                                </td>
+                                <td>
+                                    <code class="nk-preview" id="preview_<?php echo $typ; ?>">
+                                        <?php echo htmlspecialchars($preview); ?>
+                                    </code>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer text-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Nummernkreise speichern
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card bg-light mb-3">
+                <div class="card-body">
+                    <h6><i class="bi bi-info-circle"></i> Hinweise</h6>
+                    <p class="small text-muted mb-2">
+                        Der <strong>Präfix</strong> wird vor die fortlaufende Nummer gestellt.
+                        Die Anzahl der <strong>Stellen</strong> bestimmt, wie breit die Zahl mit führenden Nullen aufgefüllt wird.
+                    </p>
+                    <ul class="small text-muted mb-0 ps-3">
+                        <li><code>Y</code> → <?php echo date('Y'); ?> (4-stelliges Jahr)</li>
+                        <li><code>y</code> → <?php echo date('y'); ?> (2-stelliges Jahr)</li>
+                        <li>Stellen 3 + Präfix <code>M</code> → <code>M001</code></li>
+                        <li>Stellen 4 + Präfix <code>Ny</code> → <code>N<?php echo date('y'); ?>0001</code></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card border-warning">
+                <div class="card-body">
+                    <h6 class="text-warning"><i class="bi bi-exclamation-triangle"></i> Achtung</h6>
+                    <p class="small text-muted mb-0">
+                        Änderungen am Präfix oder den Stellen wirken sich nur auf <strong>neu angelegte</strong> Datensätze aus.
+                        Bestehende Nummern bleiben unverändert.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+(function () {
+    const yearFull  = '<?php echo date('Y'); ?>';
+    const yearShort = '<?php echo date('y'); ?>';
+
+    function resolvePrefix(prefix) {
+        return prefix.replace(/Y/g, yearFull).replace(/y/g, yearShort);
+    }
+
+    function updatePreview(typ) {
+        const prefixInput  = document.querySelector('.nk-prefix-input[data-typ="' + typ + '"]');
+        const stellenInput = document.querySelector('.nk-stellen-input[data-typ="' + typ + '"]');
+        const previewEl    = document.getElementById('preview_' + typ);
+
+        if (!prefixInput || !stellenInput || !previewEl) return;
+
+        const resolved = resolvePrefix(prefixInput.value);
+        const stellen  = Math.max(1, Math.min(10, parseInt(stellenInput.value) || 3));
+        previewEl.textContent = resolved + String(1).padStart(stellen, '0');
+    }
+
+    document.querySelectorAll('.nk-prefix-input, .nk-stellen-input').forEach(function (el) {
+        el.addEventListener('input', function () {
+            updatePreview(this.dataset.typ);
+        });
+    });
+})();
+</script>
+
 <?php endif; ?>
 
 <script>
