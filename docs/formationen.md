@@ -24,6 +24,8 @@ Jede Formation hat ihre eigene Farbe, ein Kürzel und ihre eigenen Mitglieder. V
 
 ## Formationsliste
 
+![Formationen](screenshots/formationen1.png)
+
 Die Übersicht zeigt alle angelegten Formationen mit:
 
 | Spalte | Beschreibung |
@@ -64,6 +66,8 @@ Die Übersicht zeigt alle angelegten Formationen mit:
 
 **Datei:** `formation_mitglieder.php`
 **Berechtigung:** `formationen – schreiben`
+
+![Mitglieder einer Formation](screenshots/formationen2.png)
 
 Auf dieser Seite legst du fest, welche Mitglieder zu einer Formation gehören. Ein Mitglied kann dabei **mehreren Formationen gleichzeitig** angehören.
 

@@ -7,6 +7,7 @@
 
 * **👥 Mitglieder**
   * [Übersicht](mitglieder.md)
+  * [Ehrungen](ehrungen.md)
   <!-- * [Mitglied anlegen / bearbeiten](mitglied-bearbeiten.md) -->
   <!-- * [Mitgliedsbeiträge](beitraege.md) -->
 
@@ -54,6 +55,8 @@
   * [Rollen & Berechtigungen](rollen.md)
   * [Stammdaten](stammdaten.md)
   * [Einstellungen](einstellungen.md)
+  * [BMV-Anbindung](einstellungen.md#bmv-anbindung)
+  * [BMV Daten holen](bmv-daten.md)
   * [BMV-Jahresbericht](bmv-jahresbericht.md)
 
 * **🔧 Technisch**

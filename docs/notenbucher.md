@@ -22,6 +22,8 @@ Es gibt zwei Arten von Notenbüchern:
 
 ## Übersicht
 
+![Notenbücher](screenshots/notenbuch1.png)
+
 Die Startseite zeigt zwei Bereiche:
 
 - **Meine Bücher** – alle Bücher, die du selbst angelegt hast (privat oder geteilt)
@@ -73,6 +75,8 @@ Auf der Bearbeitungsseite eines Notenbuchs gibt es zwei Tabellen:
 ---
 
 ## Reihenfolge ändern (Drag & Drop)
+
+![Notenbuch bearbeiten](screenshots/notenbuch2.png)
 
 Die Reihenfolge der Stücke innerhalb eines Notenbuchs lässt sich frei per Maus bzw. Fingertipp festlegen – praktisch, um die Stücke in der Reihenfolge zu sortieren, in der sie bei der Probe oder beim Konzert gespielt werden:
 

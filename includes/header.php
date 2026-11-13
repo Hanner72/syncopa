@@ -772,7 +772,7 @@ function isActive($page, $pages, $current) {
             <div class="nav-group">
                 <div class="nav-label">Hilfe</div>
                 <ul class="nav flex-column">
-                    <li><a class="nav-link" href="/docs">
+                    <li><a class="nav-link" href="docs/">
                         <i class="bi bi-person-gear"></i> Dokumentation
                     </a></li>
                 </ul>

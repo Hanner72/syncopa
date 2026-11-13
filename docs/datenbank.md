@@ -37,7 +37,11 @@ Es gibt **kein externes Migrationstool**. Neue Tabellen/Spalten werden als anony
 
 | Tabelle | Zweck |
 |---|---|
-| `mitglieder` | Stammdaten der Vereinsmitglieder (Adresse, Kontakt, Status, optional `benutzer_id`, `register_id`) |
+| `mitglieder` | Stammdaten der Vereinsmitglieder (Adresse, Kontakt, optional `benutzer_id`, `register_id`); `mitgliedsart_code` = aktuelle Mitgliedsart (NULL = ausgetreten); `status` = „überprüfen“ bei neu aus dem BMV angelegten Mitgliedern |
+| `mitgliedsarten` | Katalog der Mitgliedsarten (`code` = BMV-Nummer, eigene ab 9001): `aktiv` (zählt als aktiv), `beitragspflichtig`, `beitrag`, `gast`, `farbe`, `sortierung` |
+| `bmv_mitglied_daten` | Laufbahn je Mitglied: `art` = mitgliedsart, ehrung, funktion, instrument, pruefung; mit Zeitraum `von`/`bis`. `bmv_eintrag_id` leer = eigener Eintrag aus Syncopa |
+| `bmv_bezeichnungen` | Eigene Namen zu BMV-Nummern (Ehrungen, Funktionen, Instrumente, Prüfungen); Standardnamen in `includes/bmv_bezeichnungen_standard.php` |
+| `ehrungsregeln` | Ab wie vielen Mitgliedsjahren eine Ehrung ansteht (`ehrung_code`, `jahre`, `aktiv` = vorschlagen) |
 | `register` | Musikalische Register (Trompete, Klarinette, ...) |
 | `formationen` | Formationen/Besetzungen eines Vereins (Name, Kürzel, Farbe) |
 | `mitglied_formationen` | Zuordnung Mitglied ↔ Formation, inkl. Rolle und optionalem formationsspezifischem Register |
@@ -79,6 +83,7 @@ Es gibt **kein externes Migrationstool**. Neue Tabellen/Spalten werden als anony
 | `uniform_kategorien` / `uniform_kleidungsstuecke` | Uniform-Bestandteile und ihre verfügbaren Größen |
 | `uniform_zuweisungen` | Zuordnung Kleidungsstück ↔ Mitglied (eine Zeile je Mitglied und Kleidungsstück), `anzahl` = Stück bei Mengen-Kleidungsstücken, bei Einzelstücken immer 1 mit `stueck_id`; `nicht_benoetigt` = Mitglied braucht das Stück nicht |
 | `uniform_stuecke` | Einzelstücke mit Nummer (bei `uniform_kleidungsstuecke.bestandsart = 'einzeln'`): `nummer` 3-stellig (001–999, dann A00–Z99) ohne Kürzel – angezeigt mit `uniform_kleidungsstuecke.kuerzel` davor; Größe, Zustand, Status lager/ausgegeben/ausgeschieden |
+| `bmv_inventar_zuordnung` | Gemerkte Zuordnung BMV-Inventarbezeichnung → Instrumentart beim Inventar-Import |
 | `uniform_bewegungen` | Verlauf und Mengen-Bestand: `zugang`, `ausscheiden`, `korrektur` (Inventur) bilden den Bestand; `ausgabe`/`rueckgabe` nur Verlauf |
 
 ## Finanzen
@@ -128,6 +133,7 @@ Es gibt **kein externes Migrationstool**. Neue Tabellen/Spalten werden als anony
 | `einstellungen` | Key-Value-Speicher für Systemeinstellungen |
 | `dokumente` | Hochgeladene allgemeine Dokumente |
 | `aktivitaetslog` | Protokoll sicherheitsrelevanter Aktionen |
+| `uniformen`, `uniform_ausgaben` | Altlasten aus früheren Versionen, vom Code nicht mehr verwendet |
 
 ---
 

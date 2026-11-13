@@ -1,91 +1,351 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Syncopa – Dokumentation</title>
   <meta name="description" content="Benutzerhandbuch für die Syncopa Musikvereinsverwaltung">
+  <link rel="icon" type="image/png" href="../assets/favicon.png">
+  <meta name="theme-color" content="#4471A3">
 
-  <!-- Docsify Theme -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify-themeable@0/dist/css/theme-simple.css">
+  <!-- Design wie in der App: gleiche Einstellung (localStorage „theme“), sonst Systemeinstellung -->
+  <script>
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('theme'); } catch (e) {}
+      if (t !== 'light' && t !== 'dark') {
+        t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
 
-  <!-- Custom Styles -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify-themeable@0.9.0/dist/css/theme-simple.css">
+
   <style>
+    /* ===== Farben der App (includes/header.php) ===== */
     :root {
-      --theme-color: #4a6fa5;
-      --sidebar-width: 280px;
-      --sidebar-background: #f8f9fa;
+      --c-primary: #4471A3;
+      --c-primary-light: #5496cb;
+      --c-success: #5b8a72;
+      --c-warning: #D19A3E;
+      --c-danger: #F44336;
+      --c-info: #77bad7;
+      --radius: 4px;
+      --radius-lg: 6px;
+    }
+    [data-theme="light"] {
+      --bg-body: #f5f6f8;
+      --bg-card: #ffffff;
+      --bg-sidebar: #2d4a6a;
+      --bg-input: #ffffff;
+      --border: #e0e4e8;
+      --border-light: #eef0f2;
+      --text-primary: #2c3e50;
+      --text-secondary: #5a6c7d;
+      --text-muted: #8699ac;
+      --sidebar-text: #a8b8c8;
+      --sidebar-hover: rgba(255,255,255,0.06);
+      --sidebar-active: rgba(255,255,255,0.12);
+      --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.04);
+      --img-shadow: 0 4px 16px rgba(44,62,80,0.12);
+      --code-bg: #eef2f7;
+      --code-color: #2d4a6a;
+      --hint-info-bg: #e8f0f8;   --hint-info-fg: #3a5a7a;
+      --hint-warn-bg: #fef6e6;   --hint-warn-fg: #8a6d1b;
+      --hint-danger-bg: #fde8e8; --hint-danger-fg: #8a3a3a;
+      --hint-ok-bg: #e8f5ed;     --hint-ok-fg: #3a6b4a;
+      color-scheme: light;
+    }
+    [data-theme="dark"] {
+      --bg-body: #1a2332;
+      --bg-card: #243042;
+      --bg-sidebar: #151d2b;
+      --bg-input: #2a3a4d;
+      --border: #3a4a5d;
+      --border-light: #2d3d50;
+      --text-primary: #e8eef4;
+      --text-secondary: #a0b0c0;
+      --text-muted: #708090;
+      --sidebar-text: #8090a0;
+      --sidebar-hover: rgba(255,255,255,0.05);
+      --sidebar-active: rgba(255,255,255,0.10);
+      --shadow: 0 1px 2px rgba(0,0,0,0.25);
+      --img-shadow: 0 4px 18px rgba(0,0,0,0.45);
+      --code-bg: #2a3a4d;
+      --code-color: #a9c6e6;
+      --hint-info-bg: rgba(119,186,215,0.15);  --hint-info-fg: #9ed3ea;
+      --hint-warn-bg: rgba(209,154,62,0.15);   --hint-warn-fg: #e0b563;
+      --hint-danger-bg: rgba(244,67,54,0.15);  --hint-danger-fg: #f18b84;
+      --hint-ok-bg: rgba(91,138,114,0.18);     --hint-ok-fg: #8fc3a6;
+      --c-primary: #6f9ad0;
+      color-scheme: dark;
+    }
+
+    /* ===== docsify-themeable an die App-Farben binden ===== */
+    :root, [data-theme] {
+      --theme-color: var(--c-primary);
+      --base-background-color: var(--bg-body);
+      --base-color: var(--text-primary);
+      --base-font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
       --base-font-size: 15px;
-      --sidebar-nav-link-color: #333;
-      --sidebar-nav-link-color--active: #4a6fa5;
+      --base-line-height: 1.65;
+      --heading-color: var(--text-primary);
+      --heading-font-weight: 600;
+      --heading-h1-font-size: 1.75rem;
+      --heading-h1-border-width: 0;
+      --heading-h2-font-size: 1.3rem;
+      --heading-h2-border-width: 0;
+      --heading-h3-font-size: 1.1rem;
+      --link-color: var(--c-primary);
+      --link-text-decoration: none;
+      --link-text-decoration--hover: underline;
+      --strong-color: var(--text-primary);
+      --hr-border: 1px solid var(--border);
+      --sidebar-width: 270px;
+      --sidebar-background: var(--bg-sidebar);
+      --sidebar-border-width: 0;
+      --sidebar-padding: 0 12px;
+      --sidebar-name-color: #fff;
+      --sidebar-nav-link-color: var(--sidebar-text);
+      --sidebar-nav-link-color--hover: #d0daea;
+      --sidebar-nav-link-color--active: #fff;
+      --sidebar-nav-link-font-weight--active: 600;
+      --sidebar-nav-link-text-decoration: none;
+      --sidebar-nav-link-text-decoration--active: none;
+      --sidebar-nav-link-border-width: 0;
+      --sidebar-nav-pagelink-background: none;
+      --sidebar-nav-pagelink-background--active: none;
+      --sidebar-nav-pagelink-background--collapse: none;
+      --sidebar-nav-pagelink-background--loaded: none;
+      --sidebar-toggle-background: var(--bg-card);
+      --sidebar-toggle-icon-color: var(--text-primary);
+      --search-input-background-color: rgba(255,255,255,0.08);
+      --search-input-border-color: rgba(255,255,255,0.15);
+      --search-input-color: #fff;
+      --search-result-heading-color: #fff;
+      --search-result-item-color: var(--sidebar-text);
+      --search-result-keyword-background: rgba(209,154,62,0.35);
+      --search-result-keyword-color: #fff;
+      --code-font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --code-font-size: 0.86em;
+      --code-inline-background: var(--code-bg);
+      --code-inline-color: var(--code-color);
+      --code-inline-border-radius: var(--radius);
+      --code-theme-background: var(--code-bg);
+      --code-theme-text: var(--text-primary);
+      --table-head-background: var(--bg-body);
+      --table-head-font-weight: 600;
+      --table-row-odd-background: transparent;
+      --table-cell-border-color: var(--border-light);
+      --table-cell-border-width: 0 0 1px 0;
+      --blockquote-background: var(--hint-info-bg);
+      --blockquote-border-color: var(--c-info);
+      --blockquote-border-width: 0 0 0 3px;
+      --blockquote-border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+      --blockquote-color: var(--hint-info-fg);
+      --blockquote-padding: 12px 16px;
+      --navbar-root-color: var(--text-secondary);
+      --navbar-root-color--active: var(--c-primary);
+      --navbar-menu-background: var(--bg-card);
+      --navbar-menu-border-radius: var(--radius-lg);
+      --navbar-menu-box-shadow: 0 6px 20px rgba(0,0,0,.15);
+      --navbar-menu-link-color: var(--text-primary);
+      --pagination-border-top: 1px solid var(--border);
+      --pagination-chevron-height: 0.8em;
+      --pagination-title-font-size: 1em;
+      --copycode-background: var(--c-primary);
+      --mark-background: rgba(209,154,62,0.3);
+      --mark-color: inherit;
     }
 
-    .app-name-link img {
-      /* height: 40px; */
-      margin-right: 8px;
-    }
+    html, body { background: var(--bg-body); color: var(--text-primary); }
+    * { -webkit-tap-highlight-color: transparent; }
 
-    .sidebar .app-name {
-      font-size: 1.3rem;
-      font-weight: 700;
+    /* ===== Seitenleiste wie in der App ===== */
+    .sidebar { box-shadow: none; }
+    .sidebar .app-name { margin: 0 -12px; padding: 18px 12px 10px; text-align: center; }
+    .sidebar .app-name-link { color: var(--sidebar-text) !important; font-size: 12px; font-weight: 500; display: inline-block; }
+    .sidebar .app-name-link:hover { color: #fff !important; }
+    .sidebar .app-name-link img { width: 92px; height: auto; display: block; margin: 0 auto 6px; padding: 0 !important; }
+    .sidebar .search { border-bottom: 0; padding: 8px 0 4px; margin: 0; }
+    .sidebar .search input { border-radius: var(--radius); font-size: 13px; padding: 7px 10px; }
+    .sidebar .search input::placeholder { color: rgba(255,255,255,.45); }
+    .sidebar .search .clear-button svg circle { fill: rgba(255,255,255,.25); }
+    .sidebar .search .results-panel .matching-post { border-bottom: 1px solid rgba(255,255,255,.08); }
+    .sidebar .search .results-panel .matching-post:hover { background: var(--sidebar-hover); }
+    .sidebar-nav { padding-bottom: 24px; }
+    .sidebar-nav > ul { margin: 0; padding: 0; }
+    /* Gruppen-Überschriften (fett in _sidebar.md) wie .nav-label der App */
+    .sidebar-nav > ul > li { margin-top: 14px; }
+    .sidebar-nav > ul > li > p,
+    .sidebar-nav > ul > li > strong,
+    .sidebar-nav > ul > li > p > strong {
+      display: block; font-size: 10.5px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .8px; color: #7d8ea0; padding: 4px 10px 4px; margin: 0;
     }
+    [data-theme="dark"] .sidebar-nav > ul > li > p,
+    [data-theme="dark"] .sidebar-nav > ul > li > p > strong { color: #5a6a7a; }
+    .sidebar-nav ul ul { margin: 2px 0 0; padding: 0; }
+    .sidebar-nav li { list-style: none; }
+    .sidebar-nav a {
+      display: block; padding: 7px 10px; margin-bottom: 2px; border-radius: var(--radius);
+      font-size: 13px; font-weight: 500; transition: background .2s, color .2s;
+    }
+    .sidebar-nav a:hover { background: var(--sidebar-hover); }
+    .sidebar-nav li.active > a { background: var(--sidebar-active); }
+    /* Alle Einträge gleich eingerückt wie im App-Menü – das Theme rückt Seiten-Links sonst weiter ein als Abschnitts-Links */
+    .sidebar-nav a, .sidebar-nav a[href] { padding-left: 10px !important; margin-left: 0 !important; background-image: none !important; }
+    .sidebar-nav ul, .sidebar-nav li { margin-left: 0 !important; padding-left: 0 !important; }
+    .sidebar-nav li { margin-top: 0 !important; margin-bottom: 0 !important; }
+    .sidebar-nav a, .sidebar-nav a[href] { padding-top: 7px !important; padding-bottom: 7px !important; line-height: 1.35 !important; margin-bottom: 2px !important; }
+    .sidebar-nav > ul > li { margin-top: 14px !important; }
+    .sidebar-nav > ul > li > p { padding-left: 10px !important; padding-right: 10px !important; }
+    /* Unterpunkte der geöffneten Seite leicht eingerückt und kleiner (wie „Notenpult leiten“ in der App) */
+    .sidebar-nav .app-sub-sidebar a, .sidebar-nav .app-sub-sidebar a[href] { padding-left: 28px !important; padding-top: 5px !important; padding-bottom: 5px !important; margin-bottom: 0 !important; font-size: 12px; font-weight: 400; }
+    .sidebar-nav .app-sub-sidebar .app-sub-sidebar a, .sidebar-nav .app-sub-sidebar .app-sub-sidebar a[href] { padding-left: 40px !important; }
+    .sidebar-nav .app-sub-sidebar li.active > a { background: none; color: #fff; }
+    .sidebar-nav .app-sub-sidebar li::before { display: none !important; }
+    .sidebar::-webkit-scrollbar { width: 3px; }
+    .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 3px; }
 
-    /* Screenshot Platzhalter */
-    .screenshot-hint {
-      background: #e9ecef;
-      border: 2px dashed #adb5bd;
-      border-radius: 8px;
-      padding: 20px;
-      text-align: center;
-      color: #6c757d;
-      font-size: 0.9em;
-      margin: 16px 0;
+    /* ===== Kopfzeile ===== */
+    .app-nav { top: 0; right: 0; left: auto; margin: 0; padding: 12px 20px; display: flex; align-items: center; gap: 8px; z-index: 30; }
+    .app-nav > ul { display: flex; align-items: center; gap: 8px; margin: 0; padding: 0; }
+    .app-nav > ul > li { margin: 0; }
+    .app-nav > ul > li > a, .app-nav > ul > li > p {
+      display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; margin: 0;
+      border-radius: var(--radius); background: var(--bg-card); border: 1px solid var(--border);
+      color: var(--text-secondary); font-size: 13px; font-weight: 500;
     }
+    .app-nav > ul > li > a:hover, .app-nav > ul > li:hover > p { color: var(--c-primary); border-color: var(--c-primary); text-decoration: none; }
+    .app-nav li ul { border: 1px solid var(--border); padding: 6px 0; }
+    .app-nav li ul a { color: var(--text-primary); font-size: 13px; padding: 6px 14px; }
+    .doku-werkzeuge { position: fixed; top: 12px; right: 20px; z-index: 40; display: flex; gap: 8px; }
+    .app-nav { right: 172px !important; left: auto !important; padding-right: 0 !important; }
+    .doku-knopf {
+      display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px;
+      border-radius: var(--radius); background: var(--bg-card); border: 1px solid var(--border);
+      color: var(--text-secondary); font-size: 13px; font-weight: 500; text-decoration: none;
+    }
+    .doku-knopf:hover { color: var(--c-primary); border-color: var(--c-primary); }
+    .theme-toggle {
+      width: 34px; height: 34px; border-radius: var(--radius); background: var(--bg-card);
+      border: 1px solid var(--border); color: var(--text-secondary); cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; font-size: 15px; transition: all .2s;
+    }
+    .theme-toggle:hover { color: var(--c-primary); border-color: var(--c-primary); }
 
-    .screenshot-hint::before {
-      content: "📸 ";
-      font-size: 1.5em;
+    /* ===== Inhalt als Karte ===== */
+    .content { padding-top: 64px; }
+    .markdown-section {
+      max-width: 1000px; margin: 0 auto 40px; padding: 28px 40px 36px;
+      background: var(--bg-card); border-radius: var(--radius-lg); box-shadow: var(--shadow);
+      border-left: 3px solid var(--c-primary);
     }
+    .markdown-section h1 { margin: 0 0 18px; letter-spacing: -.01em; }
+    .markdown-section h2 { margin-top: 2.2em; padding-bottom: 8px; border-bottom: 1px solid var(--border-light); }
+    .markdown-section h3 { margin-top: 1.6em; color: var(--text-primary); }
+    .markdown-section h4, .markdown-section h5 { color: var(--text-secondary); }
+    .markdown-section p, .markdown-section li { color: var(--text-primary); }
+    .markdown-section hr { border: 0; border-top: 1px solid var(--border); margin: 2em 0; }
+    .markdown-section a { font-weight: 500; }
+    .markdown-section strong { font-weight: 600; }
 
-    /* Tip / Warning / Info Boxen */
-    .tip, .warning, .info {
-      border-left: 4px solid;
-      padding: 12px 16px;
-      border-radius: 0 6px 6px 0;
-      margin: 16px 0;
+    /* Tabellen wie in der App */
+    .markdown-section table { display: table; width: 100%; border-collapse: collapse; font-size: 14px; border: 1px solid var(--border-light); border-radius: var(--radius-lg); overflow: hidden; }
+    .markdown-section table th {
+      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px;
+      color: var(--text-muted); background: var(--bg-body); border: 0; border-bottom: 1px solid var(--border);
+      padding: 10px 12px; text-align: left;
     }
-    .tip    { border-color: #28a745; background: #d4edda; }
-    .warning{ border-color: #ffc107; background: #fff3cd; }
-    .info   { border-color: #17a2b8; background: #d1ecf1; }
+    .markdown-section table td { border: 0; border-bottom: 1px solid var(--border-light); padding: 9px 12px; vertical-align: top; color: var(--text-primary); }
+    .markdown-section table tr { background: transparent; }
+    .markdown-section table tbody tr:hover { background: var(--bg-body); }
+    .markdown-section table tr:last-child td { border-bottom: 0; }
+
+    /* Hinweisboxen (> 💡 / > ⚠️) wie die Alerts der App */
+    .markdown-section blockquote { margin: 1.2em 0; font-size: 14px; }
+    .markdown-section blockquote p { color: inherit; margin: 0; }
+    .markdown-section blockquote p + p { margin-top: .6em; }
+    .markdown-section blockquote.hinweis-warnung { background: var(--hint-warn-bg); color: var(--hint-warn-fg); border-left-color: var(--c-warning); }
+    .markdown-section blockquote.hinweis-gefahr  { background: var(--hint-danger-bg); color: var(--hint-danger-fg); border-left-color: var(--c-danger); }
+    .markdown-section blockquote.hinweis-ok      { background: var(--hint-ok-bg); color: var(--hint-ok-fg); border-left-color: var(--c-success); }
+    .markdown-section blockquote strong { color: inherit; }
+    .tip, .warning, .info { border-left: 3px solid; padding: 12px 16px; border-radius: 0 var(--radius-lg) var(--radius-lg) 0; margin: 16px 0; }
+    .tip     { border-color: var(--c-success); background: var(--hint-ok-bg);   color: var(--hint-ok-fg); }
+    .warning { border-color: var(--c-warning); background: var(--hint-warn-bg); color: var(--hint-warn-fg); }
+    .info    { border-color: var(--c-info);    background: var(--hint-info-bg); color: var(--hint-info-fg); }
+
+    /* Code */
+    .markdown-section code { padding: .15em .4em; }
+    .markdown-section pre { border-radius: var(--radius-lg); border: 1px solid var(--border-light); }
+    .markdown-section pre > code { color: var(--text-primary); }
+
+    /* Screenshots */
+    .markdown-section img { border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--img-shadow); margin: 8px 0 4px; max-width: 100%; }
+    .markdown-section h1 img { border: 0; box-shadow: none; margin: 0; vertical-align: middle; }
+    .medium-zoom-overlay { background: var(--bg-body) !important; }
+
+    /* Blättern unten */
+    .docsify-pagination-container { border-top: 1px solid var(--border); margin-top: 2em; }
+    .pagination-item-title { color: var(--c-primary); }
+    .pagination-item-label { color: var(--text-muted); }
 
     /* Rollenbadges */
-    .badge-admin     { background:#dc3545; color:#fff; padding:2px 7px; border-radius:12px; font-size:.8em; }
-    .badge-obmann    { background:#6610f2; color:#fff; padding:2px 7px; border-radius:12px; font-size:.8em; }
-    .badge-kassier   { background:#fd7e14; color:#fff; padding:2px 7px; border-radius:12px; font-size:.8em; }
-    .badge-schriftf  { background:#20c997; color:#fff; padding:2px 7px; border-radius:12px; font-size:.8em; }
-    .badge-user      { background:#6c757d; color:#fff; padding:2px 7px; border-radius:12px; font-size:.8em; }
+    .badge-admin, .badge-obmann, .badge-kassier, .badge-schriftf, .badge-user { color:#fff; padding:2px 7px; border-radius:12px; font-size:.8em; }
+    .badge-admin { background:#dc3545; } .badge-obmann { background:#6610f2; } .badge-kassier { background:#fd7e14; }
+    .badge-schriftf { background:#20c997; } .badge-user { background:#6c757d; }
+
+    /* Knopf für die Seitenleiste: kleiner Knopf oben links wie in der App */
+    .sidebar-toggle {
+      position: fixed; top: 12px; left: calc(var(--sidebar-width) + 12px); bottom: auto;
+      width: 34px; height: 34px; padding: 0; border-radius: var(--radius);
+      background: var(--bg-card) !important; border: 1px solid var(--border); z-index: 40;
+      display: flex; align-items: center; justify-content: center; transition: left .25s;
+      transform: none !important; /* Theme verschiebt sonst zusätzlich um die Seitenleistenbreite */
+    }
+    .sidebar-toggle .sidebar-toggle-button { position: static !important; top: auto; left: auto; transform: none; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; padding: 0; margin: 0; }
+    .sidebar-toggle .sidebar-toggle-button span { display: none !important; }
+    .sidebar-toggle .sidebar-toggle-button::before { font-family: 'bootstrap-icons'; content: '\f479'; font-size: 18px; line-height: 1; color: var(--text-secondary); }
+    .sidebar-toggle:hover { border-color: var(--c-primary); }
+    body.close .sidebar-toggle { left: 12px; }
+
+    @media (max-width: 768px) {
+      .sidebar-toggle { left: 12px; top: 10px; }
+      body.close .sidebar-toggle { left: calc(var(--sidebar-width) + 12px); }
+      .content { padding-top: 56px; }
+      .markdown-section { padding: 20px 18px 28px; border-radius: 0; margin-bottom: 0; }
+      .app-nav { display: none; }
+      .doku-werkzeuge { top: 10px; right: 12px; }
+      .doku-knopf span { display: none; }
+    }
   </style>
 </head>
 <body>
-  <div id="app">Dokumentation wird geladen...</div>
+  <div id="app">Dokumentation wird geladen …</div>
 
   <script>
     window.$docsify = {
-      name: '<img src="../assets/logo_full.png" alt="Syncopa" style="padding: 12px 0;"><br>⬆️ zurück zur App',
-      nameLink: '/',
+      name: '<img src="../assets/logo_full_white.png" alt="Syncopa"><i class="bi bi-arrow-left"></i> zurück zur App',
+      nameLink: '../',
       repo: '',
       loadSidebar: true,
       loadNavbar: true,
-      subMaxLevel: 3,
+      subMaxLevel: 2,
       auto2top: true,
       search: {
-        placeholder: 'Suchen...',
+        placeholder: 'Suchen …',
         noData: 'Keine Ergebnisse',
         depth: 4
       },
       pagination: {
-        previousText: '← Zurück',
-        nextText: 'Weiter →',
+        previousText: 'Zurück',
+        nextText: 'Weiter',
         crossChapter: true
       },
       copyCode: {
@@ -93,20 +353,42 @@
         errorText: 'Fehler',
         successText: 'Kopiert!'
       },
-      themeColor: '#4a6fa5',
+      themeColor: '#4471A3',
       notFoundPage: '404.md',
 
       plugins: [
-        function(hook) {
-          hook.mounted(function() {
-            // Ermittelt automatisch den Pfad eine Ebene über /docs/
+        // Hinweisboxen nach Symbol einfärben: ⚠️ gelb, ❌/🚫 rot, ✅ grün, sonst blau (wie die Alerts der App)
+        function (hook) {
+          hook.doneEach(function () {
+            document.querySelectorAll('.markdown-section blockquote').forEach(function (b) {
+              var t = b.textContent.trim();
+              if (/^(⚠|❗)/.test(t)) b.classList.add('hinweis-warnung');
+              else if (/^(❌|🚫|⛔)/.test(t)) b.classList.add('hinweis-gefahr');
+              else if (/^✅/.test(t)) b.classList.add('hinweis-ok');
+            });
+          });
+        },
+        // Eigene feste Leiste oben rechts: „Zur App“ und Hell/Dunkel-Schalter (gleiche Einstellung wie in der App).
+        // Bewusst außerhalb der Docsify-Kopfzeile, weil diese bei jedem Seitenwechsel neu aufgebaut wird.
+        function (hook) {
+          hook.mounted(function () {
+            if (document.querySelector('.doku-werkzeuge')) return;
             var appUrl = window.location.pathname.replace(/\/docs\/?.*$/, '/');
-            var nav = document.querySelector('.app-nav ul');
-            if (nav) {
-              var li = document.createElement('li');
-              li.innerHTML = '<a href="' + appUrl + '">🏠 Zur App</a>';
-              nav.prepend(li);
-            }
+            var leiste = document.createElement('div');
+            leiste.className = 'doku-werkzeuge';
+            leiste.innerHTML = '<a class="doku-knopf" href="' + appUrl + '"><i class="bi bi-house"></i><span> Zur App</span></a>'
+              + '<button type="button" class="theme-toggle" title="Design wechseln" aria-label="Design wechseln"></button>';
+            document.body.appendChild(leiste);
+            var btn = leiste.querySelector('.theme-toggle');
+            var html = document.documentElement;
+            var icon = function () { btn.innerHTML = '<i class="bi ' + (html.getAttribute('data-theme') === 'dark' ? 'bi-sun' : 'bi-moon') + '"></i>'; };
+            icon();
+            btn.addEventListener('click', function () {
+              var neu = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+              html.setAttribute('data-theme', neu);
+              try { localStorage.setItem('theme', neu); } catch (e) {}
+              icon();
+            });
           });
         }
       ]
@@ -115,9 +397,11 @@
 
   <!-- Docsify Core -->
   <script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/docsify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify-themeable@0.9.0/dist/js/docsify-themeable.min.js"></script>
 
   <!-- Plugins -->
   <script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/plugins/search.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/plugins/zoom-image.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/docsify-copy-code@2/dist/docsify-copy-code.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/docsify-pagination/dist/docsify-pagination.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-php.min.js"></script>

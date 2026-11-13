@@ -61,6 +61,8 @@ Im selben Formular kann rechts auch gleich das **Ausgeliehen an**-Feld gesetzt w
 
 **Datei:** `instrument_detail.php`
 
+![Instrument Detail](screenshots/instrumente3.png)
+
 Klickt man in der Übersicht auf das Lupe-Symbol, öffnet sich die Detailseite mit allen Informationen zu einem Instrument:
 
 - **Stammdaten** – Inventarnummer, Typ, Register, Hersteller, Modell, Seriennummer, Baujahr, Zustand
@@ -71,7 +73,7 @@ Klickt man in der Übersicht auf das Lupe-Symbol, öffnet sich die Detailseite m
 
 ---
 
-## Wartungen {#wartungen}
+## Wartungen
 
 Wartungen werden direkt auf der Instrument-Detailseite erfasst.
 

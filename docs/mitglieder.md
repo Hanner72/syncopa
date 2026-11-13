@@ -119,6 +119,7 @@ Die Detailseite eines Mitglieds zeigt:
 - **Kontakt** – Adresse, Telefon, E-Mail
 - **Gespielte Instrumente** – siehe unten
 - **Ausgeliehene Instrumente (Inventar)** – konkrete Instrumente aus dem Inventar, die diesem Mitglied ausgegeben wurden
+- **Laufbahn** – Reiter für Instrumente, Funktionen, Ehrungen (mit Mitgliedsjahren und anstehenden Ehrungen, siehe [Ehrungen](ehrungen.md)), Prüfungen und Mitgliedsart. Einträge aus dem BMV sind gesperrt; eigene Einträge lassen sich anlegen, ändern und löschen.
 - **Uniform** – alle ausgegebenen Kleidungsstücke mit Nummer (bei Einzelstücken), Größe, Zustand und Ausgabedatum; der Knopf führt zur Uniform-Seite des Mitglieds zum Ausgeben und Zurücknehmen (sichtbar mit `uniformen – lesen`)
 
 ### Gespielte Instrumente (formationsabhängig)

@@ -17,7 +17,10 @@ syncopa/
 │   ├── Ausrueckung.php             # Ausrückungs-Logik, Anwesenheit
 │   ├── Instrument.php              # Instrumenten-Inventar, Wartungen
 │   ├── Noten.php                   # Noten-Archiv, PDF-Dateien
-│   ├── Uniform.php                 # Uniform-Kategorien & Kleidungsstücke
+│   ├── Mitgliedsart.php            # Mitgliedsarten-Katalog, aktuelle Art je Mitglied, SQL-Bedingung „aktiv“
+│   ├── Ehrungen.php                # Verliehene/anstehende Ehrungen, Regeln, Mitgliedsjahre
+│   ├── RollenFarbe.php             # Rollenfarben: Lesbarkeit, Schriftfarbe, Farbvorschläge
+│   ├── Uniform.php                 # Uniform-Kleidungsstücke, Bestand, Einzelstücke, Ausgabe/Rückgabe
 │   ├── KalenderTermin.php          # Kalender-Logik
 │   ├── ICalendar.php               # iCal-Export (Ausrückungen & Termine)
 │   ├── Nummernkreis.php            # Automatische Nummerierung (Mitglieder, Noten, ...)
@@ -39,7 +42,22 @@ syncopa/
 │   ├── ImapClient.php              # E-Mail: IMAP (Ordner, Nachrichten, Verschieben, …)
 │   ├── MailSender.php              # E-Mail: SMTP-Versand, Ablage in „Gesendet“
 │   ├── MailNachricht.php           # E-Mail: MIME bauen und zerlegen, HTML bereinigen
-│   └── MailSpamfilter.php          # E-Mail: Junk-Filter (Absenderlisten, Server-Kennzeichnung, Lernfilter)
+│   ├── MailSpamfilter.php          # E-Mail: Junk-Filter (Absenderlisten, Server-Kennzeichnung, Lernfilter)
+│   ├── BmvApi.php                  # BMV: Zugang zum Datenservice (nur lesend)
+│   ├── BmvDaten.php                # BMV: Vereinsdaten übernehmen, Prüfung auf neue Daten
+│   ├── BmvMitgliederSync.php       # BMV: Mitglieder abgleichen (neu, geändert, nur in Syncopa)
+│   ├── BmvZusatzdaten.php          # BMV: Funktionen, Ehrungen, Instrumente, Prüfungen, Mitgliedsarten, Bezeichnungen
+│   ├── BmvNoten.php                # BMV: Notenarchiv übernehmen
+│   ├── BmvInventar.php             # BMV: Inventar aus dem CSV-Export übernehmen
+│   └── BmvJahresbericht.php        # BMV: Jahresbericht berechnen, abschließen, PDF
+│
+├── includes/                        # Bausteine, die Seiten einbinden
+│   ├── header.php, footer.php      # Seitenkopf mit Menü / Seitenfuß mit Skripten, Toasts, Bestätigungs-Modal
+│   ├── anwesenheit_register.php    # Karten „Zusagen“/„Absagen“ nach Register (Ausrückung, Live-Aktualisierung)
+│   ├── mitglied_laufbahn.php       # Karte „Laufbahn“ in der Mitglied-Detailseite
+│   ├── bmv_bezeichnungen_standard.php  # Standardnamen zu den BMV-Nummern
+│   ├── fest_tabs.php               # Reiter der Fest-Unterseiten
+│   └── mail_konto_formular.php     # Dialog Postfach anlegen/bearbeiten
 │
 ├── api/                             # Reine JSON-Endpunkte (fetch()/AJAX aus den Seiten)
 │   ├── formation_switch.php        # Aktive Formation im Topmenü wechseln
@@ -55,6 +73,8 @@ syncopa/
 │   ├── anwesenheit_verwalten.php   # Status/Grund eines Mitglieds sofort speichern (schreiben)
 │   ├── kalender.php, kalender_termine.php
 │   ├── uniform_mitglied.php        # Uniform-Zuordnung speichern
+│   ├── mitglied_foto.php           # Foto eines Mitglieds (Original oder BMV-Version)
+│   ├── mitglied_laufbahn.php       # Eigene Laufbahn-Einträge anlegen, ändern, löschen
 │   ├── finanz_sortierung.php       # Drag & Drop Reihenfolge der Konten/Kategorien im Kassabuch
 │   ├── rollen_sortierung.php       # Drag & Drop Rollen-Reihenfolge
 │   ├── system_update.php           # Versionsprüfung & Update aus GitHub
@@ -108,10 +128,15 @@ syncopa/
 │   fest_abrechnung.php
 ├── benutzer.php, benutzer_bearbeiten.php, benutzer_befoerdern.php, benutzer_loeschen.php
 ├── rollen.php, rolle_bearbeiten.php, berechtigungen_bearbeiten.php, berechtigungen_matrix.php
-├── stammdaten.php
+├── stammdaten.php                   # Register, Instrumententypen, Ausrückungstypen, Mitgliedsarten, Nummernkreise
+├── ehrungen.php                     # Anstehende und verliehene Ehrungen, Regeln
+├── bmv_daten.php                    # BMV Daten holen (Verein, Mitglieder, Noten, Inventar, Bezeichnungen)
+├── bmv_jahresbericht.php            # BMV-Jahresbericht
+├── bmv_mitglieder_vorschau.php      # nur noch Weiterleitung auf bmv_daten.php (alte Links)
 ├── mail.php, mail_konten.php, mail_kontakte.php, konto.php   # E-Mail-Programm, Funktions-Postfächer, Kontakte, Mein Konto
 ├── freigabe.php                     # Öffentliche Downloadseite für Download-Links (ohne Anmeldung)
-└── einstellungen.php
+├── einstellungen.php
+└── version_sync.php                 # Entwickler-Werkzeug: Version aus docs/changelog.md in alle Dateien übernehmen (Git-Hook)
 ```
 
 ---
