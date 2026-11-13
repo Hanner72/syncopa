@@ -472,6 +472,32 @@ function isActive($page, $pages, $current) {
         [data-theme="dark"] .alert-info      { background: rgba(119,186,215,0.15); color: #9ed3ea; }
         [data-theme="dark"] .alert-secondary { background: var(--bg-input); color: var(--text-secondary); border: 1px solid var(--border); }
 
+        /* TOASTS (Meldungen schweben über dem Inhalt, statt ihn zu verschieben) */
+        .toast-container.syncopa-toasts { top: calc(var(--topbar-h) + 8px); right: 0; z-index: 1090; padding: 0 12px; }
+        .syncopa-toast { width: 360px; max-width: calc(100vw - 24px); background: var(--bg-card); color: var(--text-primary);
+            border: 1px solid var(--border); border-left: 4px solid var(--toast-farbe, var(--c-primary)); border-radius: var(--radius-lg);
+            box-shadow: 0 6px 20px rgba(0,0,0,.15); font-size: 13px; }
+        .syncopa-toast .toast-body { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; }
+        .syncopa-toast .toast-icon { color: var(--toast-farbe, var(--c-primary)); font-size: 16px; line-height: 1.2; }
+        .syncopa-toast .toast-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+        .syncopa-toast .toast-text > :last-child { margin-bottom: 0; }
+        .syncopa-toast .btn-close { font-size: 10px; margin-top: 3px; }
+        .syncopa-toast.t-success { --toast-farbe: var(--c-success); }
+        .syncopa-toast.t-danger  { --toast-farbe: var(--c-danger); }
+        .syncopa-toast.t-warning { --toast-farbe: var(--c-warning); }
+        .syncopa-toast.t-info    { --toast-farbe: var(--c-info); }
+        [data-theme="dark"] .syncopa-toast .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
+        /* Bestätigungs-Modal (ersetzt confirm()) – eigener Hintergrund, damit es auch über anderen Dialogen liegt */
+        .modal.syncopa-confirm { z-index: 1100; background: rgba(0,0,0,.45); }
+        .syncopa-confirm .modal-content { border: none; border-radius: var(--radius-lg); box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+        .syncopa-confirm .modal-header { border-bottom: 1px solid var(--border-light); padding: 14px 18px; }
+        .syncopa-confirm .modal-title { font-size: 16px; }
+        .syncopa-confirm .modal-body { padding: 16px 18px; font-size: 14px; white-space: pre-line; }
+        .syncopa-confirm .modal-footer { border-top: none; padding: 0 18px 16px; }
+        @media (max-width: 575.98px) {
+            .toast-container.syncopa-toasts { left: 0; right: 0; display: flex; flex-direction: column; align-items: center; }
+        }
+
         /* MODAL */
         .modal-content { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); }
         .modal-header, .modal-footer { border-color: var(--border-light); }
@@ -999,8 +1025,6 @@ function isActive($page, $pages, $current) {
     <div class="main-wrapper">
         <main class="main-content">
             <?php if ($flash = Session::getFlashMessage()): ?>
-            <div class="alert alert-<?php echo $flash['type']; ?> alert-dismissible fade show">
-                <?php echo $flash['message']; ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
+            <!-- Flash-Meldung: wird im Footer als Toast angezeigt (verschiebt den Inhalt nicht) -->
+            <template class="flash-toast" data-typ="<?php echo htmlspecialchars($flash['type']); ?>"><?php echo $flash['message']; ?></template>
             <?php endif; ?>

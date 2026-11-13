@@ -86,7 +86,7 @@ include 'includes/header.php';
 </div>
 
 <?php if (Session::getRole() === 'user'): ?>
-<div class="alert alert-danger d-flex align-items-center mb-4">
+<div class="alert alert-danger alert-permanent d-flex align-items-center mb-4">
     <i class="bi bi-exclamation-triangle-fill me-3" style="font-size: 20px;"></i>
     <div>
         <strong>Konto noch nicht freigeschaltet!</strong><br>

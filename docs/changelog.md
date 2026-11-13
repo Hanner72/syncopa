@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.14.0]
+
+### Geändert
+
+- Meldungen erscheinen als Toasts oben rechts statt als Box am Seitenanfang – der Inhalt verschiebt sich nicht mehr, wenn eine Meldung verschwindet
+  - Erfolg und Info 5 Sekunden, Fehler und Warnungen 10 Sekunden; mit der Maus darüber bleiben sie offen
+  - Grüne/rote Meldungen der Seiten werden automatisch zu Toasts; blaue/gelbe Hinweisboxen bleiben dauerhaft stehen
+- Bestätigungsdialoge (z. B. „Kategorie löschen?“) als eigenes Fenster statt Browser-Dialog; Löschen mit rotem Knopf
+- Hinweis-Fenster des Browsers (z. B. „Bitte Titel eingeben!“) als Toasts, Farbe je nach Inhalt
+
 ## [2.13.2]
 
 ### Hinzugefügt
