@@ -1135,5 +1135,81 @@ require_once __DIR__ . '/classes/FestAbrechnung.php';
     } catch (\Throwable $e) { /* Schlüssel nicht verfügbar – bleibt vorerst im Klartext */ }
 })();
 
+// Migration: Shop (Vereinsbekleidung) – Katalog, Varianten, Bilder, Bestellungen
+(function() {
+    $db = Database::getInstance();
+    try {
+        $db->execute("CREATE TABLE IF NOT EXISTS shop_kategorien (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            beschreibung TEXT NULL,
+            sortierung INT NOT NULL DEFAULT 100,
+            aktiv TINYINT(1) NOT NULL DEFAULT 1
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $db->execute("CREATE TABLE IF NOT EXISTS shop_artikel (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            kategorie_id INT NULL,
+            name VARCHAR(150) NOT NULL,
+            beschreibung TEXT NULL,
+            artikelnummer VARCHAR(50) NULL,
+            preis DECIMAL(10,2) NOT NULL DEFAULT 0,
+            lieferzeit VARCHAR(100) NULL,
+            aktiv TINYINT(1) NOT NULL DEFAULT 1,
+            sortierung INT NOT NULL DEFAULT 100,
+            erstellt_am DATETIME NOT NULL,
+            aktualisiert_am DATETIME NULL,
+            KEY idx_kategorie (kategorie_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $db->execute("CREATE TABLE IF NOT EXISTS shop_varianten (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            artikel_id INT NOT NULL,
+            bezeichnung VARCHAR(80) NOT NULL,
+            artikelnummer VARCHAR(50) NULL,
+            preis DECIMAL(10,2) NULL,
+            sortierung INT NOT NULL DEFAULT 100,
+            aktiv TINYINT(1) NOT NULL DEFAULT 1,
+            KEY idx_artikel (artikel_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $db->execute("CREATE TABLE IF NOT EXISTS shop_bilder (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            artikel_id INT NOT NULL,
+            dateiname VARCHAR(255) NOT NULL,
+            sortierung INT NOT NULL DEFAULT 100,
+            KEY idx_artikel (artikel_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $db->execute("CREATE TABLE IF NOT EXISTS shop_bestellungen (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            bestellnummer VARCHAR(30) NOT NULL,
+            verein_name VARCHAR(150) NULL,
+            verein_url VARCHAR(255) NULL,
+            installation_id VARCHAR(64) NULL,
+            besteller_name VARCHAR(150) NULL,
+            besteller_email VARCHAR(150) NULL,
+            besteller_telefon VARCHAR(50) NULL,
+            lieferadresse TEXT NULL,
+            bemerkung TEXT NULL,
+            summe DECIMAL(10,2) NOT NULL DEFAULT 0,
+            status VARCHAR(20) NOT NULL DEFAULT 'neu',
+            erstellt_am DATETIME NOT NULL,
+            UNIQUE KEY uk_bestellnummer (bestellnummer)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $db->execute("CREATE TABLE IF NOT EXISTS shop_bestellpositionen (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            bestellung_id INT NOT NULL,
+            artikel_name VARCHAR(200) NOT NULL,
+            variante VARCHAR(100) NULL,
+            artikelnummer VARCHAR(50) NULL,
+            einzelpreis DECIMAL(10,2) NOT NULL DEFAULT 0,
+            menge INT NOT NULL DEFAULT 1,
+            KEY idx_bestellung (bestellung_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    } catch (\Throwable $e) { /* bereits vorhanden */ }
+})();
+
 // Schutz-Kopfzeilen senden und POST-Anfragen angemeldeter Benutzer auf das Prüfzeichen prüfen
 Sicherheit::anfrageSchuetzen();

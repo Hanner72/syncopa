@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.16.0]
+
+### Hinzugefügt
+
+- Shop für Vereinsbekleidung: ein zentral gepflegter Katalog, den die Vereine in ihrer eigenen Syncopa sehen und per Rechnung bestellen
+  - Katalog-Server (`SHOP_IST_ZENTRALE`): Kategorien, Artikel, Groessen/Varianten, Bilder und Shop-Einstellungen pflegen (Menue Shop -> Verwaltung); Bestell-Eingang mit Status (Menue Shop -> Bestellungen)
+  - Verein (`SHOP_ZENTRALE_URL`): Shop mit Katalog, Warenkorb und Bestellung (Menue Shop); Katalog wird vom Server geholt und bis zu 30 Minuten zwischengespeichert
+  - Katalog- und Bestell-Schnittstelle (`api/shop_katalog.php`, `api/shop_bestellung.php`), abgesichert ueber den gemeinsamen Schluessel `SHOP_API_KEY`
+  - Dokumentation: neue Seite "Shop (Vereinsbekleidung)"
+
 ## [2.15.0]
 
 ### Hinzugefügt

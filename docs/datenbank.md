@@ -134,6 +134,8 @@ Es gibt **kein externes Migrationstool**. Neue Tabellen/Spalten werden als anony
 | `login_versuche` | Anmeldeversuche (Benutzername, IP, Erfolg, Zeit) für die Sperre nach Fehlversuchen; wird nach 30 Tagen aufgeräumt |
 | `dokumente` | Hochgeladene allgemeine Dokumente |
 | `aktivitaetslog` | Protokoll sicherheitsrelevanter Aktionen |
+| `shop_kategorien`, `shop_artikel`, `shop_varianten`, `shop_bilder` | Shop-Katalog (auf dem Katalog-Server) |
+| `shop_bestellungen`, `shop_bestellpositionen` | Eingegangene Shop-Bestellungen der Vereine |
 | `uniformen`, `uniform_ausgaben` | Altlasten aus früheren Versionen, vom Code nicht mehr verwendet |
 
 ---

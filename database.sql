@@ -1485,6 +1485,83 @@ CREATE TABLE IF NOT EXISTS `login_versuche` (
   KEY `idx_ip` (`ip`,`zeit`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Shop (Vereinsbekleidung) – Katalog, Varianten, Bilder, Bestellungen
+CREATE TABLE IF NOT EXISTS `shop_kategorien` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `beschreibung` text DEFAULT NULL,
+  `sortierung` int(11) NOT NULL DEFAULT 100,
+  `aktiv` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `shop_artikel` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `kategorie_id` int(11) DEFAULT NULL,
+  `name` varchar(150) NOT NULL,
+  `beschreibung` text DEFAULT NULL,
+  `artikelnummer` varchar(50) DEFAULT NULL,
+  `preis` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `lieferzeit` varchar(100) DEFAULT NULL,
+  `aktiv` tinyint(1) NOT NULL DEFAULT 1,
+  `sortierung` int(11) NOT NULL DEFAULT 100,
+  `erstellt_am` datetime NOT NULL,
+  `aktualisiert_am` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_kategorie` (`kategorie_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `shop_varianten` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `artikel_id` int(11) NOT NULL,
+  `bezeichnung` varchar(80) NOT NULL,
+  `artikelnummer` varchar(50) DEFAULT NULL,
+  `preis` decimal(10,2) DEFAULT NULL,
+  `sortierung` int(11) NOT NULL DEFAULT 100,
+  `aktiv` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  KEY `idx_artikel` (`artikel_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `shop_bilder` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `artikel_id` int(11) NOT NULL,
+  `dateiname` varchar(255) NOT NULL,
+  `sortierung` int(11) NOT NULL DEFAULT 100,
+  PRIMARY KEY (`id`),
+  KEY `idx_artikel` (`artikel_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `shop_bestellungen` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `bestellnummer` varchar(30) NOT NULL,
+  `verein_name` varchar(150) DEFAULT NULL,
+  `verein_url` varchar(255) DEFAULT NULL,
+  `installation_id` varchar(64) DEFAULT NULL,
+  `besteller_name` varchar(150) DEFAULT NULL,
+  `besteller_email` varchar(150) DEFAULT NULL,
+  `besteller_telefon` varchar(50) DEFAULT NULL,
+  `lieferadresse` text DEFAULT NULL,
+  `bemerkung` text DEFAULT NULL,
+  `summe` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `status` varchar(20) NOT NULL DEFAULT 'neu',
+  `erstellt_am` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_bestellnummer` (`bestellnummer`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `shop_bestellpositionen` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `bestellung_id` int(11) NOT NULL,
+  `artikel_name` varchar(200) NOT NULL,
+  `variante` varchar(100) DEFAULT NULL,
+  `artikelnummer` varchar(50) DEFAULT NULL,
+  `einzelpreis` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `menge` int(11) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  KEY `idx_bestellung` (`bestellung_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
