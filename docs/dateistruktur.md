@@ -76,6 +76,7 @@ syncopa/
 │   ├── anwesenheit_verwalten.php   # Status/Grund eines Mitglieds sofort speichern (schreiben)
 │   ├── shop_katalog.php            # Shop-Katalog als JSON (Katalog-Server → Vereine)
 │   ├── shop_bestellung.php         # Bestell-Eingang (Verein → Katalog-Server)
+│   ├── shop_status.php             # Freischalt-Abfrage/Meldung einer Installation
 │   ├── kalender.php, kalender_termine.php
 │   ├── uniform_mitglied.php        # Uniform-Zuordnung speichern
 │   ├── mitglied_foto.php           # Foto eines Mitglieds (Original oder BMV-Version)
@@ -144,7 +145,7 @@ syncopa/
 ├── einstellungen.php
 ├── server.php                       # System → Server: Sicherheits-Checkliste (nur Admins)
 ├── shop.php                         # Shop für den Verein (Katalog, Warenkorb, Bestellung)
-├── shop_verwaltung.php, shop_artikel_bearbeiten.php, shop_bestellungen.php  # Shop-Katalog-Server (Admin)
+├── shop_verwaltung.php, shop_artikel_bearbeiten.php, shop_bestellungen.php, shop_installationen.php  # Shop-Katalog-Server (Admin)
 └── version_sync.php                 # Entwickler-Werkzeug: Version aus docs/changelog.md in alle Dateien übernehmen (Git-Hook)
 ```
 

@@ -54,17 +54,15 @@ define('EMAIL_FROM',       'noreply@deine-domain.at');
 define('EMAIL_FROM_NAME',  'Musikverein');
 
 // ============================================================================
-// SHOP (Vereinsbekleidung – optional)
-//   Katalog-Server (betreibt den Shop und pflegt die Artikel):
+// SHOP (Vereinsbekleidung)
+//   Der Shop ist standardmäßig aktiv: Jede Installation fragt beim Standard-Katalog-Server
+//   (SHOP_SERVER_URL in config.app.php) nach, ob er für sie freigeschaltet ist. Für normale
+//   Vereine ist hier nichts nötig. Nur der Betreiber des Katalog-Servers setzt:
 //       define('SHOP_IST_ZENTRALE', true);
-//   Jeder Verein (holt den Katalog vom Server und zeigt den Shop):
-//       define('SHOP_ZENTRALE_URL', 'https://shop.deine-domain.at/syncopa');
-//   Gemeinsamer Schlüssel (auf Server und Vereinen identisch):
-//       define('SHOP_API_KEY', 'langer-zufälliger-schlüssel');
+//       define('SHOP_ZENTRALE_URL', 'https://shop.deine-domain.at/syncopa'); // eigene öffentliche Adresse
+//   Optionaler Schlüssel (leer = offener Zugang):
+//       define('SHOP_API_KEY', '');
 // ============================================================================
-define('SHOP_IST_ZENTRALE', false);
-define('SHOP_ZENTRALE_URL', '');
-define('SHOP_API_KEY',      '');
 
 // ============================================================================
 // App-Konfiguration laden (nicht editieren)

@@ -1208,6 +1208,19 @@ require_once __DIR__ . '/classes/FestAbrechnung.php';
             menge INT NOT NULL DEFAULT 1,
             KEY idx_bestellung (bestellung_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // Registry der angebundenen Vereins-Installationen (auf dem Katalog-Server) – Shop je Verein schaltbar
+        $db->execute("CREATE TABLE IF NOT EXISTS shop_installationen (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            installation_id VARCHAR(64) NOT NULL,
+            name VARCHAR(150) NULL,
+            url VARCHAR(255) NULL,
+            version VARCHAR(20) NULL,
+            shop_aktiv TINYINT(1) NOT NULL DEFAULT 1,
+            erstellt_am DATETIME NOT NULL,
+            letzte_meldung DATETIME NULL,
+            UNIQUE KEY uk_installation (installation_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     } catch (\Throwable $e) { /* bereits vorhanden */ }
 })();
 

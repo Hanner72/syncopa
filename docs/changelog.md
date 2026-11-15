@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.17.0]
+
+### Hinzugefügt
+
+- Shop: zentrale Steuerung je Verein. Der Shop ist in jeder Installation standardmaessig aktiv; jede Installation fragt beim Katalog-Server, ob er fuer sie freigeschaltet ist
+  - Neue Seite Shop -> Installationen (nur Katalog-Server): Liste aller angebundenen Vereine mit Ein-/Aus-Schalter je Verein; neue Vereine sind automatisch freigeschaltet
+  - Statusabfrage `api/shop_status.php`; Vereine brauchen keine Shop-Einstellungen mehr in config.php (Standard-Server ueber SHOP_SERVER_URL)
+  - Bestellungen werden nur von freigeschalteten Installationen angenommen
+
+### Geaendert
+
+- Shop-Zugang standardmaessig offen (SHOP_API_KEY optional); die Steuerung laeuft ueber die Installations-Liste
+
+### Bugs
+
+- Shop: falscher Einstellungsschluessel bei der Bestellung (installations_id) korrigiert
+
 ## [2.16.0]
 
 ### Hinzugefügt

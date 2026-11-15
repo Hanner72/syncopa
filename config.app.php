@@ -8,7 +8,7 @@
 // ============================================================================
 // ANWENDUNGS-KONSTANTEN
 // ============================================================================
-if (!defined('APP_VERSION')) define('APP_VERSION', '2.16.0');
+if (!defined('APP_VERSION')) define('APP_VERSION', '2.17.0');
 if (!defined('APP_NAME'))    define('APP_NAME',    'Syncopa');
 if (!defined('BASE_PATH'))   define('BASE_PATH', __DIR__);
 
@@ -31,11 +31,14 @@ if (!defined('MAX_UPLOAD_SIZE'))    define('MAX_UPLOAD_SIZE',    10485760); // 1
 
 // ============================================================================
 // SHOP (Vereinsbekleidung)
-//   SHOP_IST_ZENTRALE  = true  → diese Installation pflegt den Katalog (Katalog-Server)
-//   SHOP_ZENTRALE_URL  = URL der Installation, die den Katalog liefert (für die Vereine)
-//   SHOP_API_KEY       = gemeinsamer Schlüssel zwischen Katalog-Server und Vereinen
-// Diese Werte gehören in config.php (siehe config.example.php).
+//   SHOP_SERVER_URL    = Standard-Katalog-Server; jede Installation fragt hier, ob der Shop für sie
+//                        freigeschaltet ist. Dadurch ist der Shop ohne weitere Einrichtung aktiv und
+//                        lässt sich zentral je Verein ein-/ausschalten. In config.php überschreibbar.
+//   SHOP_IST_ZENTRALE  = true  → diese Installation ist selbst der Katalog-Server
+//   SHOP_ZENTRALE_URL  = abweichender Katalog-Server (leer = SHOP_SERVER_URL verwenden)
+//   SHOP_API_KEY       = optionaler Schlüssel; leer = offener Zugang (nur Katalog/Status)
 // ============================================================================
+if (!defined('SHOP_SERVER_URL'))   define('SHOP_SERVER_URL',   'https://coding.dannerserv.eu/syncopa');
 if (!defined('SHOP_IST_ZENTRALE')) define('SHOP_IST_ZENTRALE', false);
 if (!defined('SHOP_ZENTRALE_URL')) define('SHOP_ZENTRALE_URL', '');
 if (!defined('SHOP_API_KEY'))      define('SHOP_API_KEY',      '');

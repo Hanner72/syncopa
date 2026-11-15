@@ -9,9 +9,16 @@ if (!Session::isAdmin()) {
     header('Location: index.php');
     exit;
 }
-if (!ShopKatalog::aktiv()) {
+if (!SHOP_IST_ZENTRALE && ShopKatalog::server() === '') {
     include 'includes/header.php';
-    echo '<div class="alert alert-info alert-permanent mt-3"><i class="bi bi-info-circle"></i> Für diese Installation ist kein Shop eingerichtet. In <code>config.php</code> die Adresse des Katalog-Servers (<code>SHOP_ZENTRALE_URL</code>) und den Schlüssel (<code>SHOP_API_KEY</code>) eintragen.</div>';
+    echo '<div class="alert alert-info alert-permanent mt-3"><i class="bi bi-info-circle"></i> Für diese Installation ist kein Katalog-Server hinterlegt.</div>';
+    include 'includes/footer.php';
+    exit;
+}
+// Zentrale Freischaltung prüfen (meldet diese Installation beim Server und holt den Freischalt-Status)
+if (!ShopKatalog::status()['aktiv']) {
+    include 'includes/header.php';
+    echo '<div class="alert alert-info alert-permanent mt-3"><i class="bi bi-info-circle"></i> Der Shop ist für diesen Verein derzeit nicht freigeschaltet.</div>';
     include 'includes/footer.php';
     exit;
 }
@@ -75,7 +82,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $nr = ShopKatalog::bestellungSenden([
                     'verein_name'      => trim((string)($_POST['verein_name'] ?? '')),
                     'verein_url'       => BASE_URL,
-                    'installation_id'  => (string)($db->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = 'installations_id'")['wert'] ?? ''),
                     'besteller_name'   => trim((string)($_POST['besteller_name'] ?? '')),
                     'besteller_email'  => trim((string)($_POST['besteller_email'] ?? '')),
                     'besteller_telefon'=> trim((string)($_POST['besteller_telefon'] ?? '')),
