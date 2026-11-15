@@ -1550,6 +1550,19 @@ CREATE TABLE IF NOT EXISTS `shop_bestellungen` (
   UNIQUE KEY `uk_bestellnummer` (`bestellnummer`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `shop_installationen` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `installation_id` varchar(64) NOT NULL,
+  `name` varchar(150) DEFAULT NULL,
+  `url` varchar(255) DEFAULT NULL,
+  `version` varchar(20) DEFAULT NULL,
+  `shop_aktiv` tinyint(1) NOT NULL DEFAULT 1,
+  `erstellt_am` datetime NOT NULL,
+  `letzte_meldung` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_installation` (`installation_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS `shop_bestellpositionen` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `bestellung_id` int(11) NOT NULL,

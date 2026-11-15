@@ -777,7 +777,7 @@ function isActive($page, $pages, $current) {
             </div>
             <?php endif; ?>
 
-            <?php if ((SHOP_IST_ZENTRALE || SHOP_ZENTRALE_URL !== '') && Session::isAdmin()): ?>
+            <?php if (Session::isAdmin() && (SHOP_IST_ZENTRALE || ShopKatalog::aktivCache())): ?>
             <div class="nav-group">
                 <div class="nav-label">Shop</div>
                 <ul class="nav flex-column">
@@ -790,6 +790,9 @@ function isActive($page, $pages, $current) {
                     </a></li>
                     <li><a class="nav-link <?php echo $currentPage === 'shop_bestellungen' ? 'active' : ''; ?>" href="shop_bestellungen.php">
                         <i class="bi bi-inbox"></i> Bestellungen
+                    </a></li>
+                    <li><a class="nav-link <?php echo $currentPage === 'shop_installationen' ? 'active' : ''; ?>" href="shop_installationen.php">
+                        <i class="bi bi-hdd-stack"></i> Installationen
                     </a></li>
                     <?php endif; ?>
                 </ul>

@@ -204,6 +204,36 @@ class Shop {
         self::db()->execute("UPDATE shop_bestellungen SET status = ? WHERE id = ?", [$status, $id]);
     }
 
+    // ---------------------------------------------------------------- Angebundene Installationen (Registry)
+    public static function installationen(): array {
+        return self::db()->fetchAll("SELECT * FROM shop_installationen ORDER BY shop_aktiv DESC, letzte_meldung DESC, name");
+    }
+    /** Meldung einer Vereins-Installation verbuchen; neue sind standardmäßig aktiv. Gibt den Datensatz zurück. */
+    public static function installationMelden(string $installationId, array $d): array {
+        $db = self::db();
+        $vorhanden = $db->fetchOne("SELECT * FROM shop_installationen WHERE installation_id = ?", [$installationId]);
+        if ($vorhanden) {
+            $db->execute("UPDATE shop_installationen SET name = ?, url = ?, version = ?, letzte_meldung = NOW() WHERE installation_id = ?",
+                [mb_substr(trim((string)($d['name'] ?? '')), 0, 150) ?: $vorhanden['name'],
+                 mb_substr(trim((string)($d['url'] ?? '')), 0, 255) ?: $vorhanden['url'],
+                 mb_substr(trim((string)($d['version'] ?? '')), 0, 20) ?: $vorhanden['version'], $installationId]);
+        } else {
+            $db->execute("INSERT INTO shop_installationen (installation_id, name, url, version, shop_aktiv, erstellt_am, letzte_meldung) VALUES (?, ?, ?, ?, 1, NOW(), NOW())",
+                [$installationId, mb_substr(trim((string)($d['name'] ?? '')), 0, 150) ?: null,
+                 mb_substr(trim((string)($d['url'] ?? '')), 0, 255) ?: null, mb_substr(trim((string)($d['version'] ?? '')), 0, 20) ?: null]);
+        }
+        return $db->fetchOne("SELECT * FROM shop_installationen WHERE installation_id = ?", [$installationId]);
+    }
+    public static function installationAktivSetzen(int $id, bool $aktiv): void {
+        self::db()->execute("UPDATE shop_installationen SET shop_aktiv = ? WHERE id = ?", [$aktiv ? 1 : 0, $id]);
+    }
+    /** Ist der Shop für diese Installation freigeschaltet? Unbekannte Installationen gelten als aktiv. */
+    public static function installationAktiv(string $installationId): bool {
+        if ($installationId === '') return true;
+        $r = self::db()->fetchOne("SELECT shop_aktiv FROM shop_installationen WHERE installation_id = ?", [$installationId]);
+        return $r ? (int)$r['shop_aktiv'] === 1 : true;
+    }
+
     /** Eine von einem Verein übermittelte Bestellung speichern. Gibt [id, bestellnummer] zurück. */
     public static function bestellungAnlegen(array $d): array {
         $positionen = [];

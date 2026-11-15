@@ -30,6 +30,13 @@ if (!is_array($daten)) {
     echo json_encode(['success' => false, 'error' => 'Ungültige Daten.']);
     exit;
 }
+// Bestellungen nur von freigeschalteten Installationen annehmen (zentrale Steuerung je Verein)
+$installationId = preg_replace('/[^a-f0-9]/i', '', (string)($daten['installation_id'] ?? ''));
+if (!Shop::installationAktiv($installationId)) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => 'Der Shop ist für diesen Verein nicht freigeschaltet.']);
+    exit;
+}
 
 try {
     $ergebnis = Shop::bestellungAnlegen($daten);

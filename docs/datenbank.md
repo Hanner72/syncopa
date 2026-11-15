@@ -136,6 +136,7 @@ Es gibt **kein externes Migrationstool**. Neue Tabellen/Spalten werden als anony
 | `aktivitaetslog` | Protokoll sicherheitsrelevanter Aktionen |
 | `shop_kategorien`, `shop_artikel`, `shop_varianten`, `shop_bilder` | Shop-Katalog (auf dem Katalog-Server) |
 | `shop_bestellungen`, `shop_bestellpositionen` | Eingegangene Shop-Bestellungen der Vereine |
+| `shop_installationen` | Angebundene Vereins-Installationen; `shop_aktiv` schaltet den Shop je Verein frei |
 | `uniformen`, `uniform_ausgaben` | Altlasten aus früheren Versionen, vom Code nicht mehr verwendet |
 
 ---
