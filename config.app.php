@@ -8,7 +8,7 @@
 // ============================================================================
 // ANWENDUNGS-KONSTANTEN
 // ============================================================================
-if (!defined('APP_VERSION')) define('APP_VERSION', '2.15.0');
+if (!defined('APP_VERSION')) define('APP_VERSION', '2.16.0');
 if (!defined('APP_NAME'))    define('APP_NAME',    'Syncopa');
 if (!defined('BASE_PATH'))   define('BASE_PATH', __DIR__);
 
@@ -26,7 +26,19 @@ if (!defined('FOTOS_DIR'))          define('FOTOS_DIR',          UPLOAD_DIR . DI
 if (!defined('DOKUMENTE_DIR'))      define('DOKUMENTE_DIR',      UPLOAD_DIR . DIRECTORY_SEPARATOR . 'dokumente');
 if (!defined('FEST_VERTRAEGE_DIR'))       define('FEST_VERTRAEGE_DIR',       UPLOAD_DIR . DIRECTORY_SEPARATOR . 'fest_vertraege');
 if (!defined('PROBE_ANNOTATIONS_DIR'))  define('PROBE_ANNOTATIONS_DIR',  UPLOAD_DIR . DIRECTORY_SEPARATOR . 'probe_annotationen');
+if (!defined('SHOP_DIR'))           define('SHOP_DIR',           UPLOAD_DIR . DIRECTORY_SEPARATOR . 'shop');
 if (!defined('MAX_UPLOAD_SIZE'))    define('MAX_UPLOAD_SIZE',    10485760); // 10 MB
+
+// ============================================================================
+// SHOP (Vereinsbekleidung)
+//   SHOP_IST_ZENTRALE  = true  → diese Installation pflegt den Katalog (Katalog-Server)
+//   SHOP_ZENTRALE_URL  = URL der Installation, die den Katalog liefert (für die Vereine)
+//   SHOP_API_KEY       = gemeinsamer Schlüssel zwischen Katalog-Server und Vereinen
+// Diese Werte gehören in config.php (siehe config.example.php).
+// ============================================================================
+if (!defined('SHOP_IST_ZENTRALE')) define('SHOP_IST_ZENTRALE', false);
+if (!defined('SHOP_ZENTRALE_URL')) define('SHOP_ZENTRALE_URL', '');
+if (!defined('SHOP_API_KEY'))      define('SHOP_API_KEY',      '');
 
 // ============================================================================
 // ZEITZONE
@@ -77,6 +89,6 @@ spl_autoload_register(function (string $class): void {
 // ============================================================================
 // UPLOAD-VERZEICHNISSE ERSTELLEN (beim ersten Aufruf)
 // ============================================================================
-foreach ([UPLOAD_DIR, NOTEN_DIR, FOTOS_DIR, DOKUMENTE_DIR, FEST_VERTRAEGE_DIR, PROBE_ANNOTATIONS_DIR] as $dir) {
+foreach ([UPLOAD_DIR, NOTEN_DIR, FOTOS_DIR, DOKUMENTE_DIR, FEST_VERTRAEGE_DIR, PROBE_ANNOTATIONS_DIR, SHOP_DIR] as $dir) {
     if (!file_exists($dir)) @mkdir($dir, 0755, true);
 }

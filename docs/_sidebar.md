@@ -50,6 +50,9 @@
   * [Ordner](email.md#ordner)
   * [Junk-E-Mail (Spamfilter)](email.md#junk-e-mail-spamfilter)
 
+* **🛍️ Shop**
+  * [Vereinsbekleidung](shop.md)
+
 * **⚙️ Administration**
   * [Benutzerverwaltung](benutzer.md)
   * [Rollen & Berechtigungen](rollen.md)

@@ -13,6 +13,8 @@ syncopa/
 │   ├── Database.php                # Datenbankverbindung (PDO, Singleton)
 │   ├── Session.php                 # Session-Management, Rollen & Berechtigungen
 │   ├── Sicherheit.php              # Prüfzeichen (CSRF), Schutz-Kopfzeilen, Login-Sperre, Passwortregeln, Kalender-Schlüssel
+│   ├── Shop.php                    # Shop (Katalog-Server): Artikel, Varianten, Bilder, Bestell-Eingang, Katalog-API
+│   ├── ShopKatalog.php             # Shop (Verein): Katalog vom Server holen/zwischenspeichern, Bestellung senden
 │   ├── Mitglied.php                # Mitglieder-Logik
 │   ├── Formation.php                # Formationen (Musikkapelle, 7er-Partie, ...)
 │   ├── Ausrueckung.php             # Ausrückungs-Logik, Anwesenheit
@@ -72,6 +74,8 @@ syncopa/
 │   ├── anwesenheit_liste.php       # Aktueller Stand der Zu-/Absagen (Live-Aktualisierung)
 │   ├── anwesenheit_setzen.php      # An-/Abmeldung zu Ausrückungen
 │   ├── anwesenheit_verwalten.php   # Status/Grund eines Mitglieds sofort speichern (schreiben)
+│   ├── shop_katalog.php            # Shop-Katalog als JSON (Katalog-Server → Vereine)
+│   ├── shop_bestellung.php         # Bestell-Eingang (Verein → Katalog-Server)
 │   ├── kalender.php, kalender_termine.php
 │   ├── uniform_mitglied.php        # Uniform-Zuordnung speichern
 │   ├── mitglied_foto.php           # Foto eines Mitglieds (Original oder BMV-Version)
@@ -139,6 +143,8 @@ syncopa/
 ├── freigabe.php                     # Öffentliche Downloadseite für Download-Links (ohne Anmeldung)
 ├── einstellungen.php
 ├── server.php                       # System → Server: Sicherheits-Checkliste (nur Admins)
+├── shop.php                         # Shop für den Verein (Katalog, Warenkorb, Bestellung)
+├── shop_verwaltung.php, shop_artikel_bearbeiten.php, shop_bestellungen.php  # Shop-Katalog-Server (Admin)
 └── version_sync.php                 # Entwickler-Werkzeug: Version aus docs/changelog.md in alle Dateien übernehmen (Git-Hook)
 ```
 

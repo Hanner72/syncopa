@@ -776,7 +776,26 @@ function isActive($page, $pages, $current) {
                 </ul>
             </div>
             <?php endif; ?>
-            
+
+            <?php if ((SHOP_IST_ZENTRALE || SHOP_ZENTRALE_URL !== '') && Session::isAdmin()): ?>
+            <div class="nav-group">
+                <div class="nav-label">Shop</div>
+                <ul class="nav flex-column">
+                    <li><a class="nav-link <?php echo in_array($currentPage, ['shop']) ? 'active' : ''; ?>" href="shop.php">
+                        <i class="bi bi-bag"></i> Shop
+                    </a></li>
+                    <?php if (SHOP_IST_ZENTRALE): ?>
+                    <li><a class="nav-link <?php echo in_array($currentPage, ['shop_verwaltung', 'shop_artikel_bearbeiten']) ? 'active' : ''; ?>" href="shop_verwaltung.php">
+                        <i class="bi bi-shop"></i> Verwaltung
+                    </a></li>
+                    <li><a class="nav-link <?php echo $currentPage === 'shop_bestellungen' ? 'active' : ''; ?>" href="shop_bestellungen.php">
+                        <i class="bi bi-inbox"></i> Bestellungen
+                    </a></li>
+                    <?php endif; ?>
+                </ul>
+            </div>
+            <?php endif; ?>
+
             <div class="nav-group">
                 <div class="nav-label">Hilfe</div>
                 <ul class="nav flex-column">
