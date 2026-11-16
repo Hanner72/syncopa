@@ -1,5 +1,33 @@
 # Changelog
 
+## [2.18.0]
+
+### Hinzugefügt
+
+- Shop: neues, modernes Design in den Syncopa-Farben (Petrol/Blau, Gold als Akzent; hell und dunkel)
+  - Kopfbereich mit Navigation (Shop-Menue, Angebote, Warenkorb), Suche, Vorteils-Hinweisen
+  - Mega-Menue "Shop": je Hauptkategorie eine Karte mit ihren Unterkategorien
+  - Katalog als kompaktes Raster mit Kategorie-Leiste, Unterkategorien-Leiste, Sortierung und Merkliste (im Browser gespeichert)
+  - Mehrere Bilder je Artikel direkt auf der Karte durchklickbar (Pfeile, Punkte, Wischen); Hauptbild in der Verwaltung waehlbar
+  - Detailseite mit Bildergalerie, Groessen-Auswahl als Kaestchen und Mengen-Knoepfen
+  - Warenkorb in Spalten (Artikel, Preis, Menge, Summe) mit Fortschrittsbalken bis "versandfrei"; Schrittanzeige Warenkorb -> Daten -> Fertig
+- Shop: Unterkategorien (eine Ebene); Kategorien in der Verwaltung per Drag & Drop anordnen, unter- und wieder herausziehen (`api/shop_kategorien_sortieren.php`)
+- Shop: Angebote – Karten mit Bild, Beschreibung und Aufzaehlung auf der Shop-Startseite, optional mit Verweis auf eine Kategorie (Verwaltung -> Angebote)
+- Shop: Versandkosten (Pauschale und "versandfrei ab"), serverseitig berechnet und je Bestellung gespeichert
+- Shop: Kennzeichen "Aktion" (mit eigenem Text) und "Ausverkauft" je Artikel; ausverkaufte Artikel sind nicht bestellbar
+- Shop: Bilder bis 16 MB; beim Hochladen automatisch auf max. 1600 px verkleinert, komprimiert und nach EXIF gedreht
+- Shop-Installationen: eigener Anzeigename je Verein (Stift in der Liste), Ort des Vereins; ohne Namen wird die Adresse angezeigt
+
+### Geaendert
+
+- Shop-Verwaltung: Artikelliste mit vollstaendigem Kategoriepfad und nach Kategorienbaum sortiert; Speichern-Leiste beim Artikel bleibt beim Scrollen sichtbar, mit Hinweis auf ungespeicherte Aenderungen
+- Vereine melden ihren Vereinsnamen (ersatzweise den Kontonamen) und Ort an den Katalog-Server
+
+### Bugs
+
+- Shop: Vereinsname wurde unter falschem Schluessel gelesen und kam beim Katalog-Server als "unbenannt" an
+- Shop: Migrationen ohne "ADD COLUMN IF NOT EXISTS" (wird von diesem MySQL nicht unterstuetzt)
+
 ## [2.17.0]
 
 ### Hinzugefügt

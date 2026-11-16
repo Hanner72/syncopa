@@ -1156,6 +1156,9 @@ require_once __DIR__ . '/classes/FestAbrechnung.php';
             preis DECIMAL(10,2) NOT NULL DEFAULT 0,
             lieferzeit VARCHAR(100) NULL,
             aktiv TINYINT(1) NOT NULL DEFAULT 1,
+            aktion TINYINT(1) NOT NULL DEFAULT 0,
+            aktion_text VARCHAR(40) NULL,
+            ausverkauft TINYINT(1) NOT NULL DEFAULT 0,
             sortierung INT NOT NULL DEFAULT 100,
             erstellt_am DATETIME NOT NULL,
             aktualisiert_am DATETIME NULL,
@@ -1192,6 +1195,7 @@ require_once __DIR__ . '/classes/FestAbrechnung.php';
             besteller_telefon VARCHAR(50) NULL,
             lieferadresse TEXT NULL,
             bemerkung TEXT NULL,
+            versandkosten DECIMAL(10,2) NOT NULL DEFAULT 0,
             summe DECIMAL(10,2) NOT NULL DEFAULT 0,
             status VARCHAR(20) NOT NULL DEFAULT 'neu',
             erstellt_am DATETIME NOT NULL,
@@ -1220,6 +1224,45 @@ require_once __DIR__ . '/classes/FestAbrechnung.php';
             erstellt_am DATETIME NOT NULL,
             letzte_meldung DATETIME NULL,
             UNIQUE KEY uk_installation (installation_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    } catch (\Throwable $e) { /* bereits vorhanden */ }
+    // Spalten für bestehende Installationen nachziehen
+    // (plain ADD COLUMN im try/catch – dieser MySQL-Server kennt "ADD COLUMN IF NOT EXISTS" nicht)
+    try {
+        $db->execute("ALTER TABLE `shop_bestellungen` ADD COLUMN versandkosten DECIMAL(10,2) NOT NULL DEFAULT 0 AFTER bemerkung");
+    } catch (\Throwable $e) { /* bereits vorhanden */ }
+    try {
+        $db->execute("ALTER TABLE `shop_artikel` ADD COLUMN aktion TINYINT(1) NOT NULL DEFAULT 0 AFTER aktiv");
+    } catch (\Throwable $e) { /* bereits vorhanden */ }
+    try {
+        $db->execute("ALTER TABLE `shop_artikel` ADD COLUMN aktion_text VARCHAR(40) NULL AFTER aktion");
+    } catch (\Throwable $e) { /* bereits vorhanden */ }
+    try {
+        $db->execute("ALTER TABLE `shop_artikel` ADD COLUMN ausverkauft TINYINT(1) NOT NULL DEFAULT 0 AFTER aktion_text");
+    } catch (\Throwable $e) { /* bereits vorhanden */ }
+    // Installationen: selbst vergebener Anzeigename (wird von Meldungen nicht überschrieben) und Ort
+    try {
+        $db->execute("ALTER TABLE `shop_installationen` ADD COLUMN anzeigename VARCHAR(150) NULL AFTER name");
+    } catch (\Throwable $e) { /* bereits vorhanden */ }
+    try {
+        $db->execute("ALTER TABLE `shop_installationen` ADD COLUMN ort VARCHAR(100) NULL AFTER anzeigename");
+    } catch (\Throwable $e) { /* bereits vorhanden */ }
+    // Unterkategorien (eine Ebene)
+    try {
+        $db->execute("ALTER TABLE `shop_kategorien` ADD COLUMN parent_id INT NULL AFTER id");
+    } catch (\Throwable $e) { /* bereits vorhanden */ }
+    // Angebote: Karten mit Bild und Beschreibung (keine Artikel), auf der Shop-Startseite
+    try {
+        $db->execute("CREATE TABLE IF NOT EXISTS shop_angebote (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            titel VARCHAR(150) NOT NULL,
+            beschreibung TEXT NULL,
+            punkte TEXT NULL,
+            bild VARCHAR(255) NULL,
+            kategorie_id INT NULL,
+            sortierung INT NOT NULL DEFAULT 100,
+            aktiv TINYINT(1) NOT NULL DEFAULT 1,
+            erstellt_am DATETIME NOT NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     } catch (\Throwable $e) { /* bereits vorhanden */ }
 })();

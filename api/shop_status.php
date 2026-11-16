@@ -28,6 +28,7 @@ if ($installationId === '') {
 
 $datensatz = Shop::installationMelden($installationId, [
     'name'    => $_REQUEST['name'] ?? '',
+    'ort'     => $_REQUEST['ort'] ?? '',
     'url'     => $_REQUEST['url'] ?? '',
     'version' => $_REQUEST['version'] ?? '',
 ]);

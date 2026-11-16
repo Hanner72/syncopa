@@ -1488,6 +1488,7 @@ CREATE TABLE IF NOT EXISTS `login_versuche` (
 -- Shop (Vereinsbekleidung) – Katalog, Varianten, Bilder, Bestellungen
 CREATE TABLE IF NOT EXISTS `shop_kategorien` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
+  `parent_id` int(11) DEFAULT NULL,
   `name` varchar(100) NOT NULL,
   `beschreibung` text DEFAULT NULL,
   `sortierung` int(11) NOT NULL DEFAULT 100,
@@ -1504,6 +1505,9 @@ CREATE TABLE IF NOT EXISTS `shop_artikel` (
   `preis` decimal(10,2) NOT NULL DEFAULT 0.00,
   `lieferzeit` varchar(100) DEFAULT NULL,
   `aktiv` tinyint(1) NOT NULL DEFAULT 1,
+  `aktion` tinyint(1) NOT NULL DEFAULT 0,
+  `aktion_text` varchar(40) DEFAULT NULL,
+  `ausverkauft` tinyint(1) NOT NULL DEFAULT 0,
   `sortierung` int(11) NOT NULL DEFAULT 100,
   `erstellt_am` datetime NOT NULL,
   `aktualisiert_am` datetime DEFAULT NULL,
@@ -1543,6 +1547,7 @@ CREATE TABLE IF NOT EXISTS `shop_bestellungen` (
   `besteller_telefon` varchar(50) DEFAULT NULL,
   `lieferadresse` text DEFAULT NULL,
   `bemerkung` text DEFAULT NULL,
+  `versandkosten` decimal(10,2) NOT NULL DEFAULT 0.00,
   `summe` decimal(10,2) NOT NULL DEFAULT 0.00,
   `status` varchar(20) NOT NULL DEFAULT 'neu',
   `erstellt_am` datetime NOT NULL,
@@ -1550,10 +1555,25 @@ CREATE TABLE IF NOT EXISTS `shop_bestellungen` (
   UNIQUE KEY `uk_bestellnummer` (`bestellnummer`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `shop_angebote` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `titel` varchar(150) NOT NULL,
+  `beschreibung` text DEFAULT NULL,
+  `punkte` text DEFAULT NULL,
+  `bild` varchar(255) DEFAULT NULL,
+  `kategorie_id` int(11) DEFAULT NULL,
+  `sortierung` int(11) NOT NULL DEFAULT 100,
+  `aktiv` tinyint(1) NOT NULL DEFAULT 1,
+  `erstellt_am` datetime NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS `shop_installationen` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `installation_id` varchar(64) NOT NULL,
   `name` varchar(150) DEFAULT NULL,
+  `anzeigename` varchar(150) DEFAULT NULL,
+  `ort` varchar(100) DEFAULT NULL,
   `url` varchar(255) DEFAULT NULL,
   `version` varchar(20) DEFAULT NULL,
   `shop_aktiv` tinyint(1) NOT NULL DEFAULT 1,
