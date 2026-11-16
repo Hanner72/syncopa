@@ -18,6 +18,12 @@ class ShopKatalog {
         return (string)(Database::getInstance()->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = 'installation_id'")['wert'] ?? '');
     }
 
+    /** Vereinsname für die Meldung an den Katalog-Server: Vereinsname, sonst Kontoname (Teil vor „/“). */
+    public static function vereinsname(): string {
+        $n = trim((string)(self::einstellung('verein_name') ?? ''));
+        if ($n === '') $n = trim(explode('/', (string)(self::einstellung('verein_kontoname') ?? ''))[0]);
+        return $n;
+    }
     private static function einstellung(string $k): ?string {
         $r = Database::getInstance()->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = ?", [$k]);
         return $r ? (string)$r['wert'] : null;
@@ -46,7 +52,8 @@ class ShopKatalog {
         try {
             $url = self::server() . '/api/shop_status.php?' . http_build_query([
                 'key' => SHOP_API_KEY, 'id' => self::installationId(),
-                'name' => (string)(self::einstellung('vereinsname') ?? ''), 'url' => BASE_URL, 'version' => APP_VERSION,
+                'name' => self::vereinsname(), 'ort' => trim((string)(self::einstellung('verein_ort') ?? '')),
+                'url' => BASE_URL, 'version' => APP_VERSION,
             ]);
             $d = json_decode(self::http('GET', $url), true);
             if (!is_array($d) || empty($d['success'])) throw new RuntimeException('Status unklar');

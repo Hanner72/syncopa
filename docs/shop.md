@@ -33,6 +33,11 @@ Ein optionaler `SHOP_API_KEY` (auf Server und Vereinen gleich) schließt Katalog
 - **Bilder:** JPG, PNG oder WEBP, mehrere je Artikel. Das erste Bild ist das Vorschaubild.
 - **Kategorien:** zum Gruppieren im Shop. Artikel ohne Kategorie erscheinen unter „Sonstiges“.
 - **Einstellungen:** Titel, Einleitung, Versand- und Kontakthinweis sowie die E-Mail-Adresse, an die neue Bestellungen gemeldet werden.
+- **Versandkosten:** eine Pauschale je Bestellung (leer oder 0 = kein Versand) und optional eine Freigrenze (**versandfrei ab** einer bestimmten Warensumme). Die Kosten gelten für alle Vereine gleich; sie werden beim Verein im Warenkorb und an der Kasse angezeigt und bei der Bestellung serverseitig autoritativ berechnet und mitgespeichert.
+- **Kategorien per Drag & Drop:** In der Verwaltung lassen sich Kategorien am Griff ziehen – Reihenfolge ändern, unter eine andere Kategorie ziehen (wird Unterkategorie) oder wieder herausziehen (wird Hauptkategorie). Gespeichert wird sofort. Eine Kategorie, die selbst Unterkategorien hat, kann nicht untergeordnet werden.
+- **Unterkategorien:** Im Kategorie-Dialog eine **Oberkategorie** wählen – die Kategorie wird damit zur Unterkategorie (eine Ebene). Im Shop öffnet der Button **Kategorien** im Kopfbereich ein Menü mit allen Haupt- und Unterkategorien; wird eine Hauptkategorie gewählt, erscheint darunter eine Leiste mit ihren Unterkategorien. Eine Hauptkategorie zeigt auch die Artikel ihrer Unterkategorien.
+- **Angebote:** Karten mit Bild, Titel, Beschreibung und optionaler Aufzählung (z. B. „Besticken & Beflocken“), die oben im Shop als Abschnitt „Unsere Angebote“ erscheinen – keine Artikel, nicht bestellbar. Gepflegt unter Shop → Verwaltung → **Angebote**. Aufzählungspunkte stehen je in einer Zeile; mit `Text | https://…` wird ein Punkt zum Link. Optional verweist ein Angebot auf eine Kategorie („Zu den Artikeln“).
+- **Aktion / Ausverkauft je Artikel:** im Artikel (Shop → Verwaltung → Artikel) lassen sich zwei Kennzeichen setzen. **Aktion** zeigt im Shop ein Label (eigener Text möglich, Standard „Aktion“). **Ausverkauft** zeigt ein Ausverkauft-Label, graut das Bild aus und sperrt das Bestellen dieses Artikels. Beide erscheinen auch in der Artikelliste der Verwaltung.
 
 ## Bestellungen (Katalog-Server)
 
@@ -52,7 +57,7 @@ Jede Syncopa, die den Shop öffnet, meldet sich hier mit Name, Adresse und Versi
 
 **Menü:** Shop · **Berechtigung:** Administrator (Vorstand)
 
-Der Vorstand sieht den Katalog, legt Artikel in den Warenkorb und bestellt. Verein, Ansprechpartner und E-Mail sind vorausgefüllt; Lieferadresse und eine Bemerkung werden ergänzt. Nach dem Absenden erscheint eine Bestellnummer; die Bestellung wird an den Katalog-Server übermittelt.
+Der Shop öffnet mit einem Header im Trachtenstil; darunter filtern **Kategorie-Chips** („Alle“ + je Kategorie) die Ansicht. Artikel mit Aktion tragen ein farbiges Label, ausverkaufte ein Ausverkauft-Label. Der Vorstand sieht den Katalog, legt Artikel in den Warenkorb und bestellt. Verein, Ansprechpartner und E-Mail sind vorausgefüllt; Lieferadresse und eine Bemerkung werden ergänzt. Sind Versandkosten hinterlegt, erscheinen sie im Warenkorb und an der Kasse als eigene Zeile (ggf. „versandfrei“). Nach dem Absenden erscheint eine Bestellnummer; die Bestellung wird an den Katalog-Server übermittelt. Der Shop ist im Trachtenstil gehalten (Lodengrün, Cremetöne, Serifentitel), passt sich aber dem hellen/dunklen Thema an.
 
 Der Katalog wird bis zu 30 Minuten zwischengespeichert, damit nicht jeder Seitenaufruf den Server abfragt. Ist der Server einmal nicht erreichbar, zeigt Syncopa den zuletzt bekannten Stand.
 

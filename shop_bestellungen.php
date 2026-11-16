@@ -98,7 +98,12 @@ include 'includes/header.php';
                     </tr>
                     <?php endforeach; ?>
                     </tbody>
-                    <tfoot><tr><th colspan="4" class="text-end">Summe</th><th class="text-end" style="font-variant-numeric:tabular-nums"><?php echo Shop::euro($b['summe']); ?></th></tr></tfoot>
+                    <tfoot>
+                    <?php if ((float)($b['versandkosten'] ?? 0) > 0): ?>
+                        <tr><td colspan="4" class="text-end border-0 py-0 text-muted small"><i class="bi bi-truck"></i> Versand</td><td class="text-end border-0 py-0" style="font-variant-numeric:tabular-nums"><?php echo Shop::euro($b['versandkosten']); ?></td></tr>
+                    <?php endif; ?>
+                        <tr><th colspan="4" class="text-end">Summe</th><th class="text-end" style="font-variant-numeric:tabular-nums"><?php echo Shop::euro($b['summe']); ?></th></tr>
+                    </tfoot>
                 </table>
             </div>
         </div>
