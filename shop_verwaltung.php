@@ -19,6 +19,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         switch ($_POST['aktion'] ?? '') {
             case 'einstellungen':
+                $postfach = (int)($_POST['mail_konto'] ?? 0);
+                if ($postfach && !Database::getInstance()->fetchOne("SELECT id FROM mail_konten WHERE id = ? AND benutzer_id IS NULL", [$postfach])) $postfach = 0;
+                Shop::einstellungSetzen('mail_konto', $postfach ? (string)$postfach : '');
                 foreach (['titel', 'einleitung', 'versand', 'kontakt', 'bestell_email'] as $f) {
                     Shop::einstellungSetzen($f, trim((string)($_POST[$f] ?? '')));
                 }
@@ -29,36 +32,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 Session::setFlashMessage('success', 'Shop-Einstellungen gespeichert.');
                 break;
-            case 'kategorie':
-                Shop::kategorieSpeichern($_POST, (int)($_POST['id'] ?? 0) ?: null);
-                Session::setFlashMessage('success', 'Kategorie gespeichert.');
-                break;
-            case 'kategorie_loeschen':
-                Shop::kategorieLoeschen((int)$_POST['id']);
-                Session::setFlashMessage('success', 'Kategorie gelöscht. Artikel darin bleiben erhalten (ohne Kategorie).');
-                break;
+            case 'veredelung':
+                Shop::veredelungenSpeichern((array)($_POST['ved_preis'] ?? []), (array)($_POST['ved_aktiv'] ?? []));
+                Session::setFlashMessage('success', 'Veredelungs-Preise gespeichert.');
+                header('Location: shop_verwaltung.php#veredelung');
+                exit;
             case 'angebot_loeschen':
                 Shop::angebotLoeschen((int)$_POST['id']);
                 Session::setFlashMessage('success', 'Angebot gelöscht.');
                 header('Location: shop_verwaltung.php#angebote');
                 exit;
-            case 'artikel_loeschen':
-                Shop::artikelLoeschen((int)$_POST['id']);
-                Session::setFlashMessage('success', 'Artikel gelöscht.');
-                break;
         }
     } catch (\Throwable $e) {
         Session::setFlashMessage('danger', $e->getMessage());
     }
-    header('Location: shop_verwaltung.php' . (str_starts_with($_POST['aktion'] ?? '', 'kategorie') ? '#kategorien' : ''));
+    header('Location: shop_verwaltung.php' . (($_POST['aktion'] ?? '') === 'einstellungen' ? '#einstellungen' : ''));
     exit;
 }
 
-$kategorien = Shop::kategorienBaum();
-$hauptKats  = array_values(array_filter($kategorien, fn($k) => (int)$k['ebene'] === 0));
-$katNamen   = array_column($kategorien, 'name', 'id');
+$katNamen   = array_column(Shop::kategorien(), 'name', 'id');
 $angebote   = Shop::angebote();
-$artikel    = Shop::artikelListe();
+$vedTabelle = [];
+foreach (Shop::veredelungen() as $v) $vedTabelle[$v['position']][$v['art']] = $v;
+$anzArtikel = (int)(Database::getInstance()->fetchOne("SELECT COUNT(*) n FROM shop_artikel")['n'] ?? 0);
+$anzKat     = count($katNamen);
 $bildBasis  = 'uploads/shop';
 $h = fn($t) => htmlspecialchars((string)$t, ENT_QUOTES, 'UTF-8');
 
@@ -77,113 +74,53 @@ include 'includes/header.php';
     <div>Dieser Katalog wird an alle Vereine ausgeliefert, die in ihrer Syncopa den Shop aktiviert haben. Nur <strong>aktive</strong> Kategorien und Artikel sind für die Vereine sichtbar.</div>
 </div>
 
-<!-- Artikel -->
-<div class="card mb-4">
-    <div class="card-header"><h5 class="mb-0"><i class="bi bi-box-seam"></i> Artikel</h5></div>
-    <div class="table-responsive">
-        <table class="table align-middle mb-0">
-            <thead class="table-light"><tr><th style="width:64px"></th><th>Artikel</th><th>Kategorie</th><th>Größen</th><th class="text-end">Preis</th><th class="text-center">Sichtbar</th><th></th></tr></thead>
-            <tbody>
-            <?php if (!$artikel): ?>
-            <tr><td colspan="7" class="text-center text-muted py-4">Noch keine Artikel. Lege mit <strong>Neuer Artikel</strong> den ersten an.</td></tr>
-            <?php endif; ?>
-            <?php foreach ($artikel as $a): ?>
-            <tr class="<?php echo $a['aktiv'] ? '' : 'text-muted'; ?>">
-                <td>
-                    <?php if ($a['hauptbild']): ?>
-                    <img src="<?php echo $h($bildBasis . '/' . rawurlencode($a['hauptbild'])); ?>" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid var(--border)">
-                    <?php else: ?>
-                    <span class="text-muted d-inline-flex align-items-center justify-content-center" style="width:48px;height:48px;border:1px dashed var(--border);border-radius:4px"><i class="bi bi-image"></i></span>
-                    <?php endif; ?>
-                </td>
-                <td>
-                    <a href="shop_artikel_bearbeiten.php?id=<?php echo (int)$a['id']; ?>" class="fw-semibold"><?php echo $h($a['name']); ?></a>
-                    <?php if (!$a['aktiv']): ?><span class="badge bg-secondary ms-1">verborgen</span><?php endif; ?>
-                    <?php if (!empty($a['aktion'])): ?><span class="badge bg-danger ms-1"><?php echo $h($a['aktion_text'] ?: 'Aktion'); ?></span><?php endif; ?>
-                    <?php if (!empty($a['ausverkauft'])): ?><span class="badge bg-dark ms-1">Ausverkauft</span><?php endif; ?>
-                    <?php if ($a['artikelnummer']): ?><br><small class="text-muted"><?php echo $h($a['artikelnummer']); ?></small><?php endif; ?>
-                </td>
-                <td class="small"><?php if ($a['kategorie_name']): ?>
-                    <?php if (!empty($a['oberkategorie_name'])): ?><span class="text-muted"><?php echo $h($a['oberkategorie_name']); ?></span> <i class="bi bi-chevron-right text-muted" style="font-size:.7em"></i> <?php endif; ?><?php echo $h($a['kategorie_name']); ?>
-                <?php else: ?><span class="text-muted">–</span><?php endif; ?></td>
-                <td class="small"><?php echo (int)$a['anzahl_varianten'] ? ((int)$a['anzahl_varianten'] . ' Größen') : '<span class="text-muted">eine</span>'; ?></td>
-                <td class="text-end text-nowrap" style="font-variant-numeric:tabular-nums"><?php echo Shop::euro($a['preis']); ?></td>
-                <td class="text-center"><?php echo $a['aktiv'] ? '<i class="bi bi-check-circle-fill text-success"></i>' : '<i class="bi bi-dash-circle text-muted"></i>'; ?></td>
-                <td class="text-end text-nowrap">
-                    <a href="shop_artikel_bearbeiten.php?id=<?php echo (int)$a['id']; ?>" class="btn btn-sm btn-outline-primary" title="Bearbeiten"><i class="bi bi-pencil"></i></a>
-                    <button type="submit" form="art-del-<?php echo (int)$a['id']; ?>" class="btn btn-sm btn-outline-danger" title="Löschen" onclick="return confirm('Artikel „<?php echo $h(addslashes($a['name'])); ?>“ wirklich löschen?')"><i class="bi bi-trash"></i></button>
-                </td>
-            </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
+<!-- Schnellzugriff: Artikel und Kategorien haben eigene Seiten -->
+<div class="row g-3 mb-4">
+    <div class="col-md-6"><a href="shop_artikel.php" class="card h-100 text-decoration-none"><div class="card-body d-flex align-items-center gap-3">
+        <i class="bi bi-box-seam fs-3 text-primary"></i>
+        <div><div class="fw-bold">Artikel</div><div class="small text-muted"><?php echo $anzArtikel; ?> Artikel – Liste mit Suche, Filtern und Sortierung</div></div>
+        <i class="bi bi-chevron-right ms-auto text-muted"></i></div></a></div>
+    <div class="col-md-6"><a href="shop_kategorien.php" class="card h-100 text-decoration-none"><div class="card-body d-flex align-items-center gap-3">
+        <i class="bi bi-tags fs-3 text-primary"></i>
+        <div><div class="fw-bold">Kategorien</div><div class="small text-muted"><?php echo $anzKat; ?> Kategorien – per Drag &amp; Drop anordnen</div></div>
+        <i class="bi bi-chevron-right ms-auto text-muted"></i></div></a></div>
 </div>
-<?php foreach ($artikel as $a): ?>
-<form method="post" id="art-del-<?php echo (int)$a['id']; ?>" class="d-none"><input type="hidden" name="aktion" value="artikel_loeschen"><input type="hidden" name="id" value="<?php echo (int)$a['id']; ?>"></form>
-<?php endforeach; ?>
 
-<!-- Kategorien -->
-<div class="card mb-4" id="kategorien">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="bi bi-tags"></i> Kategorien</h5>
-        <button class="btn btn-sm btn-success" data-kat='{}'><i class="bi bi-plus-lg"></i> Kategorie</button>
-    </div>
-    <?php if (!$kategorien): ?>
-    <div class="card-body text-center text-muted py-4">Noch keine Kategorien. Ohne Kategorie landen Artikel unter „Sonstiges“.</div>
-    <?php else:
-        $kinderVon = [];
-        foreach ($kategorien as $k) if ($k['ebene']) $kinderVon[(int)$k['parent_id']][] = $k;
-        $katZeile = function ($k) use ($h) { ob_start(); ?>
-            <div class="kat-zeile <?php echo $k['aktiv'] ? '' : 'kat-inaktiv'; ?>">
-                <span class="kat-griff" title="Ziehen zum Verschieben"><i class="bi bi-grip-vertical"></i></span>
-                <span class="kat-name"><?php echo $h($k['name']); ?><?php if (!$k['aktiv']): ?> <span class="badge bg-secondary ms-1">inaktiv</span><?php endif; ?></span>
-                <span class="kat-besch small text-muted d-none d-md-inline"><?php echo $h($k['beschreibung'] ?? ''); ?></span>
-                <span class="kat-knoepfe text-nowrap">
-                    <button type="button" class="btn btn-sm btn-outline-primary" title="Bearbeiten" data-kat='<?php echo $h(json_encode($k, JSON_UNESCAPED_UNICODE)); ?>'><i class="bi bi-pencil"></i></button>
-                    <button type="submit" form="kat-del-<?php echo (int)$k['id']; ?>" class="btn btn-sm btn-outline-danger" title="Löschen" onclick="return confirm('Kategorie „<?php echo $h(addslashes($k['name'])); ?>“ löschen?')"><i class="bi bi-trash"></i></button>
-                </span>
-            </div>
-        <?php return ob_get_clean(); };
-    ?>
-    <div class="card-body pb-2">
-        <div class="small text-muted mb-2"><i class="bi bi-arrows-move"></i> Am Griff <i class="bi bi-grip-vertical"></i> ziehen, um die Reihenfolge zu ändern. <strong>Eingerückt unter eine Kategorie ziehen</strong> macht sie zur Unterkategorie, <strong>nach links heraus ziehen</strong> wieder zur Hauptkategorie. Wird sofort gespeichert.</div>
-        <ul class="kat-baum" id="kat-baum">
-            <?php foreach ($kategorien as $k): if ($k['ebene']) continue; ?>
-            <li class="kat-item" data-id="<?php echo (int)$k['id']; ?>">
-                <?php echo $katZeile($k); ?>
-                <ul class="kat-kinder">
-                    <?php foreach ($kinderVon[(int)$k['id']] ?? [] as $c): ?>
-                    <li class="kat-item" data-id="<?php echo (int)$c['id']; ?>"><?php echo $katZeile($c); ?><ul class="kat-kinder"></ul></li>
+<!-- Veredelung -->
+<div class="card mb-4" id="veredelung">
+    <div class="card-header"><h5 class="mb-0"><i class="bi bi-stars"></i> Veredelung</h5></div>
+    <form method="post" class="card-body">
+        <input type="hidden" name="aktion" value="veredelung">
+        <p class="small text-muted mb-3">Preise je <strong>Stück</strong> und Position. Nur angehakte Positionen werden im Shop angeboten – und nur bei Artikeln mit dem Schalter <strong>„Veredelung möglich“</strong>. Der Besteller lädt je gewählter Position ein Logo bzw. einen Schriftzug hoch (JPG, PNG, WebP, PDF); die Dateien findest du bei der Bestellung.</p>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0" style="max-width:640px">
+                <thead class="table-light"><tr><th>Position</th>
+                    <?php foreach (Shop::VEREDELUNG_ARTEN as $artName): ?><th style="width:210px"><?php echo $h($artName); ?></th><?php endforeach; ?></tr></thead>
+                <tbody>
+                <?php foreach (Shop::VEREDELUNG_POSITIONEN as $pos => $posName): ?>
+                <tr>
+                    <td class="fw-semibold"><?php echo $h($posName); ?></td>
+                    <?php foreach (array_keys(Shop::VEREDELUNG_ARTEN) as $art): $v = $vedTabelle[$pos][$art] ?? null; if (!$v) { echo '<td></td>'; continue; } ?>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="form-check form-switch m-0" title="Im Shop anbieten">
+                                <input class="form-check-input" type="checkbox" name="ved_aktiv[<?php echo (int)$v['id']; ?>]" value="1" <?php echo $v['aktiv'] ? 'checked' : ''; ?> aria-label="<?php echo $h($v['bezeichnung']); ?> anbieten">
+                            </div>
+                            <div class="input-group input-group-sm" style="max-width:130px">
+                                <input class="form-control text-end" name="ved_preis[<?php echo (int)$v['id']; ?>]" inputmode="decimal" value="<?php echo $h(number_format((float)$v['preis'], 2, ',', '')); ?>" aria-label="Preis <?php echo $h($v['bezeichnung']); ?>">
+                                <span class="input-group-text">€</span>
+                            </div>
+                        </div>
+                    </td>
                     <?php endforeach; ?>
-                </ul>
-            </li>
-            <?php endforeach; ?>
-        </ul>
-        <div class="small mt-1" id="kat-status" style="min-height:1.4em"></div>
-    </div>
-    <?php endif; ?>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <div class="text-end mt-3"><button class="btn btn-primary"><i class="bi bi-save"></i> Preise speichern</button></div>
+    </form>
 </div>
-<style>
-.kat-baum,.kat-kinder{list-style:none;margin:0;padding:0}
-.kat-kinder{margin-left:34px;min-height:4px;border-radius:8px;transition:background .15s}
-.kat-kinder .kat-kinder{display:none}                                   /* nur eine Ebene */
-.kat-zeile{display:flex;align-items:center;gap:10px;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:7px 10px;margin:4px 0}
-.kat-baum > li > .kat-zeile .kat-name{font-weight:700}
-.kat-kinder .kat-zeile{border-style:dashed}
-.kat-zeile .kat-name{flex:0 1 auto;min-width:0}
-.kat-zeile .kat-besch{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.kat-zeile .kat-knoepfe{margin-left:auto}
-.kat-inaktiv{opacity:.6}
-.kat-griff{cursor:grab;color:var(--text-muted);padding:2px 4px;font-size:1.1rem;touch-action:none}
-.kat-griff:active{cursor:grabbing}
-.kat-ziehen .kat-baum > li > .kat-kinder{min-height:30px;background:rgba(68,113,163,.06);outline:1px dashed rgba(68,113,163,.35)}
-.kat-geist > .kat-zeile{background:rgba(68,113,163,.12);border-color:var(--c-primary)}
-.kat-gewaehlt > .kat-zeile{box-shadow:0 6px 16px rgba(0,0,0,.15)}
-</style>
-<?php foreach ($kategorien as $k): ?>
-<form method="post" id="kat-del-<?php echo (int)$k['id']; ?>" class="d-none"><input type="hidden" name="aktion" value="kategorie_loeschen"><input type="hidden" name="id" value="<?php echo (int)$k['id']; ?>"></form>
-<?php endforeach; ?>
 
 <!-- Angebote -->
 <div class="card mb-4" id="angebote">
@@ -221,7 +158,7 @@ include 'includes/header.php';
 <?php endforeach; ?>
 
 <!-- Einstellungen -->
-<div class="card mb-4">
+<div class="card mb-4" id="einstellungen">
     <div class="card-header"><h5 class="mb-0"><i class="bi bi-gear"></i> Shop-Einstellungen</h5></div>
     <form method="post" class="card-body">
         <input type="hidden" name="aktion" value="einstellungen">
@@ -229,7 +166,17 @@ include 'includes/header.php';
             <div class="col-md-6"><label class="form-label" for="s-titel">Titel des Shops</label>
                 <input class="form-control" id="s-titel" name="titel" value="<?php echo $h(Shop::einstellung('titel', 'Vereins-Shop')); ?>"></div>
             <div class="col-md-6"><label class="form-label" for="s-email">Bestellungen melden an (E-Mail)</label>
-                <input type="email" class="form-control" id="s-email" name="bestell_email" value="<?php echo $h(Shop::einstellung('bestell_email')); ?>" placeholder="z. B. shop@deine-domain.at"></div>
+                <input type="email" class="form-control" id="s-email" name="bestell_email" value="<?php echo $h(Shop::einstellung('bestell_email')); ?>" placeholder="z. B. shop@deine-domain.at">
+                <div class="form-text">Bei jeder neuen Bestellung geht eine Mail mit allen Positionen an diese Adresse.</div></div>
+            <div class="col-md-6"><label class="form-label" for="s-postfach">Versenden über Postfach</label>
+                <?php $postfaecher = MailKonto::funktionsPostfaecher(); $gewaehlt = (int)Shop::einstellung('mail_konto', '0'); ?>
+                <select class="form-select" id="s-postfach" name="mail_konto">
+                    <option value="">– keine Mail senden –</option>
+                    <?php foreach ($postfaecher as $pf): ?>
+                    <option value="<?php echo (int)$pf['id']; ?>" <?php echo $gewaehlt === (int)$pf['id'] ? 'selected' : ''; ?>><?php echo $h($pf['bezeichnung'] . ' <' . $pf['email'] . '>'); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <div class="form-text"><?php echo $postfaecher ? 'Funktions-Postfach aus dem E-Mail-Programm, über das gesendet wird.' : 'Noch kein Funktions-Postfach vorhanden – bitte im E-Mail-Programm anlegen.'; ?></div></div>
             <div class="col-12"><label class="form-label" for="s-einl">Einleitung (wird den Vereinen über dem Shop angezeigt)</label>
                 <textarea class="form-control" id="s-einl" name="einleitung" rows="2"><?php echo $h(Shop::einstellung('einleitung')); ?></textarea></div>
             <div class="col-md-6"><label class="form-label" for="s-versand">Versand- und Lieferhinweis</label>
@@ -247,89 +194,4 @@ include 'includes/header.php';
     </form>
 </div>
 
-<!-- Kategorie-Dialog -->
-<div class="modal fade" id="katModal" tabindex="-1"><div class="modal-dialog"><form method="post" class="modal-content">
-    <input type="hidden" name="aktion" value="kategorie"><input type="hidden" name="id" id="k-id">
-    <div class="modal-header"><h5 class="modal-title">Kategorie</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-    <div class="modal-body">
-        <div class="mb-3"><label class="form-label" for="k-name">Name</label><input class="form-control" id="k-name" name="name" required></div>
-        <div class="mb-3"><label class="form-label" for="k-parent">Oberkategorie</label>
-            <select class="form-select" id="k-parent" name="parent_id">
-                <option value="">– keine (Hauptkategorie) –</option>
-                <?php foreach ($hauptKats as $hk): ?><option value="<?php echo (int)$hk['id']; ?>"><?php echo $h($hk['name']); ?></option><?php endforeach; ?>
-            </select>
-            <div class="form-text">Mit Oberkategorie wird diese Kategorie zur Unterkategorie.</div></div>
-        <div class="mb-3"><label class="form-label" for="k-besch">Beschreibung</label><input class="form-control" id="k-beschreibung" name="beschreibung"></div>
-        <div class="row g-3">
-            <div class="col-6"><label class="form-label" for="k-sort">Reihenfolge</label><input type="number" class="form-control" id="k-sortierung" name="sortierung" value="100"></div>
-            <div class="col-6 d-flex align-items-end"><div class="form-check"><input class="form-check-input" type="checkbox" id="k-aktiv" name="aktiv" value="1" checked><label class="form-check-label" for="k-aktiv">Aktiv</label></div></div>
-        </div>
-    </div>
-    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button><button class="btn btn-primary">Speichern</button></div>
-</form></div></div>
-
 <?php include 'includes/footer.php'; ?>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-<script>
-// Kategorien per Drag & Drop anordnen – auch als Unter- bzw. Hauptkategorie (eine Ebene)
-(function () {
-    var baum = document.getElementById('kat-baum');
-    if (!baum || !window.Sortable) return;
-    var bereich = baum.parentElement, status = document.getElementById('kat-status');
-    function struktur() {
-        return Array.prototype.map.call(baum.children, function (li) {
-            var ul = li.querySelector(':scope > .kat-kinder');
-            return { id: +li.dataset.id, kinder: ul ? Array.prototype.map.call(ul.children, function (c) { return +c.dataset.id; }) : [] };
-        });
-    }
-    function speichern() {
-        status.innerHTML = '<span class="text-muted"><i class="bi bi-arrow-repeat"></i> Wird gespeichert …</span>';
-        fetch('api/shop_kategorien_sortieren.php', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ struktur: struktur() })
-        }).then(function (r) {
-            return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok || !d.success) throw new Error(d.error || 'Speichern fehlgeschlagen.'); });
-        }).then(function () {
-            status.innerHTML = '<span class="text-success"><i class="bi bi-check-circle"></i> Gespeichert</span>';
-            setTimeout(function () { status.innerHTML = ''; }, 2500);
-        }).catch(function (e) {
-            status.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> ' + e.message + ' Die Seite wird neu geladen …</span>';
-            setTimeout(function () { location.reload(); }, 2000);
-        });
-    }
-    var optionen = {
-        group: 'shop-kategorien', handle: '.kat-griff', animation: 150, fallbackOnBody: true, swapThreshold: 0.6,
-        ghostClass: 'kat-geist', chosenClass: 'kat-gewaehlt',
-        onStart: function () { bereich.classList.add('kat-ziehen'); },
-        onMove: function (evt) {
-            if (!evt.to.classList.contains('kat-kinder')) return true;
-            if (evt.to.parentElement.parentElement !== baum) return false;          // nur eine Ebene
-            var eigene = evt.dragged.querySelector(':scope > .kat-kinder');
-            if (eigene && eigene.children.length) return false;                      // hat selbst Unterkategorien
-            return true;
-        },
-        onEnd: function (evt) {
-            bereich.classList.remove('kat-ziehen');
-            if (evt.from !== evt.to || evt.oldIndex !== evt.newIndex) speichern();
-        }
-    };
-    new Sortable(baum, optionen);
-    baum.querySelectorAll('.kat-kinder').forEach(function (ul) { new Sortable(ul, optionen); });
-})();
-</script>
-<script>
-document.querySelectorAll('[data-kat]').forEach(function (b) {
-    b.addEventListener('click', function () {
-        var d = JSON.parse(b.dataset.kat || '{}');
-        var f = document.getElementById('katModal');
-        f.querySelector('#k-id').value = d.id || '';
-        f.querySelector('#k-name').value = d.name || '';
-        var sel = f.querySelector('#k-parent');
-        sel.value = d.parent_id || '';
-        Array.prototype.forEach.call(sel.options, function (o) { o.disabled = !!d.id && o.value === String(d.id); });
-        f.querySelector('#k-beschreibung').value = d.beschreibung || '';
-        f.querySelector('#k-sortierung').value = d.sortierung || 100;
-        f.querySelector('#k-aktiv').checked = d.id ? d.aktiv == 1 : true;
-        bootstrap.Modal.getOrCreateInstance(f).show();
-    });
-});
-</script>

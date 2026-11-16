@@ -26,7 +26,11 @@ Ein optionaler `SHOP_API_KEY` (auf Server und Vereinen gleich) schließt Katalog
 
 ## Katalog pflegen (Katalog-Server)
 
-**Menü:** Shop → Verwaltung · **Berechtigung:** Administrator
+**Menü:** Shop → Artikel · Shop → Kategorien · Shop → Verwaltung · **Berechtigung:** Administrator
+
+- **Artikel** (Shop → Artikel): Liste aller Artikel mit Suche (Name, Artikelnummer, Kategorie), Filtern nach Kategorie (inkl. Unterkategorien), Sichtbarkeit und Kennzeichen (Aktion, Ausverkauft, Veredelung, ohne Bild, mit Größen) sowie Sortierung (nach Kategorie, Name, Preis, zuletzt geändert – oder per Klick auf eine Spalte). Filter und Sortierung bleiben für die Sitzung erhalten.
+- **Kategorien** (Shop → Kategorien): Kategorienbaum mit Artikelanzahl, Suche, Filter (aktiv/inaktiv, mit/ohne Artikel) und Sortierung (eigene Reihenfolge, Name, meiste Artikel). Ein Klick auf die Artikelanzahl öffnet die Artikelliste gefiltert auf diese Kategorie.
+- **Verwaltung** (Shop → Verwaltung): Veredelung, Angebote und Shop-Einstellungen.
 
 - **Artikel:** Name, Kategorie, Preis, Lieferzeit, Beschreibung, Bilder und Größen. Nur **aktive** Artikel sind für die Vereine sichtbar.
 - **Größen / Varianten:** je Artikel beliebig viele (z. B. „Gr. 46“ … „Gr. 56“), optional mit eigenem Preis und eigener Artikelnummer. Ohne Größen wird nur der Artikelpreis verwendet (z. B. Zubehör).
@@ -34,10 +38,22 @@ Ein optionaler `SHOP_API_KEY` (auf Server und Vereinen gleich) schließt Katalog
 - **Kategorien:** zum Gruppieren im Shop. Artikel ohne Kategorie erscheinen unter „Sonstiges“.
 - **Einstellungen:** Titel, Einleitung, Versand- und Kontakthinweis sowie die E-Mail-Adresse, an die neue Bestellungen gemeldet werden.
 - **Versandkosten:** eine Pauschale je Bestellung (leer oder 0 = kein Versand) und optional eine Freigrenze (**versandfrei ab** einer bestimmten Warensumme). Die Kosten gelten für alle Vereine gleich; sie werden beim Verein im Warenkorb und an der Kasse angezeigt und bei der Bestellung serverseitig autoritativ berechnet und mitgespeichert.
-- **Kategorien per Drag & Drop:** In der Verwaltung lassen sich Kategorien am Griff ziehen – Reihenfolge ändern, unter eine andere Kategorie ziehen (wird Unterkategorie) oder wieder herausziehen (wird Hauptkategorie). Gespeichert wird sofort. Eine Kategorie, die selbst Unterkategorien hat, kann nicht untergeordnet werden.
+- **Kategorien per Drag & Drop:** Unter Shop → Kategorien lassen sich Kategorien am Griff ziehen – Reihenfolge ändern, unter eine andere Kategorie ziehen (wird Unterkategorie) oder wieder herausziehen (wird Hauptkategorie). Gespeichert wird sofort. Eine Kategorie, die selbst Unterkategorien hat, kann nicht untergeordnet werden. Ziehen geht nur in der eigenen Reihenfolge ohne Suche und Filter.
 - **Unterkategorien:** Im Kategorie-Dialog eine **Oberkategorie** wählen – die Kategorie wird damit zur Unterkategorie (eine Ebene). Im Shop öffnet der Button **Kategorien** im Kopfbereich ein Menü mit allen Haupt- und Unterkategorien; wird eine Hauptkategorie gewählt, erscheint darunter eine Leiste mit ihren Unterkategorien. Eine Hauptkategorie zeigt auch die Artikel ihrer Unterkategorien.
 - **Angebote:** Karten mit Bild, Titel, Beschreibung und optionaler Aufzählung (z. B. „Besticken & Beflocken“), die oben im Shop als Abschnitt „Unsere Angebote“ erscheinen – keine Artikel, nicht bestellbar. Gepflegt unter Shop → Verwaltung → **Angebote**. Aufzählungspunkte stehen je in einer Zeile; mit `Text | https://…` wird ein Punkt zum Link. Optional verweist ein Angebot auf eine Kategorie („Zu den Artikeln“).
+- **Veredelung (Stickerei/Druck):** Unter Verwaltung → **Veredelung** je Position (rechte/linke Schulter, linke/rechte Brust, Rücken) und Art einen Preis je Stück festlegen und freischalten. Im Artikel den Schalter **„Veredelung möglich“** setzen. Im Shop kann der Besteller dann mehrere Positionen anhaken, lädt je Position ein Logo bzw. einen Schriftzug hoch (JPG, PNG, WebP, PDF) und kann einen Hinweis angeben; der Aufpreis gilt je Stück. Die Dateien werden mit der Bestellung an den Katalog-Server übertragen (gespeichert in `uploads/shop_bestellungen`, von außen gesperrt) und sind unter Shop → Bestellungen bei der jeweiligen Position abrufbar. Die Veredelungspreise rechnet der Katalog-Server selbst – nicht der Verein.
+- **Aktionspreis:** Im Artikel (oder direkt in der Artikelliste) einen Aktionspreis eintragen. Solange **Aktion** an ist, gilt im Shop der Aktionspreis – der normale Preis wird durchgestrichen angezeigt. Ohne Aktionspreis zeigt „Aktion“ nur das Label.
+- **Größen mit Aufpreis:** Größen haben keinen eigenen Preis mehr, sondern einen **Aufpreis (+/−)** auf den Artikelpreis (z. B. `+5` für große Größen, `-3` für kleine). Dadurch gilt ein Aktionspreis automatisch für alle Größen. Bisherige Größenpreise wurden einmalig in Aufpreise umgerechnet.
+- **In der Artikelliste direkt umschaltbar:** Sichtbar, Ausverkauft, Aktion sowie der Aktionspreis – sofort gespeichert, ohne den Artikel öffnen zu müssen.
 - **Aktion / Ausverkauft je Artikel:** im Artikel (Shop → Verwaltung → Artikel) lassen sich zwei Kennzeichen setzen. **Aktion** zeigt im Shop ein Label (eigener Text möglich, Standard „Aktion“). **Ausverkauft** zeigt ein Ausverkauft-Label, graut das Bild aus und sperrt das Bestellen dieses Artikels. Beide erscheinen auch in der Artikelliste der Verwaltung.
+
+## Bestellstatus für die Vereine
+
+Im Shop gibt es den Menüpunkt **Bestellungen**: Jeder Verein sieht dort nur seine eigenen Bestellungen mit Fortschritt (Eingegangen → Bestätigt → In Bearbeitung → Versendet → Zugestellt), Sendungsnummer, Button **„Sendung verfolgen“** und einer Nachricht des Shops. Abgerufen wird beim Katalog-Server über `api/shop_meine_bestellungen.php`; die Installation weist sich mit ihrer geheimen Installations-ID aus.
+
+## Benachrichtigung per E-Mail
+
+In den Shop-Einstellungen die Adresse für Bestell-Meldungen und das **Versand-Postfach** (ein Funktions-Postfach aus dem E-Mail-Programm) wählen. Dann geht bei jeder neuen Bestellung eine Mail mit allen Positionen, Veredelungen und Summen an diese Adresse. Ein Fehler beim Mailversand verhindert die Bestellung nicht.
 
 ## Bestellungen (Katalog-Server)
 

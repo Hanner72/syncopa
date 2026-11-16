@@ -1,5 +1,33 @@
 # Changelog
 
+## [2.19.0]
+
+### Hinzugefügt
+
+- Shop: Veredelung (Stickerei und Druck) je Position – rechte/linke Schulter, linke/rechte Brust, Rücken; mehrere Positionen wählbar, je Position Logo/Schriftzug hochladen (JPG, PNG, WebP, PDF) und Hinweis
+  - Preisliste je Position und Art in Verwaltung -> Veredelung; je Artikel Schalter "Veredelung möglich"; Aufpreis je Stück, Preise rechnet der Katalog-Server selbst
+  - Vorlagen werden mit der Bestellung übertragen, in einem von außen gesperrten Ordner abgelegt und sind im Bestelleingang abrufbar (`shop_datei.php`)
+- Shop: Bestellstatus für die Vereine – Menüpunkt "Bestellungen" mit Fortschritt (Eingegangen, Bestätigt, In Bearbeitung, Versendet, Zugestellt), Sendungsnummer, Link "Sendung verfolgen" und Nachricht des Shops (`api/shop_meine_bestellungen.php`)
+- Shop-Bestelleingang: Status, Sendungsnummer, Verfolgungslink und Nachricht an den Verein je Bestellung, Verlauf der Statuswechsel; Bestellungen auf- und zuklappbar
+- Shop: Mail bei neuer Bestellung über ein Funktions-Postfach des E-Mail-Programms (Einstellung "Versenden über Postfach")
+- Shop: eigene Menüpunkte "Artikel" und "Kategorien"
+  - Artikelliste mit Suche, Filtern (Kategorie inkl. Unterkategorien, Sichtbarkeit, Kennzeichen) und Sortierung; Sichtbar, Ausverkauft, Aktion und Aktionspreis direkt in der Liste umschaltbar (`api/shop_artikel_schalten.php`)
+  - Kategorien mit Artikelanzahl, Suche, Filter und Sortierung; Drag & Drop in der eigenen Reihenfolge
+- Shop: Aktionspreis je Artikel (normaler Preis durchgestrichen); Größen mit Aufpreis (+/-) statt eigenem Preis, bisherige Größenpreise werden umgerechnet
+- Shop: Mengentabelle je Größe – mehrere Größen auf einmal in den Warenkorb; nach dem Hinzufügen bleibt man auf der Artikelseite
+
+### Geändert
+
+- Shop: Aktions-Kennzeichen rot und eckig
+- Shop-Verwaltung enthält nur noch Veredelung, Angebote und Einstellungen
+
+### Bugs
+
+- Kalender: deutsche Sprachdatei wurde unter falschem Pfad geladen (Texte wie "all-day", "No events to display" waren englisch); überflüssigen Link auf eine nicht vorhandene FullCalendar-CSS-Datei entfernt
+- Shop: Bestell-Benachrichtigung wurde nie versendet (alter Versandweg war abgeschaltet)
+- Shop: Größenliste kam bei deaktivierter Größe im falschen Format bei den Vereinen an
+- Shop-Artikelliste: Preissortierung (Dezimalpunkt) korrigiert
+
 ## [2.18.0]
 
 ### Hinzugefügt

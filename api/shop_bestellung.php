@@ -17,6 +17,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
     echo json_encode(['success' => false, 'error' => 'Nur POST.']);
     exit;
 }
+@ini_set('memory_limit', '512M');   // Bestellungen können Logos/Vorlagen (base64) enthalten
+@set_time_limit(120);
 $roh = file_get_contents('php://input');
 $daten = json_decode((string)$roh, true);
 $key = (string)($daten['key'] ?? $_SERVER['HTTP_X_SHOP_KEY'] ?? '');
@@ -39,16 +41,7 @@ if (!Shop::installationAktiv($installationId)) {
 }
 
 try {
-    $ergebnis = Shop::bestellungAnlegen($daten);
-    // Betreiber benachrichtigen (nur wenn E-Mail-Versand eingerichtet ist; Fehler soll die Bestellung nicht verhindern)
-    $email = Shop::einstellung('bestell_email');
-    if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) && defined('EMAIL_ENABLED') && EMAIL_ENABLED) {
-        $betreff = 'Neue Shop-Bestellung ' . $ergebnis['bestellnummer'];
-        $text = 'Verein: ' . (string)($daten['verein_name'] ?? '-') . "\n"
-              . 'Summe: ' . number_format($ergebnis['summe'], 2, ',', '.') . " EUR\n"
-              . 'Details in Syncopa unter Shop → Bestellungen.';
-        @mail($email, $betreff, $text, 'From: ' . (defined('EMAIL_FROM') ? EMAIL_FROM : 'noreply@localhost'));
-    }
+    $ergebnis = Shop::bestellungAnlegen($daten);   // meldet die Bestellung auch per E-Mail (Shop-Einstellungen)
     echo json_encode(['success' => true, 'bestellnummer' => $ergebnis['bestellnummer']]);
 } catch (\Throwable $e) {
     http_response_code(400);

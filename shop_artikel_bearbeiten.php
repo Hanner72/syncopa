@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $zeilen[] = [
                 'bezeichnung'   => $bez,
                 'artikelnummer' => $_POST['variante_artikelnummer'][$i] ?? '',
-                'preis'         => $_POST['variante_preis'][$i] ?? '',
+                'aufschlag'     => $_POST['variante_aufschlag'][$i] ?? '',
             ];
         }
         Shop::variantenSetzen($id, $zeilen);
@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $artikel    = $id ? Shop::artikel($id) : null;
-if ($id && !$artikel) { Session::setFlashMessage('danger', 'Artikel nicht gefunden.'); header('Location: shop_verwaltung.php'); exit; }
+if ($id && !$artikel) { Session::setFlashMessage('danger', 'Artikel nicht gefunden.'); header('Location: shop_artikel.php'); exit; }
 $kategorien = Shop::kategorienBaum();
 $varianten  = $id ? Shop::varianten($id) : [];
 $bilder     = $id ? Shop::bilder($id) : [];
@@ -72,7 +72,7 @@ include 'includes/header.php';
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
     <h1 class="h2 mb-0"><i class="bi bi-box-seam"></i> <?php echo $id ? 'Artikel bearbeiten' : 'Neuer Artikel'; ?></h1>
-    <a href="shop_verwaltung.php" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Zur Verwaltung</a>
+    <a href="shop_artikel.php?zurueck=1" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Zur Artikelliste</a>
 </div>
 
 <form method="post" enctype="multipart/form-data">
@@ -107,11 +107,18 @@ include 'includes/header.php';
                         <div class="col-md-4 d-flex align-items-center pt-2"><div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" id="a-aktion" name="aktion" value="1" <?php echo ($id && $artikel['aktion']) ? 'checked' : ''; ?>>
                             <label class="form-check-label" for="a-aktion"><i class="bi bi-tag-fill text-danger"></i> Aktion / Angebot</label></div></div>
+                        <div class="col-md-4"><label class="form-label" for="a-aktionspreis">Aktionspreis (€)</label>
+                            <input class="form-control" id="a-aktionspreis" name="aktionspreis" inputmode="decimal" value="<?php echo !empty($artikel['aktionspreis']) ? $h(number_format((float)$artikel['aktionspreis'], 2, ',', '')) : ''; ?>" placeholder="leer = nur Label">
+                            <div class="form-text">Gilt, solange „Aktion“ an ist – auch für alle Größen.</div></div>
                         <div class="col-md-4"><label class="form-label" for="a-aktiontext">Aktionslabel (optional)</label>
                             <input class="form-control" id="a-aktiontext" name="aktion_text" maxlength="40" value="<?php echo $h($neu('aktion_text')); ?>" placeholder="Standard: „Aktion“"></div>
                         <div class="col-md-4 d-flex align-items-center pt-2"><div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" id="a-ausverkauft" name="ausverkauft" value="1" <?php echo ($id && $artikel['ausverkauft']) ? 'checked' : ''; ?>>
                             <label class="form-check-label" for="a-ausverkauft"><i class="bi bi-slash-circle text-secondary"></i> Ausverkauft</label></div></div>
+                        <div class="col-12"><div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="a-veredelung" name="veredelung" value="1" <?php echo ($id && !empty($artikel['veredelung'])) ? 'checked' : ''; ?>>
+                            <label class="form-check-label" for="a-veredelung"><i class="bi bi-stars text-primary"></i> Veredelung möglich (Stickerei/Druck)</label>
+                            <span class="form-text ms-1">Positionen und Preise unter <a href="shop_verwaltung.php#veredelung">Verwaltung → Veredelung</a></span></div></div>
                         <div class="col-12"><label class="form-label" for="a-besch">Beschreibung</label>
                             <textarea class="form-control" id="a-besch" name="beschreibung" rows="4"><?php echo $h($neu('beschreibung')); ?></textarea></div>
                     </div>
@@ -124,16 +131,17 @@ include 'includes/header.php';
                     <button type="button" class="btn btn-sm btn-outline-primary" id="variante-neu"><i class="bi bi-plus-lg"></i> Größe</button>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted small">Leer lassen, wenn der Artikel keine Größen hat (z. B. Zubehör). Ein eigener Preis je Größe ist optional – leer = Artikelpreis.</p>
+                    <p class="text-muted small">Leer lassen, wenn der Artikel keine Größen hat (z. B. Zubehör). Der <strong>Aufpreis</strong> gilt zusätzlich zum Artikelpreis – z. B. <code>+5</code> für große Größen, <code>-3</code> für kleine, leer = gleicher Preis. So gilt auch ein Aktionspreis automatisch für alle Größen.</p>
                     <div class="table-responsive">
                         <table class="table table-sm align-middle mb-0" id="variante-tabelle">
-                            <thead><tr><th>Bezeichnung</th><th>Artikelnummer</th><th style="width:140px">Preis (€)</th><th style="width:40px"></th></tr></thead>
+                            <thead><tr><th>Bezeichnung</th><th>Artikelnummer</th><th style="width:130px">Aufpreis (+/− €)</th><th style="width:110px" class="text-end">= Preis</th><th style="width:40px"></th></tr></thead>
                             <tbody id="variante-rows">
-                            <?php foreach ($varianten as $v): ?>
+                            <?php foreach ($varianten as $v): $auf = (float)$v['aufschlag']; ?>
                             <tr>
                                 <td><input class="form-control form-control-sm" name="variante_bezeichnung[]" value="<?php echo $h($v['bezeichnung']); ?>" placeholder="z. B. Gr. 50"></td>
                                 <td><input class="form-control form-control-sm" name="variante_artikelnummer[]" value="<?php echo $h($v['artikelnummer'] ?? ''); ?>"></td>
-                                <td><input class="form-control form-control-sm" name="variante_preis[]" inputmode="decimal" value="<?php echo $v['preis'] !== null ? $h(number_format((float)$v['preis'], 2, ',', '')) : ''; ?>" placeholder="Artikelpreis"></td>
+                                <td><input class="form-control form-control-sm text-end" name="variante_aufschlag[]" inputmode="decimal" value="<?php echo $auf != 0 ? $h(($auf > 0 ? '+' : '') . number_format($auf, 2, ',', '')) : ''; ?>" placeholder="±0,00"></td>
+                                <td class="text-end small text-nowrap var-endpreis"></td>
                                 <td class="text-center"><button type="button" class="btn btn-sm btn-link text-danger p-0 variante-weg" title="Entfernen"><i class="bi bi-x-lg"></i></button></td>
                             </tr>
                             <?php endforeach; ?>
@@ -179,7 +187,7 @@ include 'includes/header.php';
 
     <div class="speicher-leiste">
         <span class="speicher-hinweis small text-muted" id="speicher-hinweis"></span>
-        <a href="shop_verwaltung.php" class="btn btn-secondary">Abbrechen</a>
+        <a href="shop_artikel.php?zurueck=1" class="btn btn-secondary">Abbrechen</a>
         <button class="btn btn-primary"><i class="bi bi-save"></i> Speichern</button>
     </div>
 </form>
@@ -212,19 +220,39 @@ include 'includes/header.php';
 <script>
 (function () {
     var rows = document.getElementById('variante-rows');
+    var zahl = function (s) { s = String(s || '').replace(/[€\s]/g, '').replace(/[−–]/g, '-').replace(',', '.'); var n = parseFloat(s); return isNaN(n) ? 0 : n; };
+    var euro = function (b) { return b.toLocaleString('de-AT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; };
+    // Endpreis je Größe anzeigen: Grundpreis (bzw. Aktionspreis, wenn Aktion an) + Aufpreis
+    function endpreise() {
+        var grund = zahl(document.getElementById('a-preis').value);
+        var aktion = document.getElementById('a-aktion').checked, ap = zahl(document.getElementById('a-aktionspreis').value);
+        var basis = aktion && ap > 0 ? ap : grund;
+        rows.querySelectorAll('tr').forEach(function (tr) {
+            var auf = zahl(tr.querySelector('input[name="variante_aufschlag[]"]').value), z = tr.querySelector('.var-endpreis');
+            var p = Math.max(0, basis + auf), r = Math.max(0, grund + auf);
+            z.innerHTML = (basis !== grund ? '<s class="text-muted me-1">' + euro(r) + '</s><span class="text-danger fw-semibold">' + euro(p) + '</span>' : euro(p));
+        });
+    }
     function zeile() {
         var tr = document.createElement('tr');
         tr.innerHTML = '<td><input class="form-control form-control-sm" name="variante_bezeichnung[]" placeholder="z. B. Gr. 50"></td>'
             + '<td><input class="form-control form-control-sm" name="variante_artikelnummer[]"></td>'
-            + '<td><input class="form-control form-control-sm" name="variante_preis[]" inputmode="decimal" placeholder="Artikelpreis"></td>'
+            + '<td><input class="form-control form-control-sm text-end" name="variante_aufschlag[]" inputmode="decimal" placeholder="±0,00"></td>'
+            + '<td class="text-end small text-nowrap var-endpreis"></td>'
             + '<td class="text-center"><button type="button" class="btn btn-sm btn-link text-danger p-0 variante-weg" title="Entfernen"><i class="bi bi-x-lg"></i></button></td>';
         rows.appendChild(tr);
+        endpreise();
+        tr.querySelector('input').focus();
     }
     document.getElementById('variante-neu').addEventListener('click', zeile);
     rows.addEventListener('click', function (e) {
         var b = e.target.closest('.variante-weg');
         if (b) b.closest('tr').remove();
     });
+    rows.addEventListener('input', endpreise);
+    ['a-preis', 'a-aktionspreis'].forEach(function (id) { document.getElementById(id).addEventListener('input', endpreise); });
+    document.getElementById('a-aktion').addEventListener('change', endpreise);
+    endpreise();
 })();
 </script>
 <script>

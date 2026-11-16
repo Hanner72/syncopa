@@ -91,7 +91,7 @@ function isActive($page, $pages, $current) {
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
+    <!-- FullCalendar 6 bringt seine Styles im Skript mit (keine eigene CSS-Datei) -->
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     
     <!-- Chart.js früh laden -->
@@ -785,7 +785,13 @@ function isActive($page, $pages, $current) {
                         <i class="bi bi-bag"></i> Shop
                     </a></li>
                     <?php if (SHOP_IST_ZENTRALE): ?>
-                    <li><a class="nav-link <?php echo in_array($currentPage, ['shop_verwaltung', 'shop_artikel_bearbeiten']) ? 'active' : ''; ?>" href="shop_verwaltung.php">
+                    <li><a class="nav-link <?php echo in_array($currentPage, ['shop_artikel', 'shop_artikel_bearbeiten']) ? 'active' : ''; ?>" href="shop_artikel.php">
+                        <i class="bi bi-box-seam"></i> Artikel
+                    </a></li>
+                    <li><a class="nav-link <?php echo $currentPage === 'shop_kategorien' ? 'active' : ''; ?>" href="shop_kategorien.php">
+                        <i class="bi bi-tags"></i> Kategorien
+                    </a></li>
+                    <li><a class="nav-link <?php echo in_array($currentPage, ['shop_verwaltung', 'shop_angebot_bearbeiten']) ? 'active' : ''; ?>" href="shop_verwaltung.php">
                         <i class="bi bi-shop"></i> Verwaltung
                     </a></li>
                     <li><a class="nav-link <?php echo $currentPage === 'shop_bestellungen' ? 'active' : ''; ?>" href="shop_bestellungen.php">
