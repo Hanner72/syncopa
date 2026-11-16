@@ -117,20 +117,34 @@ class ShopKatalog {
     // ---------------------------------------------------------------- Bestellung
     public static function bestellungSenden(array $daten): string {
         if (SHOP_IST_ZENTRALE) {
+            $daten['installation_id'] = self::installationId();   // damit sie unter „Meine Bestellungen“ erscheint
             return Shop::bestellungAnlegen($daten)['bestellnummer'];
         }
         $daten['key'] = SHOP_API_KEY;
         $daten['installation_id'] = self::installationId();
         $basis = self::status()['katalog_url'] ?: self::server();
-        $d = json_decode(self::http('POST', rtrim($basis, '/') . '/api/shop_bestellung.php', json_encode($daten, JSON_UNESCAPED_UNICODE)), true);
+        // längere Wartezeit: die Bestellung kann Logos/Vorlagen der Veredelung enthalten
+        $d = json_decode(self::http('POST', rtrim($basis, '/') . '/api/shop_bestellung.php', json_encode($daten, JSON_UNESCAPED_UNICODE), 120), true);
         if (!is_array($d) || empty($d['success'])) throw new RuntimeException($d['error'] ?? 'Die Bestellung konnte nicht übermittelt werden.');
         return (string)$d['bestellnummer'];
     }
 
-    private static function http(string $methode, string $url, ?string $body = null): string {
+    /** Eigene Bestellungen dieses Vereins samt Status vom Katalog-Server (immer frisch, nicht zwischengespeichert) */
+    public static function meineBestellungen(): array {
+        $iid = self::installationId();
+        if ($iid === '') return [];
+        if (SHOP_IST_ZENTRALE) return Shop::bestellungenFuerInstallation($iid);
+        $basis = self::status()['katalog_url'] ?: self::server();
+        $d = json_decode(self::http('POST', rtrim($basis, '/') . '/api/shop_meine_bestellungen.php',
+            json_encode(['key' => SHOP_API_KEY, 'installation_id' => $iid])), true);
+        if (!is_array($d) || empty($d['success'])) throw new RuntimeException($d['error'] ?? 'Die Bestellungen konnten nicht abgerufen werden.');
+        return (array)$d['bestellungen'];
+    }
+
+    private static function http(string $methode, string $url, ?string $body = null, int $timeout = 8): string {
         if (function_exists('curl_init')) {
             $ch = curl_init($url);
-            $opt = [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 8, CURLOPT_CONNECTTIMEOUT => 5,
+            $opt = [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => $timeout, CURLOPT_CONNECTTIMEOUT => 5,
                     CURLOPT_SSL_VERIFYPEER => true, CURLOPT_FOLLOWLOCATION => true, CURLOPT_USERAGENT => 'syncopa-shop/1.0'];
             if ($methode === 'POST') { $opt[CURLOPT_POST] = true; $opt[CURLOPT_POSTFIELDS] = $body; $opt[CURLOPT_HTTPHEADER] = ['Content-Type: application/json']; }
             curl_setopt_array($ch, $opt);
@@ -141,7 +155,7 @@ class ShopKatalog {
             return (string)$res;
         }
         $ctx = stream_context_create(['http' => [
-            'method' => $methode, 'timeout' => 8, 'ignore_errors' => true,
+            'method' => $methode, 'timeout' => $timeout, 'ignore_errors' => true,
             'header' => $methode === 'POST' ? "Content-Type: application/json\r\n" : '',
             'content' => $body ?? '',
         ]]);

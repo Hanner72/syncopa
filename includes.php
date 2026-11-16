@@ -1240,6 +1240,62 @@ require_once __DIR__ . '/classes/FestAbrechnung.php';
     try {
         $db->execute("ALTER TABLE `shop_artikel` ADD COLUMN ausverkauft TINYINT(1) NOT NULL DEFAULT 0 AFTER aktion_text");
     } catch (\Throwable $e) { /* bereits vorhanden */ }
+    // Veredelung (Stickerei/Druck je Position, eigener Preis) – Preisliste auf dem Katalog-Server
+    try {
+        $db->execute("CREATE TABLE IF NOT EXISTS shop_veredelungen (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            art VARCHAR(20) NOT NULL,
+            position VARCHAR(30) NOT NULL,
+            preis DECIMAL(10,2) NOT NULL DEFAULT 0,
+            aktiv TINYINT(1) NOT NULL DEFAULT 0,
+            sortierung INT NOT NULL DEFAULT 100,
+            UNIQUE KEY uk_art_position (art, position)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        $s = 0;
+        if (!(int)($db->fetchOne("SELECT COUNT(*) c FROM shop_veredelungen")['c'] ?? 0)) foreach (['stickerei', 'druck'] as $art) {
+            foreach (['schulter_rechts', 'schulter_links', 'brust_links', 'brust_rechts', 'ruecken'] as $pos) {
+                $db->execute("INSERT IGNORE INTO shop_veredelungen (art, position, preis, aktiv, sortierung) VALUES (?, ?, 0, 0, ?)", [$art, $pos, $s += 10]);
+            }
+        }
+    } catch (\Throwable $e) { /* bereits vorhanden */ }
+    try {
+        $db->execute("ALTER TABLE `shop_artikel` ADD COLUMN veredelung TINYINT(1) NOT NULL DEFAULT 0 AFTER ausverkauft");
+    } catch (\Throwable $e) { /* bereits vorhanden */ }
+    try {
+        $db->execute("ALTER TABLE `shop_bestellpositionen` ADD COLUMN veredelung TEXT NULL AFTER menge");
+    } catch (\Throwable $e) { /* bereits vorhanden */ }
+    // Aktionspreis je Artikel; Größen haben einen Aufpreis (+/−) auf den Grundpreis statt eines festen Preises
+    try { $db->execute("ALTER TABLE `shop_artikel` ADD COLUMN aktionspreis DECIMAL(10,2) NULL AFTER aktion_text"); } catch (\Throwable $e) { /* bereits vorhanden */ }
+    try { $db->execute("ALTER TABLE `shop_varianten` ADD COLUMN aufschlag DECIMAL(10,2) NOT NULL DEFAULT 0 AFTER preis"); } catch (\Throwable $e) { /* bereits vorhanden */ }
+    try {
+        // einmalig: bisherige feste Größenpreise in Aufpreise umrechnen (Preis im Shop bleibt gleich)
+        if (!$db->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = 'shop_varianten_aufschlag'")) {
+            $db->execute("UPDATE shop_varianten v JOIN shop_artikel a ON a.id = v.artikel_id SET v.aufschlag = v.preis - a.preis, v.preis = NULL WHERE v.preis IS NOT NULL");
+            $db->execute("INSERT INTO einstellungen (schluessel, wert) VALUES ('shop_varianten_aufschlag', '1') ON DUPLICATE KEY UPDATE wert = '1'");
+        }
+    } catch (\Throwable $e) { /* Spalte fehlt noch – beim nächsten Aufruf */ }
+    // Bestellstatus für die Vereine: Sendungsverfolgung, Nachricht an den Verein, Verlauf
+    foreach ([
+        "ALTER TABLE `shop_bestellungen` ADD COLUMN sendungsnummer VARCHAR(100) NULL AFTER status",
+        "ALTER TABLE `shop_bestellungen` ADD COLUMN tracking_url VARCHAR(500) NULL AFTER sendungsnummer",
+        "ALTER TABLE `shop_bestellungen` ADD COLUMN nachricht TEXT NULL AFTER tracking_url",
+        "ALTER TABLE `shop_bestellungen` ADD COLUMN status_geaendert_am DATETIME NULL AFTER nachricht",
+    ] as $sql) {
+        try { $db->execute($sql); } catch (\Throwable $e) { /* bereits vorhanden */ }
+    }
+    try {
+        $db->execute("CREATE TABLE IF NOT EXISTS shop_bestellstatus (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            bestellung_id INT NOT NULL,
+            status VARCHAR(20) NOT NULL,
+            erstellt_am DATETIME NOT NULL,
+            KEY idx_bestellung (bestellung_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        // bestehende Bestellungen bekommen einmalig ihren Eingang in den Verlauf
+        if (!(int)($db->fetchOne("SELECT COUNT(*) c FROM shop_bestellstatus")['c'] ?? 0)) {
+            $db->execute("INSERT INTO shop_bestellstatus (bestellung_id, status, erstellt_am) SELECT id, 'neu', erstellt_am FROM shop_bestellungen");
+        }
+    } catch (\Throwable $e) { /* bereits vorhanden */ }
     // Installationen: selbst vergebener Anzeigename (wird von Meldungen nicht überschrieben) und Ort
     try {
         $db->execute("ALTER TABLE `shop_installationen` ADD COLUMN anzeigename VARCHAR(150) NULL AFTER name");

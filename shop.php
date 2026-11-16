@@ -36,26 +36,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $a = ShopKatalog::artikel($katalog, (int)($_POST['artikel_id'] ?? 0));
                 if (!$a) throw new RuntimeException('Artikel nicht gefunden.');
                 if (!empty($a['ausverkauft'])) throw new RuntimeException('Dieser Artikel ist derzeit ausverkauft.');
-                $menge = max(1, min(99, (int)($_POST['menge'] ?? 1)));
-                $variante = null; $preis = (float)$a['preis']; $anr = $a['artikelnummer'];
+                // Zeilen sammeln: mit Größen über mengen[variante_id] (mehrere auf einmal), sonst eine Menge
+                $zeilen = [];
                 if (!empty($a['varianten'])) {
-                    $vid = (int)($_POST['variante_id'] ?? 0);
-                    foreach ($a['varianten'] as $v) if ((int)$v['id'] === $vid) { $variante = $v; break; }
-                    if (!$variante) throw new RuntimeException('Bitte eine Größe wählen.');
-                    $preis = (float)$variante['preis']; $anr = $variante['artikelnummer'] ?: $a['artikelnummer'];
+                    $mengen = (array)($_POST['mengen'] ?? []);
+                    if (!$mengen && !empty($_POST['variante_id'])) $mengen = [(int)$_POST['variante_id'] => (int)($_POST['menge'] ?? 1)];
+                    foreach ($a['varianten'] as $v) {
+                        $m = max(0, min(99, (int)($mengen[$v['id']] ?? 0)));
+                        if ($m > 0) $zeilen[] = [$v, $m];
+                    }
+                    if (!$zeilen) throw new RuntimeException('Bitte bei mindestens einer Größe eine Menge eintragen.');
+                } else {
+                    $m = max(0, min(99, (int)($_POST['menge'] ?? 1)));
+                    if ($m < 1) throw new RuntimeException('Bitte eine Menge eintragen.');
+                    $zeilen[] = [null, $m];
                 }
-                $schluessel = $a['id'] . ':' . ($variante['id'] ?? 0);
+                // Veredelung (Stickerei/Druck je Position) – gilt für alle Stück dieses Hinzufügens, Aufpreis je Stück
+                $ved = []; $vedPreis = 0.0;
+                $gewaehlt = array_map('intval', array_keys(array_filter((array)($_POST['veredelung'] ?? []))));
+                if ($gewaehlt) {
+                    if (empty($a['veredelung'])) throw new RuntimeException('Für diesen Artikel ist keine Veredelung möglich.');
+                    $angebot = [];
+                    foreach ($katalog['veredelungen'] ?? [] as $v) $angebot[(int)$v['id']] = $v;
+                    // erst alles prüfen, dann speichern (keine halben Uploads)
+                    foreach ($gewaehlt as $vid) {
+                        if (!isset($angebot[$vid])) throw new RuntimeException('Diese Veredelung wird nicht mehr angeboten. Bitte die Seite neu laden.');
+                        if ((int)($_FILES['ved_datei']['error'][$vid] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+                            throw new RuntimeException('Bitte für „' . $angebot[$vid]['art_name'] . ' – ' . $angebot[$vid]['position_name'] . '“ ein Logo bzw. einen Schriftzug hochladen.');
+                        }
+                    }
+                    Shop::vorlagenAufraeumen();
+                    foreach ($gewaehlt as $vid) {
+                        $f = Shop::vorlageSpeichern([
+                            'name' => $_FILES['ved_datei']['name'][$vid], 'tmp_name' => $_FILES['ved_datei']['tmp_name'][$vid],
+                            'error' => $_FILES['ved_datei']['error'][$vid], 'size' => $_FILES['ved_datei']['size'][$vid],
+                        ]);
+                        $ved[] = [
+                            'id' => $vid, 'bezeichnung' => $angebot[$vid]['art_name'] . ' – ' . $angebot[$vid]['position_name'],
+                            'preis' => round((float)$angebot[$vid]['preis'], 2),
+                            'hinweis' => mb_substr(trim((string)($_POST['ved_hinweis'][$vid] ?? '')), 0, 300),
+                            'datei' => $f['datei'], 'original' => $f['original'],
+                        ];
+                        $vedPreis += (float)$angebot[$vid]['preis'];
+                    }
+                }
                 $wk = &$_SESSION['shop_warenkorb'];
-                if (isset($wk[$schluessel])) $wk[$schluessel]['menge'] = min(99, $wk[$schluessel]['menge'] + $menge);
-                else $wk[$schluessel] = [
-                    'artikel_id' => (int)$a['id'], 'artikel_name' => $a['name'],
-                    'variante' => $variante['bezeichnung'] ?? null, 'artikelnummer' => $anr,
-                    'einzelpreis' => round($preis, 2), 'menge' => $menge,
-                    'bild' => $a['bilder'][0] ?? null,
-                ];
+                $stueck = 0; $groessen = [];
+                $vedKennung = $ved ? ':' . substr(md5(json_encode($ved)), 0, 10) : '';   // eigene Zeile je Veredelung
+                foreach ($zeilen as [$variante, $menge]) {
+                    $preis = $variante ? (float)$variante['preis'] : (float)$a['preis'];
+                    $anr = $variante ? ($variante['artikelnummer'] ?: $a['artikelnummer']) : $a['artikelnummer'];
+                    $schluessel = $a['id'] . ':' . ($variante['id'] ?? 0) . $vedKennung;
+                    if (isset($wk[$schluessel])) $wk[$schluessel]['menge'] = min(99, $wk[$schluessel]['menge'] + $menge);
+                    else $wk[$schluessel] = [
+                        'artikel_id' => (int)$a['id'], 'artikel_name' => $a['name'],
+                        'variante' => $variante['bezeichnung'] ?? null, 'artikelnummer' => $anr,
+                        'grundpreis' => round($preis, 2),
+                        'einzelpreis' => round($preis + $vedPreis, 2),   // inkl. Veredelung je Stück
+                        'veredelung' => $ved,
+                        'menge' => $menge,
+                        'bild' => $a['bilder'][0] ?? null,
+                    ];
+                    $stueck += $menge;
+                    if ($variante) $groessen[] = $menge . '× ' . $variante['bezeichnung'];
+                }
                 unset($wk);
-                Session::setFlashMessage('success', 'Zum Warenkorb hinzugefügt.');
-                $zielAnsicht = 'liste';
+                Session::setFlashMessage('success', $stueck . ' Stück in den Warenkorb gelegt' . ($groessen ? ' (' . implode(', ', $groessen) . ')' : '')
+                    . ($ved ? ' – mit ' . count($ved) . ' Veredelung' . (count($ved) > 1 ? 'en' : '') : '') . '.');
+                $zielAnsicht = 'artikel';
                 break;
             case 'menge':
                 $k = (string)($_POST['schluessel'] ?? '');
@@ -76,10 +124,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 break;
             case 'bestellen':
                 if (!$_SESSION['shop_warenkorb']) throw new RuntimeException('Der Warenkorb ist leer.');
-                $positionen = array_map(fn($z) => [
-                    'artikel_name' => $z['artikel_name'], 'variante' => $z['variante'],
-                    'artikelnummer' => $z['artikelnummer'], 'einzelpreis' => $z['einzelpreis'], 'menge' => $z['menge'],
-                ], array_values($_SESSION['shop_warenkorb']));
+                // Vorlagen (Logos) einmal je Datei mitschicken; Positionen verweisen nur darauf
+                $dateien = []; $positionen = [];
+                foreach ($_SESSION['shop_warenkorb'] as $z) {
+                    $vedSenden = [];
+                    foreach ($z['veredelung'] ?? [] as $v) {
+                        if (!isset($dateien[$v['datei']])) {
+                            $pfad = Shop::vorlagePfad((string)$v['datei']);
+                            if (!$pfad) throw new RuntimeException('Die Datei „' . $v['original'] . '“ ist nicht mehr vorhanden. Bitte „' . $z['artikel_name'] . '“ entfernen und erneut mit Veredelung in den Warenkorb legen.');
+                            $dateien[$v['datei']] = ['original' => $v['original'], 'inhalt' => base64_encode((string)file_get_contents($pfad))];
+                        }
+                        $vedSenden[] = ['id' => $v['id'], 'hinweis' => $v['hinweis'], 'datei' => $v['datei']];
+                    }
+                    $positionen[] = [
+                        'artikel_name' => $z['artikel_name'], 'variante' => $z['variante'], 'artikelnummer' => $z['artikelnummer'],
+                        'einzelpreis' => $z['grundpreis'] ?? $z['einzelpreis'],   // Veredelung rechnet der Katalog-Server selbst dazu
+                        'menge' => $z['menge'], 'veredelung' => $vedSenden,
+                    ];
+                }
                 $nr = ShopKatalog::bestellungSenden([
                     'verein_name'      => trim((string)($_POST['verein_name'] ?? '')),
                     'verein_url'       => BASE_URL,
@@ -89,7 +151,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'lieferadresse'    => trim((string)($_POST['lieferadresse'] ?? '')),
                     'bemerkung'        => trim((string)($_POST['bemerkung'] ?? '')),
                     'positionen'       => $positionen,
+                    'dateien'          => $dateien,
                 ]);
+                // übertragene Vorlagen aus der Zwischenablage entfernen
+                foreach (array_keys($dateien) as $ref) { $p = Shop::vorlagePfad((string)$ref); if ($p) @unlink($p); }
                 $_SESSION['shop_warenkorb'] = [];
                 header('Location: shop.php?ansicht=fertig&nr=' . urlencode($nr));
                 exit;
@@ -98,7 +163,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         Session::setFlashMessage('danger', $e->getMessage());
         $zielAnsicht = $_POST['zuruck'] ?? $zielAnsicht;
     }
-    header('Location: shop.php?ansicht=' . $zielAnsicht . (!empty($_POST['artikel_id']) && ($_POST['aktion'] ?? '') !== 'hinzufuegen' ? '&artikel=' . (int)$_POST['artikel_id'] : ''));
+    // Beim Hinzufügen (auch bei Fehlern) auf der Artikelseite bleiben
+    if (($_POST['aktion'] ?? '') === 'hinzufuegen' && !empty($_POST['artikel_id'])) $zielAnsicht = 'artikel';
+    header('Location: shop.php?ansicht=' . $zielAnsicht . ($zielAnsicht === 'artikel' && !empty($_POST['artikel_id']) ? '&artikel=' . (int)$_POST['artikel_id'] : ''));
     exit;
 }
 
@@ -127,6 +194,9 @@ include 'includes/header.php';
 
 $katName = fn($id) => $id ? ShopKatalog::kategorieName($katalog, (int)$id) : 'Sonstiges';
 $preisAbFn = fn($a) => !empty($a['varianten']) ? min(array_map(fn($v) => (float)$v['preis'], $a['varianten'])) : (float)$a['preis'];
+// normaler Preis (ohne Aktion) – zum Durchstreichen; ältere Kataloge ohne preis_regulaer zeigen nichts Durchgestrichenes
+$preisAbRegFn = fn($a) => !empty($a['varianten']) ? min(array_map(fn($v) => (float)($v['preis_regulaer'] ?? $v['preis']), $a['varianten'])) : (float)($a['preis_regulaer'] ?? $a['preis']);
+$altPreis = fn($a) => ($r = $preisAbRegFn($a)) > $preisAbFn($a) + 0.001 ? $r : null;
 $einleitung = trim((string)($katalog['info']['einleitung'] ?? ''));
 
 // Kategorie-Baum (eine Ebene Unterkategorien)
@@ -295,8 +365,8 @@ $katGesamt = fn($kid) => ($anzahlJeKat[$kid] ?? 0) + ($anzahlJeKat['g' . $kid] ?
 .sx-card:hover .sx-media img.on{transform:scale(1.04)}
 .sx-media .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#c5ccd4;font-size:32px}
 .sx-badges{position:absolute;left:8px;top:8px;z-index:3;display:flex;flex-direction:column;gap:4px;align-items:flex-start}
-.sx-badge{font-size:.68rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;border-radius:6px;padding:4px 8px;color:#fff;
-  background:var(--sx-gold);box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.sx-badge{font-size:.68rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;border-radius:2px;padding:4px 9px;color:#fff;
+  background:#d32f2f;box-shadow:0 2px 6px rgba(211,47,47,.3)}
 .sx-fav{position:absolute;right:8px;top:8px;z-index:3;width:30px;height:30px;border-radius:50%;border:none;padding:0;
   background:rgba(255,255,255,.92);color:#7b8794;display:flex;align-items:center;justify-content:center;font-size:.85rem;
   box-shadow:0 2px 8px rgba(0,0,0,.14);cursor:pointer;transition:.15s}
@@ -321,6 +391,8 @@ $katGesamt = fn($kid) => ($anzahlJeKat[$kid] ?? 0) + ($anzahlJeKat['g' . $kid] ?
 .sx-title:hover{color:var(--sx-p)}
 .sx-foot{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:auto;padding-top:8px}
 .sx-price{font-weight:800;font-size:.95rem;color:var(--sx-ink)}
+.sx-aktionspreis{color:#d32f2f}
+.sx-altpreis{color:var(--sx-mut);font-weight:500;font-size:.78em;margin-left:2px}
 .sx-price small{font-weight:500;color:var(--sx-mut);font-size:.7rem;margin-right:2px}
 .sx-go{flex:0 0 auto;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
   background:var(--sx-soft);color:var(--sx-p);transition:.15s}
@@ -352,6 +424,86 @@ $katGesamt = fn($kid) => ($anzahlJeKat[$kid] ?? 0) + ($anzahlJeKat['g' . $kid] ?
 .sx-qty button:hover{background:var(--sx-soft)}
 .sx-qty input{width:46px;border:none;text-align:center;font-weight:700;background:transparent;color:var(--sx-ink);-moz-appearance:textfield}
 .sx-qty input::-webkit-inner-spin-button{-webkit-appearance:none}
+.sx-qty.klein{border-radius:10px}
+.sx-qty.klein button{width:32px;height:34px;font-size:1rem}
+.sx-qty.klein input{width:40px}
+/* Mengentabelle je Größe */
+.sx-mtab{border:1px solid var(--sx-line);border-radius:12px;overflow:hidden;max-width:520px}
+.sx-mtab-kopf,.sx-mtab-row{display:grid;grid-template-columns:minmax(0,1fr) auto 90px;align-items:center;column-gap:14px;padding:8px 14px}
+.sx-mtab.mit-preis .sx-mtab-kopf,.sx-mtab.mit-preis .sx-mtab-row{grid-template-columns:minmax(0,1fr) 84px auto 90px}
+.sx-mtab-kopf{background:rgba(68,113,163,.05);font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--sx-mut)}
+.sx-mtab-row{border-top:1px solid var(--sx-line);transition:background .15s}
+.sx-mtab-row.hat{background:rgba(68,113,163,.07)}
+.sx-mtab-row .gr{font-weight:700}
+.sx-mtab-row .pr{text-align:right;color:var(--sx-sub);font-size:.88rem}
+.sx-mtab-row .su{text-align:right;font-weight:700;color:var(--sx-mut);font-size:.9rem}
+.sx-mtab-row.hat .su{color:var(--sx-ink)}
+.sx-mtab-fuss{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-top:1px solid var(--sx-line);
+  background:rgba(68,113,163,.05);font-size:.88rem;color:var(--sx-sub)}
+.sx-mtab-fuss b{color:var(--sx-ink)}
+/* Veredelung */
+.sx-ved{border:1px solid var(--sx-line);border-radius:12px;overflow:hidden;max-width:640px}
+.sx-ved-gruppe{padding:12px 14px;border-bottom:1px solid var(--sx-line)}
+.sx-ved-art{display:flex;align-items:center;gap:7px;font-weight:800;font-size:.86rem;margin-bottom:8px}
+.sx-ved-art i{color:var(--sx-p)}
+.sx-ved-liste{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.sx-ved-opt{border:1.5px solid var(--sx-line);border-radius:10px;background:var(--sx-card);transition:border-color .15s,background .15s}
+.sx-ved-opt.an{border-color:var(--sx-p);background:rgba(68,113,163,.05)}
+.sx-ved-kopf{display:flex;align-items:center;gap:8px;padding:8px 10px;margin:0;cursor:pointer}
+.sx-ved-kopf .form-check-input{margin:0;flex:0 0 auto}
+.sx-ved-kopf .nm{flex:1;font-weight:600;font-size:.88rem}
+.sx-ved-kopf .pr{font-size:.78rem;color:var(--sx-mut);white-space:nowrap}
+.sx-ved-opt.an .pr{color:var(--sx-p);font-weight:700}
+.sx-ved-detail{display:none;padding:0 10px 10px}
+.sx-ved-opt.an .sx-ved-detail{display:block}
+.sx-ved-fuss{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 14px;padding:10px 14px;background:rgba(68,113,163,.05);font-size:.78rem;color:var(--sx-mut)}
+.sx-ved-fuss b{color:var(--sx-ink)}
+/* Meine Bestellungen */
+.sx-orders{display:flex;flex-direction:column;gap:16px}
+.sx-orders{gap:10px}
+.sx-order{background:var(--sx-card);border:1px solid var(--sx-line);border-radius:16px;padding:0;transition:box-shadow .15s}
+.sx-order[open]{box-shadow:0 8px 22px rgba(45,74,106,.08)}
+.sx-order-kopf{display:flex;align-items:center;gap:12px;padding:14px 20px;cursor:pointer;list-style:none;user-select:none;border-radius:16px}
+.sx-order-kopf::-webkit-details-marker{display:none}
+.sx-order-kopf:hover{background:rgba(68,113,163,.04)}
+.sx-order-pfeil{color:var(--sx-mut);transition:transform .15s}
+.sx-order[open] > .sx-order-kopf .sx-order-pfeil{transform:rotate(90deg)}
+.sx-order[open] > .sx-order-kopf{border-bottom:1px solid var(--sx-line);border-radius:16px 16px 0 0}
+.sx-order-inhalt{padding:16px 22px 18px}
+.sx-order-kopf .nr{font-weight:800;font-size:1rem}
+.sx-order-kopf .dt{font-size:.82rem;color:var(--sx-mut)}
+.sx-status{border-radius:999px;padding:4px 12px;font-size:.75rem;font-weight:800;white-space:nowrap;background:var(--sx-soft);color:var(--sx-p)}
+.sx-status.st-neu{background:rgba(209,154,62,.15);color:#a0721f}
+.sx-status.st-versendet{background:rgba(68,113,163,.15);color:var(--sx-p)}
+.sx-status.st-geliefert,.sx-status.st-verrechnet{background:rgba(91,138,114,.15);color:var(--c-success,#5b8a72)}
+.sx-status.st-storniert{background:rgba(0,0,0,.06);color:var(--sx-mut)}
+.sx-fortschritt{display:flex;list-style:none;margin:4px 0 14px;padding:0;counter-reset:s}
+.sx-fortschritt li{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0}
+.sx-fortschritt li::before{content:"";position:absolute;top:13px;left:-50%;right:50%;height:3px;background:var(--sx-line);z-index:0}
+.sx-fortschritt li:first-child::before{display:none}
+.sx-fortschritt li.erledigt::before,.sx-fortschritt li.aktuell::before{background:var(--sx-p)}
+.sx-fortschritt .punkt{position:relative;z-index:1;width:28px;height:28px;border-radius:50%;background:var(--sx-card);border:3px solid var(--sx-line);
+  display:flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff}
+.sx-fortschritt li.erledigt .punkt{background:var(--sx-p);border-color:var(--sx-p)}
+.sx-fortschritt li.aktuell .punkt{background:var(--sx-p);border-color:var(--sx-p);box-shadow:0 0 0 5px rgba(68,113,163,.18)}
+.sx-fortschritt .txt{margin-top:6px;font-size:.76rem;font-weight:600;color:var(--sx-mut);line-height:1.2}
+.sx-fortschritt li.erledigt .txt,.sx-fortschritt li.aktuell .txt{color:var(--sx-ink)}
+.sx-fortschritt li.aktuell .txt{font-weight:800}
+.sx-fortschritt .zeit{font-size:.7rem;color:var(--sx-mut);min-height:1em}
+.sx-storno{background:rgba(0,0,0,.04);border-radius:10px;padding:10px 14px;color:var(--sx-sub);margin-bottom:12px}
+.sx-track{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:rgba(68,113,163,.07);border:1px solid rgba(68,113,163,.2);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.sx-track > i{font-size:1.4rem;color:var(--sx-p)}
+.sx-track .sx-btn{padding:8px 14px;font-size:.85rem}
+.sx-msg{display:flex;gap:10px;background:rgba(209,154,62,.1);border-radius:12px;padding:10px 14px;margin-bottom:10px;font-size:.88rem}
+.sx-msg > i{color:#a0721f;margin-top:2px}
+.sx-order-det summary{cursor:pointer;font-size:.85rem;font-weight:600;color:var(--sx-p);padding:4px 0}
+.sx-order-det[open] summary{margin-bottom:8px}
+@media (max-width:575px){.sx-fortschritt .txt{font-size:.66rem}.sx-order{padding:14px}}
+/* Veredelung im Warenkorb / an der Kasse */
+.c-ved{list-style:none;margin:8px 0 0;padding:0;font-size:.78rem;color:var(--sx-sub)}
+.c-ved li{display:flex;gap:6px;align-items:baseline;padding:1px 0}
+.c-ved li i{color:var(--sx-p);font-size:.72rem}
+.c-ved .dt{color:var(--sx-mut)}
 .sx-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:12px;padding:12px 22px;
   font-weight:700;background:var(--sx-p);color:#fff;transition:.15s;box-shadow:0 6px 16px rgba(68,113,163,.3)}
 .sx-btn:hover{background:var(--sx-dark);color:#fff}
@@ -436,6 +588,7 @@ $katGesamt = fn($kid) => ($anzahlJeKat[$kid] ?? 0) + ($anzahlJeKat['g' . $kid] ?
         <div class="sx-menu">
             <?php if ($kats): ?><button type="button" class="sx-mi" id="sx-megabtn" aria-expanded="false" aria-controls="sx-mega">Shop <i class="bi bi-chevron-down"></i></button><?php endif; ?>
             <?php if ($angebote): ?><a class="sx-mi" href="#sx-angebote" data-megazu>Angebote</a><?php endif; ?>
+            <a class="sx-mi" href="shop.php?ansicht=bestellungen">Bestellungen</a>
             <a class="sx-mi sx-mi-cart" href="shop.php?ansicht=warenkorb" aria-label="Warenkorb"><i class="bi bi-bag"></i><?php if ($wkAnzahl): ?><span class="n"><?php echo (int)$wkAnzahl; ?></span><?php endif; ?></a>
         </div>
     </nav>
@@ -506,7 +659,7 @@ $katGesamt = fn($kid) => ($anzahlJeKat[$kid] ?? 0) + ($anzahlJeKat['g' . $kid] ?
                 <?php if ($ansicht === 'artikel' && ($ak = ShopKatalog::artikel($katalog, (int)($_GET['artikel'] ?? 0)))): $akk = (int)($ak['kategorie_id'] ?? 0); ?>
                 <?php if (isset($katParent[$akk])): ?> <i class="bi bi-chevron-right small"></i> <?php echo $h($katName($katParent[$akk])); ?><?php endif; ?>
                 <i class="bi bi-chevron-right small"></i> <?php echo $h($katName($akk)); ?><?php endif; ?></div>
-            <h1><?php echo $ansicht === 'artikel' ? 'Artikel' : ($ansicht === 'warenkorb' ? 'Warenkorb' : ($ansicht === 'kasse' ? 'Bestellung abschließen' : 'Vielen Dank!')); ?></h1>
+            <h1><?php echo ['artikel' => 'Artikel', 'warenkorb' => 'Warenkorb', 'kasse' => 'Bestellung abschließen', 'bestellungen' => 'Meine Bestellungen'][$ansicht] ?? 'Vielen Dank!'; ?></h1>
             <?php if (in_array($ansicht, ['warenkorb', 'kasse', 'fertig'], true)): ?>
             <div class="sx-steps"><span class="<?php echo $ansicht === 'warenkorb' ? 'on' : ''; ?>">1 Warenkorb</span><i class="bi bi-chevron-right"></i>
                 <span class="<?php echo $ansicht === 'kasse' ? 'on' : ''; ?>">2 Daten</span><i class="bi bi-chevron-right"></i>
@@ -515,6 +668,7 @@ $katGesamt = fn($kid) => ($anzahlJeKat[$kid] ?? 0) + ($anzahlJeKat['g' . $kid] ?
         </div>
         <div class="d-flex gap-2">
             <a href="shop.php" class="sx-cart"><i class="bi bi-grid"></i> Katalog</a>
+            <?php if ($ansicht !== 'bestellungen'): ?><a href="shop.php?ansicht=bestellungen" class="sx-cart" title="Meine Bestellungen"><i class="bi bi-box-seam"></i> Bestellungen</a><?php endif; ?>
             <?php if ($ansicht !== 'warenkorb'): ?><a href="shop.php?ansicht=warenkorb" class="sx-cart"><i class="bi bi-bag"></i><?php if ($wkAnzahl): ?> <span class="n"><?php echo (int)$wkAnzahl; ?></span><?php endif; ?></a><?php endif; ?>
         </div>
     </div>
@@ -532,9 +686,98 @@ $katGesamt = fn($kid) => ($anzahlJeKat[$kid] ?? 0) + ($anzahlJeKat['g' . $kid] ?
         <h2 class="fw-bold">Bestellung eingegangen</h2>
         <p class="text-muted mb-1">Deine Bestellnummer</p>
         <div class="fs-4 fw-bold mb-3" style="letter-spacing:.04em"><?php echo $h($_GET['nr'] ?? ''); ?></div>
-        <p class="text-muted" style="max-width:520px;margin:0 auto">Die Bestellung wurde an den Shop-Betreiber übermittelt. Die Abrechnung erfolgt per Rechnung. Bei Rückfragen bitte die Bestellnummer angeben.</p>
-        <a href="shop.php" class="sx-btn mt-4"><i class="bi bi-grid"></i> Weiter einkaufen</a>
+        <p class="text-muted" style="max-width:520px;margin:0 auto">Die Bestellung wurde an den Shop-Betreiber übermittelt. Die Abrechnung erfolgt per Rechnung. Den Stand der Bestellung siehst du jederzeit unter „Bestellungen“.</p>
+        <div class="d-flex flex-wrap justify-content-center gap-2 mt-4">
+            <a href="shop.php?ansicht=bestellungen" class="sx-btn"><i class="bi bi-box-seam"></i> Bestellstatus ansehen</a>
+            <a href="shop.php" class="sx-btn ghost"><i class="bi bi-grid"></i> Weiter einkaufen</a>
+        </div>
     </div>
+
+<?php /* ---------------------------------------------------------------- Meine Bestellungen (Status vom Katalog-Server) */ ?>
+<?php elseif ($ansicht === 'bestellungen'):
+    $meine = []; $meineFehler = null;
+    try { $meine = ShopKatalog::meineBestellungen(); } catch (\Throwable $e) { $meineFehler = $e->getMessage(); }
+    $schritte = Shop::STATUS_SCHRITTE; ?>
+    <?php if ($meineFehler): ?>
+    <div class="alert alert-warning alert-permanent"><i class="bi bi-exclamation-triangle"></i> <?php echo $h($meineFehler); ?></div>
+    <?php elseif (!$meine): ?>
+    <div class="sx-panel sx-done">
+        <div class="ic" style="background:var(--sx-soft);color:var(--sx-p)"><i class="bi bi-box-seam"></i></div>
+        <h4 class="fw-bold">Noch keine Bestellungen</h4>
+        <p class="text-muted">Sobald ihr im Shop bestellt, seht ihr hier, wie weit die Bestellung ist.</p>
+        <a href="shop.php" class="sx-btn"><i class="bi bi-grid"></i> Zum Katalog</a>
+    </div>
+    <?php else: ?>
+    <div class="sx-orders">
+        <?php foreach ($meine as $oi => $o):
+            $st = (string)$o['status'];
+            $idx = $st === 'verrechnet' ? count($schritte) - 1 : array_search($st, $schritte, true);
+            $stueck = array_sum(array_map(fn($p) => (int)$p['menge'], $o['positionen'] ?? []));
+            $link = (string)($o['tracking_url'] ?? '');
+            $linkOk = $link !== '' && preg_match('#^https?://#i', $link); ?>
+        <details class="sx-order" <?php echo $oi === 0 ? 'open' : ''; ?>>
+            <summary class="sx-order-kopf">
+                <i class="bi bi-chevron-right sx-order-pfeil"></i>
+                <div class="flex-grow-1">
+                    <div class="nr">Bestellung <?php echo $h($o['bestellnummer']); ?></div>
+                    <div class="dt">vom <?php echo date('d.m.Y', strtotime($o['erstellt_am'])); ?> · <?php echo (int)$stueck; ?> Stück · <?php echo $h($euro($o['summe'])); ?></div>
+                </div>
+                <?php if ($linkOk): ?><i class="bi bi-truck text-primary" title="Sendung unterwegs"></i><?php endif; ?>
+                <span class="sx-status st-<?php echo $h($st); ?>"><?php echo $h($o['status_name']); ?></span>
+            </summary>
+            <div class="sx-order-inhalt">
+
+            <?php if ($st === 'storniert'): ?>
+            <div class="sx-storno"><i class="bi bi-x-circle"></i> Diese Bestellung wurde storniert<?php echo !empty($o['status_geaendert_am']) ? ' (' . date('d.m.Y', strtotime($o['status_geaendert_am'])) . ')' : ''; ?>.</div>
+            <?php else: ?>
+            <ol class="sx-fortschritt">
+                <?php foreach ($schritte as $i => $s): $zeit = $o['verlauf'][$s] ?? null; ?>
+                <li class="<?php echo $idx !== false && $i < $idx ? 'erledigt' : ''; ?> <?php echo $idx === $i ? 'aktuell' : ''; ?>">
+                    <span class="punkt"><?php echo $idx !== false && $i <= $idx ? '<i class="bi bi-check-lg"></i>' : ''; ?></span>
+                    <span class="txt"><?php echo $h(Shop::STATUS[$s]); ?></span>
+                    <span class="zeit"><?php echo $zeit && $idx !== false && $i <= $idx ? date('d.m.', strtotime($zeit)) : ''; ?></span>
+                </li>
+                <?php endforeach; ?>
+            </ol>
+            <?php if ($st === 'verrechnet'): ?><div class="small text-muted mb-2"><i class="bi bi-receipt"></i> Die Bestellung ist abgeschlossen und verrechnet.</div><?php endif; ?>
+            <?php endif; ?>
+
+            <?php if ($linkOk || !empty($o['sendungsnummer'])): ?>
+            <div class="sx-track">
+                <i class="bi bi-truck"></i>
+                <div class="flex-grow-1"><b>Paket unterwegs</b><?php if (!empty($o['sendungsnummer'])): ?><br><span class="small text-muted">Sendungsnummer <?php echo $h($o['sendungsnummer']); ?></span><?php endif; ?></div>
+                <?php if ($linkOk): ?><a class="sx-btn" href="<?php echo $h($link); ?>" target="_blank" rel="noopener noreferrer"><i class="bi bi-geo-alt"></i> Sendung verfolgen</a><?php endif; ?>
+            </div>
+            <?php endif; ?>
+            <?php if (!empty($o['nachricht'])): ?>
+            <div class="sx-msg"><i class="bi bi-chat-left-text"></i><div><b>Nachricht vom Shop</b><br><?php echo nl2br($h($o['nachricht'])); ?></div></div>
+            <?php endif; ?>
+
+            <details class="sx-order-det">
+                <summary>Bestellte Artikel anzeigen</summary>
+                <table class="table table-sm align-middle mb-2">
+                    <thead><tr><th>Artikel</th><th>Größe</th><th class="text-end">Menge</th><th class="text-end">Summe</th></tr></thead>
+                    <tbody>
+                    <?php foreach ($o['positionen'] as $p): ?>
+                    <tr><td><?php echo $h($p['artikel_name']); ?>
+                            <?php foreach ($p['veredelung'] ?? [] as $v): ?><br><small class="text-muted"><i class="bi bi-stars"></i> <?php echo $h($v['bezeichnung']); ?><?php echo !empty($v['original']) ? ' · ' . $h($v['original']) : ''; ?></small><?php endforeach; ?></td>
+                        <td><?php echo $h($p['variante'] ?: '–'); ?></td>
+                        <td class="text-end"><?php echo (int)$p['menge']; ?></td>
+                        <td class="text-end text-nowrap"><?php echo $h($euro($p['einzelpreis'] * $p['menge'])); ?></td></tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                    <tfoot>
+                    <?php if ((float)$o['versandkosten'] > 0): ?><tr><td colspan="3" class="text-end text-muted">Versand</td><td class="text-end"><?php echo $h($euro($o['versandkosten'])); ?></td></tr><?php endif; ?>
+                    <tr><th colspan="3" class="text-end">Gesamt</th><th class="text-end text-nowrap"><?php echo $h($euro($o['summe'])); ?></th></tr>
+                    </tfoot>
+                </table>
+                <div class="small text-muted"><?php if (!empty($o['besteller_name'])): ?>Bestellt von <?php echo $h($o['besteller_name']); ?> · <?php endif; ?>Lieferung an: <?php echo $h(str_replace(["\r\n", "\n"], ', ', (string)$o['lieferadresse'])); ?></div>
+            </details>
+            </div>
+        </details>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
 
 <?php /* ---------------------------------------------------------------- Artikel-Detail */ ?>
 <?php elseif ($ansicht === 'artikel' && ($a = ShopKatalog::artikel($katalog, (int)($_GET['artikel'] ?? 0)))):
@@ -566,29 +809,70 @@ $katGesamt = fn($kid) => ($anzahlJeKat[$kid] ?? 0) + ($anzahlJeKat['g' . $kid] ?
             <div class="col-md-6 col-lg-7">
                 <div class="sx-kat"><?php echo $h($katName($a['kategorie_id'])); ?><?php if ($a['artikelnummer']): ?> · Art.-Nr. <?php echo $h($a['artikelnummer']); ?><?php endif; ?></div>
                 <h2 class="sx-d-title"><?php echo $h($a['name']); ?></h2>
-                <div class="sx-d-price" id="sx-preis"><?php if (!empty($a['varianten']) && count(array_unique(array_map(fn($v) => (float)$v['preis'], $a['varianten']))) > 1): ?><small>ab </small><?php endif; ?><?php echo $h($euro($preisAbFn($a))); ?></div>
+                <div class="sx-d-price" id="sx-preis"><?php if (!empty($a['varianten']) && count(array_unique(array_map(fn($v) => (float)$v['preis'], $a['varianten']))) > 1): ?><small>ab </small><?php endif; ?><?php if ($altPreis($a) !== null): ?><span class="sx-aktionspreis"><?php echo $h($euro($preisAbFn($a))); ?></span> <s class="sx-altpreis"><?php echo $h($euro($altPreis($a))); ?></s><?php else: ?><?php echo $h($euro($preisAbFn($a))); ?><?php endif; ?></div>
                 <div class="small text-muted"><?php echo $vkSatz > 0 ? 'zzgl. Versand · ' : ''; ?>Zahlung per Rechnung</div>
 
                 <?php if ($soldout): ?>
                 <div class="alert alert-secondary alert-permanent d-flex align-items-center gap-2 mt-4 mb-0"><i class="bi bi-slash-circle"></i> Dieser Artikel ist derzeit ausverkauft.</div>
                 <?php else: ?>
-                <form method="post">
+                <form method="post" id="sx-bestellform" enctype="multipart/form-data">
                     <input type="hidden" name="aktion" value="hinzufuegen">
                     <input type="hidden" name="artikel_id" value="<?php echo (int)$a['id']; ?>">
-                    <?php if (!empty($a['varianten'])): ?>
-                    <div class="sx-label">Größe wählen</div>
-                    <div class="sx-sizes">
-                        <?php foreach ($a['varianten'] as $vi => $v): ?>
-                        <input type="radio" class="btn-check" name="variante_id" id="v<?php echo (int)$v['id']; ?>" value="<?php echo (int)$v['id']; ?>" data-preis="<?php echo $h($euro($v['preis'])); ?>" <?php echo $vi === 0 ? 'required' : ''; ?>>
-                        <label class="sx-size" for="v<?php echo (int)$v['id']; ?>"><?php echo $h($v['bezeichnung']); ?></label>
+                    <?php if (!empty($a['varianten'])):
+                        $preisSpalte = count(array_unique(array_map(fn($v) => (float)$v['preis'], $a['varianten']))) > 1; ?>
+                    <div class="sx-label">Mengen je Größe eintragen</div>
+                    <div class="sx-mtab <?php echo $preisSpalte ? 'mit-preis' : ''; ?>">
+                        <div class="sx-mtab-kopf"><span>Größe</span><?php if ($preisSpalte): ?><span class="text-end">Preis</span><?php endif; ?><span class="text-center">Menge</span><span class="text-end">Summe</span></div>
+                        <?php foreach ($a['varianten'] as $v): ?>
+                        <div class="sx-mtab-row" data-preis="<?php echo (float)$v['preis']; ?>">
+                            <span class="gr"><?php echo $h($v['bezeichnung']); ?></span>
+                            <?php if ($preisSpalte): ?><span class="pr"><?php if ((float)($v['preis_regulaer'] ?? $v['preis']) > (float)$v['preis'] + 0.001): ?><s class="sx-altpreis d-block"><?php echo $h($euro($v['preis_regulaer'])); ?></s><span class="sx-aktionspreis"><?php echo $h($euro($v['preis'])); ?></span><?php else: ?><?php echo $h($euro($v['preis'])); ?><?php endif; ?></span><?php endif; ?>
+                            <div class="sx-qty klein"><button type="button" data-q="-1" aria-label="weniger">−</button><input type="number" name="mengen[<?php echo (int)$v['id']; ?>]" value="0" min="0" max="99" inputmode="numeric" aria-label="Menge Größe <?php echo $h($v['bezeichnung']); ?>"><button type="button" data-q="1" aria-label="mehr">+</button></div>
+                            <span class="su">–</span>
+                        </div>
                         <?php endforeach; ?>
+                        <div class="sx-mtab-fuss"><span><b id="sx-stk">0</b> Stück</span><span>Zusammen <b id="sx-gesamt"><?php echo $h($euro(0)); ?></b></span></div>
+                    </div>
+                    <?php else: ?>
+                    <div class="sx-label">Menge</div>
+                    <div class="sx-qty"><button type="button" data-q="-1" aria-label="weniger">−</button><input type="number" name="menge" value="1" min="1" max="99" aria-label="Menge"><button type="button" data-q="1" aria-label="mehr">+</button></div>
+                    <?php endif; ?>
+
+                    <?php // ---- Veredelung: Stickerei/Druck je Position, mehrere möglich, je Position eigene Vorlage
+                    $vedListe = !empty($a['veredelung']) ? ($katalog['veredelungen'] ?? []) : [];
+                    if ($vedListe):
+                        $vedNachArt = [];
+                        foreach ($vedListe as $v) $vedNachArt[$v['art']][] = $v; ?>
+                    <div class="sx-label">Veredelung <span class="text-lowercase fw-normal">– optional, mehrere möglich</span></div>
+                    <div class="sx-ved">
+                        <?php foreach ($vedNachArt as $art => $liste): ?>
+                        <div class="sx-ved-gruppe">
+                            <div class="sx-ved-art"><i class="bi bi-<?php echo $art === 'druck' ? 'printer' : 'scissors'; ?>"></i> <?php echo $h($liste[0]['art_name']); ?></div>
+                            <div class="sx-ved-liste">
+                                <?php foreach ($liste as $v): $vid = (int)$v['id']; ?>
+                                <div class="sx-ved-opt">
+                                    <label class="sx-ved-kopf">
+                                        <input type="checkbox" class="form-check-input" name="veredelung[<?php echo $vid; ?>]" value="1" data-preis="<?php echo (float)$v['preis']; ?>">
+                                        <span class="nm"><?php echo $h($v['position_name']); ?></span>
+                                        <span class="pr"><?php echo (float)$v['preis'] > 0 ? '+ ' . $h($euro($v['preis'])) : 'ohne Aufpreis'; ?></span>
+                                    </label>
+                                    <div class="sx-ved-detail">
+                                        <input type="file" class="form-control form-control-sm" name="ved_datei[<?php echo $vid; ?>]" accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf" aria-label="Logo oder Schriftzug für <?php echo $h($v['art_name'] . ' ' . $v['position_name']); ?>">
+                                        <input type="text" class="form-control form-control-sm mt-2" name="ved_hinweis[<?php echo $vid; ?>]" maxlength="300" placeholder="Hinweis (optional): Text, Farbe, Größe …">
+                                    </div>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                        <div class="sx-ved-fuss">
+                            <span><i class="bi bi-upload"></i> Je Position ein Logo oder Schriftzug (JPG, PNG, WebP oder PDF, bis <?php echo round(Shop::dateiGrenzeBytes() / 1048576); ?> MB)</span>
+                            <span>Aufpreis je Stück <b id="sx-vedpreis"><?php echo $h($euro(0)); ?></b></span>
+                        </div>
                     </div>
                     <?php endif; ?>
-                    <div class="sx-label">Menge</div>
-                    <div class="d-flex flex-wrap align-items-center gap-3">
-                        <div class="sx-qty"><button type="button" data-q="-1" aria-label="weniger">−</button><input type="number" name="menge" value="1" min="1" max="99" aria-label="Menge"><button type="button" data-q="1" aria-label="mehr">+</button></div>
-                        <button class="sx-btn"><i class="bi bi-bag-plus"></i> In den Warenkorb</button>
-                    </div>
+
+                    <button class="sx-btn mt-3" id="sx-addbtn" <?php echo !empty($a['varianten']) ? 'disabled' : ''; ?>><i class="bi bi-bag-plus"></i> In den Warenkorb</button>
                 </form>
                 <?php endif; ?>
 
@@ -630,6 +914,14 @@ $katGesamt = fn($kid) => ($anzahlJeKat[$kid] ?? 0) + ($anzahlJeKat['g' . $kid] ?
                             <?php if ($z['variante']): ?><span class="c-tag">Größe <?php echo $h($z['variante']); ?></span><?php endif; ?>
                             <?php if (!empty($z['artikelnummer'])): ?><span class="c-tag hell">Art.-Nr. <?php echo $h($z['artikelnummer']); ?></span><?php endif; ?>
                         </div>
+                        <?php if (!empty($z['veredelung'])): ?>
+                        <ul class="c-ved">
+                            <?php foreach ($z['veredelung'] as $v): ?>
+                            <li><i class="bi bi-stars"></i><span><?php echo $h($v['bezeichnung']); ?><?php echo $v['preis'] > 0 ? ' (+' . $h($euro($v['preis'])) . ')' : ''; ?>
+                                <span class="dt">· <?php echo $h($v['original']); ?><?php echo $v['hinweis'] !== '' ? ' · „' . $h($v['hinweis']) . '“' : ''; ?></span></span></li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <?php endif; ?>
                         <div class="c-einzel">je <?php echo $h($euro($z['einzelpreis'])); ?></div>
                     </div>
                     <div class="c-preis"><?php echo $h($euro($z['einzelpreis'])); ?></div>
@@ -705,7 +997,9 @@ $katGesamt = fn($kid) => ($anzahlJeKat[$kid] ?? 0) + ($anzahlJeKat['g' . $kid] ?
             <div class="sx-panel sx-sum">
                 <h5 class="fw-bold mb-3">Deine Bestellung</h5>
                 <?php foreach ($warenkorb as $z): ?>
-                <div class="row-l"><span><?php echo (int)$z['menge']; ?>× <?php echo $h($z['artikel_name']); ?><?php echo $z['variante'] ? ' (' . $h($z['variante']) . ')' : ''; ?></span><span class="text-nowrap ms-2"><?php echo $h($euro($z['einzelpreis'] * $z['menge'])); ?></span></div>
+                <div class="row-l"><span><?php echo (int)$z['menge']; ?>× <?php echo $h($z['artikel_name']); ?><?php echo $z['variante'] ? ' (' . $h($z['variante']) . ')' : ''; ?>
+                    <?php if (!empty($z['veredelung'])): ?><br><small class="text-muted"><i class="bi bi-stars"></i> <?php echo $h(implode(', ', array_column($z['veredelung'], 'bezeichnung'))); ?></small><?php endif; ?></span>
+                    <span class="text-nowrap ms-2"><?php echo $h($euro($z['einzelpreis'] * $z['menge'])); ?></span></div>
                 <?php endforeach; ?>
                 <?php if ($vkSatz > 0): ?>
                 <div class="row-l mt-2"><span>Versand</span><span><?php echo $versand == 0 ? 'kostenlos' : $h($euro($versand)); ?></span></div>
@@ -783,7 +1077,7 @@ $katGesamt = fn($kid) => ($anzahlJeKat[$kid] ?? 0) + ($anzahlJeKat['g' . $kid] ?
                 <div class="sx-kat"><?php echo $h($katName($a['kategorie_id'])); ?></div>
                 <a class="sx-title" href="<?php echo $url; ?>"><?php echo $h($a['name']); ?></a>
                 <div class="sx-foot">
-                    <div class="sx-price"><?php if ($mehrPreise): ?><small>ab</small><?php endif; ?><?php echo $h($euro($preisAbFn($a))); ?></div>
+                    <div class="sx-price"><?php if ($mehrPreise): ?><small>ab</small><?php endif; ?><?php if ($altPreis($a) !== null): ?><span class="sx-aktionspreis"><?php echo $h($euro($preisAbFn($a))); ?></span> <s class="sx-altpreis"><?php echo $h($euro($altPreis($a))); ?></s><?php else: ?><?php echo $h($euro($preisAbFn($a))); ?><?php endif; ?></div>
                     <a class="sx-go" href="<?php echo $url; ?>" aria-label="Ansehen"><i class="bi bi-arrow-right"></i></a>
                 </div>
             </div>
@@ -822,16 +1116,69 @@ $katGesamt = fn($kid) => ($anzahlJeKat[$kid] ?? 0) + ($anzahlJeKat['g' . $kid] ?
     var gal = document.getElementById('sx-gal');
     if (gal) galerie(gal, document.querySelectorAll('.sx-thumb'));
 
-    // Detail: Preis je Größe, Mengen-Knöpfe
-    document.querySelectorAll('input[name="variante_id"]').forEach(function (r) {
-        r.addEventListener('change', function () { var p = document.getElementById('sx-preis'); if (p && r.dataset.preis) p.textContent = r.dataset.preis; });
-    });
+    // Detail: Mengen-Knöpfe (−/+) und Summen der Mengentabelle
+    var euro = function (b) { return b.toLocaleString('de-AT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'; };
+    function vedJeStueck() {
+        var s = 0;
+        document.querySelectorAll('.sx-ved-opt input[type="checkbox"]').forEach(function (c) { if (c.checked) s += parseFloat(c.dataset.preis) || 0; });
+        return s;
+    }
+    function summieren() {
+        var ved = vedJeStueck(), vp = document.getElementById('sx-vedpreis');
+        if (vp) vp.textContent = euro(ved);
+        var tab = document.querySelector('.sx-mtab');
+        if (!tab) return;
+        var stk = 0, sum = 0;
+        tab.querySelectorAll('.sx-mtab-row').forEach(function (r) {
+            var m = Math.max(0, parseInt(r.querySelector('input').value, 10) || 0), p = (parseFloat(r.dataset.preis) || 0) + ved;
+            r.classList.toggle('hat', m > 0);
+            r.querySelector('.su').textContent = m > 0 ? euro(m * p) : '–';
+            stk += m; sum += m * p;
+        });
+        document.getElementById('sx-stk').textContent = stk;
+        document.getElementById('sx-gesamt').textContent = euro(sum);
+        var btn = document.getElementById('sx-addbtn');
+        if (btn) {
+            btn.disabled = stk === 0;
+            btn.innerHTML = '<i class="bi bi-bag-plus"></i> ' + (stk ? stk + ' Stück in den Warenkorb' : 'In den Warenkorb');
+        }
+    }
     document.querySelectorAll('.sx-qty').forEach(function (q) {
-        var inp = q.querySelector('input');
+        var inp = q.querySelector('input'), min = parseInt(inp.min, 10) || 0;
         q.querySelectorAll('button').forEach(function (b) {
-            b.addEventListener('click', function () { inp.value = Math.max(1, Math.min(99, (parseInt(inp.value, 10) || 1) + parseInt(b.dataset.q, 10))); });
+            b.addEventListener('click', function () {
+                inp.value = Math.max(min, Math.min(99, (parseInt(inp.value, 10) || 0) + parseInt(b.dataset.q, 10)));
+                summieren();
+            });
+        });
+        inp.addEventListener('input', summieren);
+        inp.addEventListener('focus', function () { inp.select(); });   // Eintippen überschreibt die 0
+    });
+    // Veredelung: angehakte Position zeigt Datei-Feld (Pflicht) und Hinweis
+    document.querySelectorAll('.sx-ved-opt').forEach(function (o) {
+        var cb = o.querySelector('input[type="checkbox"]'), datei = o.querySelector('input[type="file"]');
+        cb.addEventListener('change', function () {
+            o.classList.toggle('an', cb.checked);
+            datei.required = cb.checked;
+            if (!cb.checked) datei.value = '';
+            summieren();
         });
     });
+    // Vor dem Absenden: Dateigrößen prüfen (sonst verwirft der Server die ganze Anfrage kommentarlos)
+    var bf = document.getElementById('sx-bestellform');
+    if (bf) bf.addEventListener('submit', function (e) {
+        var GRENZE = <?php echo Shop::uploadGrenzeBytes(); ?>, EINZEL = <?php echo Shop::dateiGrenzeBytes(); ?>, summe = 0, zuGross = [];
+        var mb = function (b) { return (b / 1048576).toFixed(1).replace('.', ',') + ' MB'; };
+        bf.querySelectorAll('.sx-ved-opt').forEach(function (o) {
+            if (!o.querySelector('input[type="checkbox"]').checked) return;
+            Array.prototype.forEach.call(o.querySelector('input[type="file"]').files || [], function (f) { summe += f.size; if (f.size > EINZEL) zuGross.push(f.name); });
+        });
+        var text = '';
+        if (zuGross.length) text = 'Diese Dateien sind größer als ' + mb(EINZEL) + ': ' + zuGross.join(', ');
+        else if (GRENZE > 0 && summe > GRENZE - 256 * 1024) text = 'Die Dateien sind zusammen ' + mb(summe) + ' groß – höchstens ' + mb(GRENZE) + ' auf einmal möglich.';
+        if (text) { e.preventDefault(); alert(text); }
+    });
+    summieren();
 
     // Katalog: Merkliste (im Browser gespeichert), Kategorie, Suche, Sortierung
     var grid = document.getElementById('sx-grid');

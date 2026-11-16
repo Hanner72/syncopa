@@ -9,16 +9,101 @@ class Shop {
     public const BILD_TYPEN = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp'];
     public const BILD_MAX_BYTES = 16 * 1024 * 1024;   // größte Datei beim Hochladen
     public const BILD_MAX_KANTE = 1600;               // längste Bildseite nach dem Verkleinern (Pixel)
-    public const STATUS = ['neu' => 'Neu', 'bestaetigt' => 'Bestätigt', 'geliefert' => 'Geliefert', 'verrechnet' => 'Verrechnet', 'storniert' => 'Storniert'];
+
+    // Veredelung
+    public const VEREDELUNG_ARTEN = ['stickerei' => 'Stickerei', 'druck' => 'Druck'];
+    public const VEREDELUNG_POSITIONEN = [
+        'schulter_rechts' => 'Rechte Schulter', 'schulter_links' => 'Linke Schulter',
+        'brust_links' => 'Linke Brust', 'brust_rechts' => 'Rechte Brust', 'ruecken' => 'Rücken',
+    ];
+    /** Erlaubte Dateien für Logos/Schriftzüge der Besteller (bewusst ohne SVG – kann Skripte enthalten) */
+    public const VORLAGE_TYPEN = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'pdf' => 'application/pdf'];
+    public const STATUS = [
+        'neu' => 'Eingegangen', 'bestaetigt' => 'Bestätigt', 'in_arbeit' => 'In Bearbeitung', 'versendet' => 'Versendet',
+        'geliefert' => 'Zugestellt', 'verrechnet' => 'Verrechnet', 'storniert' => 'Storniert',
+    ];
+    /** Schritte der Fortschrittsanzeige beim Verein (Verrechnet zählt als abgeschlossen) */
+    public const STATUS_SCHRITTE = ['neu', 'bestaetigt', 'in_arbeit', 'versendet', 'geliefert'];
+    public const STATUS_FARBE = ['neu' => 'warning text-dark', 'bestaetigt' => 'info', 'in_arbeit' => 'primary', 'versendet' => 'primary',
+        'geliefert' => 'success', 'verrechnet' => 'success', 'storniert' => 'secondary'];
 
     private static function db(): Database { return Database::getInstance(); }
 
     /** Wie viel der Server pro Speichern annimmt (post_max_size) in Bytes – für die Prüfung im Browser. */
     public static function uploadGrenzeBytes(): int {
-        $w = trim((string)ini_get('post_max_size'));
+        return self::iniBytes('post_max_size');
+    }
+    /** Größte einzelne Datei, die dieser Server annimmt (upload_max_filesize, höchstens 16 MB). */
+    public static function dateiGrenzeBytes(): int {
+        $u = self::iniBytes('upload_max_filesize');
+        return $u > 0 ? min($u, self::BILD_MAX_BYTES) : self::BILD_MAX_BYTES;
+    }
+    private static function iniBytes(string $schluessel): int {
+        $w = trim((string)ini_get($schluessel));
         $n = (int)$w;
         $e = strtolower(substr($w, -1));
         return match ($e) { 'g' => $n * 1073741824, 'm' => $n * 1048576, 'k' => $n * 1024, default => $n };
+    }
+
+    // ---------------------------------------------------------------- Veredelung (Preisliste)
+    public static function veredelungen(bool $nurAktive = false): array {
+        $liste = self::db()->fetchAll("SELECT * FROM shop_veredelungen" . ($nurAktive ? " WHERE aktiv = 1" : "") . " ORDER BY sortierung, id");
+        foreach ($liste as &$v) {
+            $v['art_name'] = self::VEREDELUNG_ARTEN[$v['art']] ?? $v['art'];
+            $v['position_name'] = self::VEREDELUNG_POSITIONEN[$v['position']] ?? $v['position'];
+            $v['bezeichnung'] = $v['art_name'] . ' – ' . $v['position_name'];
+        }
+        return $liste;
+    }
+    /** Preise und Freigaben aus dem Formular der Verwaltung übernehmen: preis[id], aktiv[id] */
+    public static function veredelungenSpeichern(array $preise, array $aktiv): void {
+        foreach (self::veredelungen() as $v) {
+            $id = (int)$v['id'];
+            $p = (float)str_replace(',', '.', trim((string)($preise[$id] ?? $v['preis'])));
+            self::db()->execute("UPDATE shop_veredelungen SET preis = ?, aktiv = ? WHERE id = ?", [round(max(0, $p), 2), !empty($aktiv[$id]) ? 1 : 0, $id]);
+        }
+    }
+
+    // ---------------------------------------------------------------- Vorlagen der Besteller (Logos, Schriftzüge)
+    /** Zwischenablage beim Verein (bis zur Bestellung) bzw. Ablage beim Katalog-Server (zur Bestellung) – beide nicht öffentlich */
+    public static function vorlagenOrdner(string $art): string {
+        $dir = UPLOAD_DIR . DIRECTORY_SEPARATOR . ($art === 'bestellung' ? 'shop_bestellungen' : 'shop_auftrag');
+        if (!is_dir($dir)) @mkdir($dir, 02775, true);
+        if (is_dir($dir) && !is_file($dir . DIRECTORY_SEPARATOR . '.htaccess')) {
+            @file_put_contents($dir . DIRECTORY_SEPARATOR . '.htaccess', "# Vorlagen der Besteller – nur über Syncopa abrufbar\nRequire all denied\n");
+        }
+        if (!is_writable($dir)) throw new RuntimeException('Der Ordner für Logos/Vorlagen (uploads/' . basename($dir) . ') ist nicht beschreibbar. Bitte die Ordnerrechte prüfen.');
+        return $dir;
+    }
+    /** Vom Besteller hochgeladene Vorlage prüfen und in der Zwischenablage speichern. Gibt [datei, original] zurück. */
+    public static function vorlageSpeichern(array $datei): array {
+        if (($datei['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) throw new RuntimeException('Keine Datei ausgewählt.');
+        if (in_array($datei['error'], [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true)) throw new RuntimeException('Die Datei „' . ($datei['name'] ?? '') . '“ ist zu groß.');
+        if ($datei['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($datei['tmp_name'])) throw new RuntimeException('Die Datei konnte nicht hochgeladen werden.');
+        if (($datei['size'] ?? 0) > self::BILD_MAX_BYTES) throw new RuntimeException('Die Datei „' . $datei['name'] . '“ ist größer als 16 MB.');
+        $typ = function_exists('mime_content_type') ? (string)mime_content_type($datei['tmp_name']) : '';
+        $endung = array_search($typ, self::VORLAGE_TYPEN, true);
+        if ($endung === false) throw new RuntimeException('„' . $datei['name'] . '“: bitte als JPG, PNG, WebP oder PDF hochladen.');
+        $name = 'v_' . bin2hex(random_bytes(10)) . '.' . ($endung === 'jpeg' ? 'jpg' : $endung);
+        if (!move_uploaded_file($datei['tmp_name'], self::vorlagenOrdner('auftrag') . DIRECTORY_SEPARATOR . $name)) throw new RuntimeException('Die Datei konnte nicht gespeichert werden.');
+        @chmod(self::vorlagenOrdner('auftrag') . DIRECTORY_SEPARATOR . $name, 0664);
+        return ['datei' => $name, 'original' => self::dateinameSauber((string)$datei['name'])];
+    }
+    /** Pfad einer Vorlage in der Zwischenablage (nur gültige, selbst erzeugte Namen) */
+    public static function vorlagePfad(string $name): ?string {
+        if (!preg_match('/^v_[a-f0-9]{20}\.(jpg|png|webp|pdf)$/', $name)) return null;
+        $p = UPLOAD_DIR . DIRECTORY_SEPARATOR . 'shop_auftrag' . DIRECTORY_SEPARATOR . $name;
+        return is_file($p) ? $p : null;
+    }
+    /** Alte Vorlagen in der Zwischenablage löschen (z. B. aus nie bestellten Warenkörben) */
+    public static function vorlagenAufraeumen(int $tage = 14): void {
+        $dir = UPLOAD_DIR . DIRECTORY_SEPARATOR . 'shop_auftrag';
+        foreach (glob($dir . DIRECTORY_SEPARATOR . 'v_*') ?: [] as $f) if (filemtime($f) < time() - $tage * 86400) @unlink($f);
+    }
+    public static function dateinameSauber(string $n): string {
+        $n = basename(str_replace('\\', '/', $n));
+        $n = preg_replace('/[^\p{L}\p{N} ._()\-]+/u', '_', $n);
+        return mb_substr($n !== '' ? $n : 'datei', 0, 120);
     }
 
     public static function euro($betrag): string {
@@ -159,21 +244,55 @@ class Shop {
             !empty($d['aktiv']) ? 1 : 0,
             !empty($d['aktion']) ? 1 : 0,
             mb_substr(trim((string)($d['aktion_text'] ?? '')), 0, 40) ?: null,
+            self::aktionspreisParsen($d['aktionspreis'] ?? ''),
             !empty($d['ausverkauft']) ? 1 : 0,
+            !empty($d['veredelung']) ? 1 : 0,
             (int)($d['sortierung'] ?? 100),
         ];
         if ($id) {
             self::db()->execute(
-                "UPDATE shop_artikel SET kategorie_id = ?, name = ?, beschreibung = ?, artikelnummer = ?, preis = ?, lieferzeit = ?, aktiv = ?, aktion = ?, aktion_text = ?, ausverkauft = ?, sortierung = ?, aktualisiert_am = NOW() WHERE id = ?",
+                "UPDATE shop_artikel SET kategorie_id = ?, name = ?, beschreibung = ?, artikelnummer = ?, preis = ?, lieferzeit = ?, aktiv = ?, aktion = ?, aktion_text = ?, aktionspreis = ?, ausverkauft = ?, veredelung = ?, sortierung = ?, aktualisiert_am = NOW() WHERE id = ?",
                 array_merge($params, [$id])
             );
             return $id;
         }
         self::db()->execute(
-            "INSERT INTO shop_artikel (kategorie_id, name, beschreibung, artikelnummer, preis, lieferzeit, aktiv, aktion, aktion_text, ausverkauft, sortierung, erstellt_am) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())",
+            "INSERT INTO shop_artikel (kategorie_id, name, beschreibung, artikelnummer, preis, lieferzeit, aktiv, aktion, aktion_text, aktionspreis, ausverkauft, veredelung, sortierung, erstellt_am) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())",
             $params
         );
         return (int)self::db()->lastInsertId();
+    }
+    /** Aktionspreis aus einer Eingabe: leer/0 = kein Aktionspreis (null) */
+    public static function aktionspreisParsen($wert): ?float {
+        $w = trim(str_replace(['€', ' '], '', (string)$wert));
+        if ($w === '') return null;
+        $p = round((float)str_replace(',', '.', $w), 2);
+        if ($p < 0) throw new RuntimeException('Der Aktionspreis darf nicht negativ sein.');
+        return $p > 0 ? $p : null;
+    }
+    /** Aufpreis einer Größe aus einer Eingabe wie „+2,50“, „-1“, „−1,00“, „3“ (leer = 0) */
+    public static function aufschlagParsen($wert): float {
+        $w = trim(str_replace(['€', ' ', '−', '–'], ['', '', '-', '-'], (string)$wert));
+        return $w === '' ? 0.0 : round((float)str_replace(',', '.', $w), 2);
+    }
+    /** Gültiger Grundpreis eines Artikels: Aktionspreis, wenn „Aktion“ an und ein Aktionspreis gesetzt ist */
+    public static function effektivPreis(array $a): float {
+        return (!empty($a['aktion']) && (float)($a['aktionspreis'] ?? 0) > 0) ? (float)$a['aktionspreis'] : (float)$a['preis'];
+    }
+    /** Einzelnes Ja/Nein-Feld eines Artikels umschalten (aus der Artikelliste). Nur freigegebene Felder. */
+    public static function artikelSchalten(int $id, string $feld, bool $wert): void {
+        if (!in_array($feld, ['aktiv', 'ausverkauft', 'aktion'], true)) throw new RuntimeException('Dieses Feld kann nicht umgeschaltet werden.');
+        if (!self::artikel($id)) throw new RuntimeException('Artikel nicht gefunden.');
+        self::db()->execute("UPDATE shop_artikel SET `$feld` = ?, aktualisiert_am = NOW() WHERE id = ?", [$wert ? 1 : 0, $id]);
+    }
+    /** Aktionspreis direkt setzen (aus der Artikelliste); gibt den gespeicherten Wert zurück */
+    public static function aktionspreisSetzen(int $id, $wert): ?float {
+        $a = self::artikel($id);
+        if (!$a) throw new RuntimeException('Artikel nicht gefunden.');
+        $p = self::aktionspreisParsen($wert);
+        if ($p !== null && $p >= (float)$a['preis']) throw new RuntimeException('Der Aktionspreis sollte unter dem normalen Preis (' . self::euro($a['preis']) . ') liegen.');
+        self::db()->execute("UPDATE shop_artikel SET aktionspreis = ?, aktualisiert_am = NOW() WHERE id = ?", [$p, $id]);
+        return $p;
     }
     public static function artikelLoeschen(int $id): void {
         foreach (self::bilder($id) as $b) @unlink(SHOP_DIR . DIRECTORY_SEPARATOR . $b['dateiname']);
@@ -186,7 +305,7 @@ class Shop {
     public static function varianten(int $artikelId): array {
         return self::db()->fetchAll("SELECT * FROM shop_varianten WHERE artikel_id = ? ORDER BY sortierung, id", [$artikelId]);
     }
-    /** Alle Varianten eines Artikels ersetzen. $zeilen = Liste von [bezeichnung, artikelnummer, preis, aktiv] */
+    /** Alle Varianten eines Artikels ersetzen. $zeilen = Liste von [bezeichnung, artikelnummer, aufschlag (+/−), inaktiv] */
     public static function variantenSetzen(int $artikelId, array $zeilen): void {
         $db = self::db();
         $db->execute("DELETE FROM shop_varianten WHERE artikel_id = ?", [$artikelId]);
@@ -194,17 +313,16 @@ class Shop {
         foreach ($zeilen as $z) {
             $bez = trim((string)($z['bezeichnung'] ?? ''));
             if ($bez === '') continue;
-            $preis = trim((string)($z['preis'] ?? ''));
             $db->execute(
-                "INSERT INTO shop_varianten (artikel_id, bezeichnung, artikelnummer, preis, sortierung, aktiv) VALUES (?, ?, ?, ?, ?, ?)",
+                "INSERT INTO shop_varianten (artikel_id, bezeichnung, artikelnummer, preis, aufschlag, sortierung, aktiv) VALUES (?, ?, ?, NULL, ?, ?, ?)",
                 [$artikelId, mb_substr($bez, 0, 80), trim((string)($z['artikelnummer'] ?? '')) ?: null,
-                 $preis !== '' ? (float)str_replace(',', '.', $preis) : null, ++$pos * 10, empty($z['inaktiv']) ? 1 : 0]
+                 self::aufschlagParsen($z['aufschlag'] ?? ''), ++$pos * 10, empty($z['inaktiv']) ? 1 : 0]
             );
         }
     }
-    /** Preis einer Variante (eigener Preis oder Artikelpreis) */
+    /** Preis einer Variante: gültiger Grundpreis (ggf. Aktionspreis) + Aufpreis der Größe */
     public static function variantePreis(array $variante, array $artikel): float {
-        return $variante['preis'] !== null ? (float)$variante['preis'] : (float)$artikel['preis'];
+        return max(0, round(self::effektivPreis($artikel) + (float)($variante['aufschlag'] ?? 0), 2));
     }
 
     // ---------------------------------------------------------------- Bilder
@@ -397,16 +515,20 @@ class Shop {
                 'name'          => $a['name'],
                 'beschreibung'  => $a['beschreibung'],
                 'artikelnummer' => $a['artikelnummer'],
-                'preis'         => (float)$a['preis'],
+                'preis'         => self::effektivPreis($a),            // gültiger Preis (bei Aktion der Aktionspreis)
+                'preis_regulaer'=> (float)$a['preis'],                 // normaler Preis – zum Durchstreichen, wenn höher
                 'lieferzeit'    => $a['lieferzeit'],
                 'sortierung'    => (int)$a['sortierung'],
                 'aktion'        => (int)($a['aktion'] ?? 0) === 1,
                 'aktion_text'   => ($a['aktion_text'] ?? '') !== '' ? $a['aktion_text'] : null,
                 'ausverkauft'   => (int)($a['ausverkauft'] ?? 0) === 1,
-                'varianten'     => array_map(fn($v) => [
+                'veredelung'    => (int)($a['veredelung'] ?? 0) === 1,
+                'varianten'     => array_values(array_map(fn($v) => [
                     'id' => (int)$v['id'], 'bezeichnung' => $v['bezeichnung'], 'artikelnummer' => $v['artikelnummer'],
-                    'preis' => $v['preis'] !== null ? (float)$v['preis'] : (float)$a['preis'],
-                ], array_filter(self::varianten((int)$a['id']), fn($v) => (int)$v['aktiv'] === 1)),
+                    'aufschlag' => (float)$v['aufschlag'],
+                    'preis' => self::variantePreis($v, $a),
+                    'preis_regulaer' => max(0, round((float)$a['preis'] + (float)$v['aufschlag'], 2)),
+                ], array_filter(self::varianten((int)$a['id']), fn($v) => (int)$v['aktiv'] === 1))),
                 'bilder'        => array_map(fn($b) => $bildBasis !== '' ? $bildBasis . '/' . rawurlencode($b['dateiname']) : $b['dateiname'], self::bilder((int)$a['id'])),
             ];
         }
@@ -423,6 +545,10 @@ class Shop {
             ],
             'kategorien' => $kategorien,
             'angebote'   => $angebote,
+            'veredelungen' => array_map(fn($v) => [
+                'id' => (int)$v['id'], 'art' => $v['art'], 'art_name' => $v['art_name'],
+                'position' => $v['position'], 'position_name' => $v['position_name'], 'preis' => (float)$v['preis'],
+            ], self::veredelungen(true)),
             'artikel'    => $artikel,
         ];
     }
@@ -440,9 +566,129 @@ class Shop {
         $b['positionen'] = self::db()->fetchAll("SELECT * FROM shop_bestellpositionen WHERE bestellung_id = ? ORDER BY id", [$id]);
         return $b;
     }
+    /** Vorlage einer Bestellung zum Herunterladen – nur wenn sie wirklich zu dieser Bestellung gehört. */
+    public static function bestellVorlage(int $bestellungId, string $datei): ?array {
+        if (!preg_match('/^B-[0-9]{6}-[a-f0-9]{6}_[a-f0-9]{12}\.(jpg|png|webp|pdf)$/', $datei)) return null;
+        foreach (self::db()->fetchAll("SELECT veredelung FROM shop_bestellpositionen WHERE bestellung_id = ? AND veredelung IS NOT NULL", [$bestellungId]) as $p) {
+            foreach ((array)json_decode((string)$p['veredelung'], true) as $v) {
+                if (($v['datei'] ?? '') === $datei) {
+                    $pfad = UPLOAD_DIR . DIRECTORY_SEPARATOR . 'shop_bestellungen' . DIRECTORY_SEPARATOR . $datei;
+                    if (!is_file($pfad)) return null;
+                    $endung = pathinfo($datei, PATHINFO_EXTENSION);
+                    return ['pfad' => $pfad, 'original' => (string)($v['original'] ?: $datei), 'typ' => self::VORLAGE_TYPEN[$endung] ?? 'application/octet-stream'];
+                }
+            }
+        }
+        return null;
+    }
     public static function bestellStatusSetzen(int $id, string $status): void {
+        self::bestellungAktualisieren($id, ['status' => $status]);
+    }
+    /** Status, Sendungsverfolgung und Nachricht an den Verein speichern; Statuswechsel landen im Verlauf. */
+    public static function bestellungAktualisieren(int $id, array $d): void {
+        $b = self::db()->fetchOne("SELECT * FROM shop_bestellungen WHERE id = ?", [$id]);
+        if (!$b) throw new RuntimeException('Bestellung nicht gefunden.');
+        $status = (string)($d['status'] ?? $b['status']);
         if (!isset(self::STATUS[$status])) throw new RuntimeException('Unbekannter Status.');
-        self::db()->execute("UPDATE shop_bestellungen SET status = ? WHERE id = ?", [$status, $id]);
+        $link = array_key_exists('tracking_url', $d) ? trim((string)$d['tracking_url']) : (string)$b['tracking_url'];
+        if ($link !== '' && !preg_match('#^https?://[^\s]+$#i', $link)) throw new RuntimeException('Der Verfolgungslink muss mit http:// oder https:// beginnen.');
+        $sendung = array_key_exists('sendungsnummer', $d) ? mb_substr(trim((string)$d['sendungsnummer']), 0, 100) : (string)$b['sendungsnummer'];
+        $nachricht = array_key_exists('nachricht', $d) ? trim((string)$d['nachricht']) : (string)$b['nachricht'];
+        $gewechselt = $status !== $b['status'];
+        self::db()->execute(
+            "UPDATE shop_bestellungen SET status = ?, sendungsnummer = ?, tracking_url = ?, nachricht = ?" . ($gewechselt ? ", status_geaendert_am = NOW()" : "") . " WHERE id = ?",
+            [$status, $sendung ?: null, mb_substr($link, 0, 500) ?: null, $nachricht ?: null, $id]
+        );
+        if ($gewechselt) self::db()->execute("INSERT INTO shop_bestellstatus (bestellung_id, status, erstellt_am) VALUES (?, ?, NOW())", [$id, $status]);
+    }
+    public static function bestellVerlauf(int $id): array {
+        return self::db()->fetchAll("SELECT status, erstellt_am FROM shop_bestellstatus WHERE bestellung_id = ? ORDER BY erstellt_am, id", [$id]);
+    }
+
+    /** Bestellungen einer Vereins-Installation – für die Ansicht „Meine Bestellungen“ (ohne interne Dateinamen) */
+    public static function bestellungenFuerInstallation(string $installationId): array {
+        if (!preg_match('/^[a-f0-9]{16,64}$/i', $installationId)) return [];
+        $db = self::db(); $out = [];
+        foreach ($db->fetchAll("SELECT * FROM shop_bestellungen WHERE installation_id = ? ORDER BY erstellt_am DESC LIMIT 200", [$installationId]) as $b) {
+            $verlauf = [];
+            foreach (self::bestellVerlauf((int)$b['id']) as $v) $verlauf[$v['status']] = $v['erstellt_am'];   // je Status der letzte Zeitpunkt
+            $out[] = [
+                'bestellnummer' => $b['bestellnummer'], 'erstellt_am' => $b['erstellt_am'],
+                'status' => $b['status'], 'status_name' => self::STATUS[$b['status']] ?? $b['status'],
+                'status_geaendert_am' => $b['status_geaendert_am'],
+                'verlauf' => $verlauf,
+                'sendungsnummer' => $b['sendungsnummer'], 'tracking_url' => $b['tracking_url'], 'nachricht' => $b['nachricht'],
+                'besteller_name' => $b['besteller_name'], 'lieferadresse' => $b['lieferadresse'], 'bemerkung' => $b['bemerkung'],
+                'versandkosten' => (float)$b['versandkosten'], 'summe' => (float)$b['summe'],
+                'positionen' => array_map(fn($p) => [
+                    'artikel_name' => $p['artikel_name'], 'variante' => $p['variante'], 'artikelnummer' => $p['artikelnummer'],
+                    'einzelpreis' => (float)$p['einzelpreis'], 'menge' => (int)$p['menge'],
+                    'veredelung' => array_map(fn($v) => ['bezeichnung' => $v['bezeichnung'] ?? '', 'preis' => (float)($v['preis'] ?? 0),
+                        'original' => $v['original'] ?? null, 'hinweis' => $v['hinweis'] ?? ''], (array)json_decode((string)$p['veredelung'], true)),
+                ], $db->fetchAll("SELECT * FROM shop_bestellpositionen WHERE bestellung_id = ? ORDER BY id", [$b['id']])),
+            ];
+        }
+        return $out;
+    }
+
+    // ---------------------------------------------------------------- Benachrichtigung per E-Mail
+    /** Funktions-Postfach (aus dem E-Mail-Programm), über das der Shop Mails verschickt – oder null */
+    public static function versandPostfach(): ?array {
+        $id = (int)self::einstellung('mail_konto', '0');
+        if (!$id) return null;
+        return self::db()->fetchOne("SELECT * FROM mail_konten WHERE id = ? AND benutzer_id IS NULL", [$id]) ?: null;
+    }
+    /**
+     * Neue Bestellung an die hinterlegte Adresse melden. Gibt true zurück, wenn gesendet wurde;
+     * ohne Adresse/Postfach passiert nichts. Fehler beim Senden werfen eine Exception.
+     */
+    public static function bestellungMelden(int $id): bool {
+        $an = trim(self::einstellung('bestell_email'));
+        $konto = self::versandPostfach();
+        if ($an === '' || !$konto) return false;
+        if (!filter_var($an, FILTER_VALIDATE_EMAIL)) throw new RuntimeException('Die Adresse für Bestell-Meldungen ist ungültig.');
+        $inhalt = self::bestellMailInhalt($id);
+        if (!$inhalt) return false;
+        MailSender::senden($konto, ['an' => [[$an, '']], 'betreff' => $inhalt['betreff'], 'html' => $inhalt['html']]);
+        return true;
+    }
+    /** Betreff und HTML der Bestell-Meldung (ohne zu senden) */
+    public static function bestellMailInhalt(int $id): ?array {
+        $b = self::bestellung($id);
+        if (!$b) return null;
+        $h = fn($t) => htmlspecialchars((string)$t, ENT_QUOTES, 'UTF-8');
+        $zeilen = '';
+        foreach ($b['positionen'] as $p) {
+            $ved = '';
+            foreach ((array)json_decode((string)$p['veredelung'], true) as $v) {
+                $ved .= '<br><span style="color:#5a6c7d;font-size:12px">+ ' . $h($v['bezeichnung']) . ' (' . self::euro($v['preis']) . ')'
+                      . ($v['original'] ? ' – Datei: ' . $h($v['original']) : '') . ($v['hinweis'] !== '' ? ' – „' . $h($v['hinweis']) . '“' : '') . '</span>';
+            }
+            $zeilen .= '<tr><td style="padding:6px 8px;border-bottom:1px solid #e0e4e8">' . $h($p['artikel_name']) . ($p['artikelnummer'] ? ' <span style="color:#8699ac">' . $h($p['artikelnummer']) . '</span>' : '') . $ved . '</td>'
+                     . '<td style="padding:6px 8px;border-bottom:1px solid #e0e4e8">' . $h($p['variante'] ?: '–') . '</td>'
+                     . '<td style="padding:6px 8px;border-bottom:1px solid #e0e4e8;text-align:right">' . (int)$p['menge'] . '</td>'
+                     . '<td style="padding:6px 8px;border-bottom:1px solid #e0e4e8;text-align:right;white-space:nowrap">' . self::euro($p['einzelpreis'] * $p['menge']) . '</td></tr>';
+        }
+        $link = rtrim(defined('BASE_URL') ? BASE_URL : '', '/') . '/shop_bestellungen.php';
+        $html = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#2c3e50;max-width:680px">'
+            . '<h2 style="color:#2d4a6a;margin:0 0 4px">Neue Shop-Bestellung ' . $h($b['bestellnummer']) . '</h2>'
+            . '<p style="margin:0 0 16px;color:#5a6c7d">' . $h($b['verein_name'] ?: 'Unbekannter Verein') . ' · ' . date('d.m.Y H:i', strtotime($b['erstellt_am'])) . '</p>'
+            . '<table style="width:100%;border-collapse:collapse;margin-bottom:12px"><tr>'
+            . '<td style="vertical-align:top;width:50%"><b>Besteller</b><br>' . $h($b['besteller_name'] ?: '–')
+            . ($b['besteller_email'] ? '<br>' . $h($b['besteller_email']) : '') . ($b['besteller_telefon'] ? '<br>' . $h($b['besteller_telefon']) : '') . '</td>'
+            . '<td style="vertical-align:top"><b>Lieferadresse</b><br>' . nl2br($h($b['lieferadresse'] ?: '–')) . '</td></tr></table>'
+            . ($b['bemerkung'] ? '<p><b>Bemerkung:</b> ' . nl2br($h($b['bemerkung'])) . '</p>' : '')
+            . '<table style="width:100%;border-collapse:collapse"><tr style="background:#f5f6f8">'
+            . '<th style="padding:6px 8px;text-align:left">Artikel</th><th style="padding:6px 8px;text-align:left">Größe</th><th style="padding:6px 8px;text-align:right">Menge</th><th style="padding:6px 8px;text-align:right">Summe</th></tr>'
+            . $zeilen
+            . ((float)$b['versandkosten'] > 0 ? '<tr><td colspan="3" style="padding:6px 8px;text-align:right">Versand</td><td style="padding:6px 8px;text-align:right">' . self::euro($b['versandkosten']) . '</td></tr>' : '')
+            . '<tr><td colspan="3" style="padding:8px;text-align:right"><b>Gesamt</b></td><td style="padding:8px;text-align:right"><b>' . self::euro($b['summe']) . '</b></td></tr></table>'
+            . '<p style="margin-top:20px"><a href="' . $h($link) . '" style="background:#4471A3;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">Bestellung in Syncopa öffnen</a></p>'
+            . '<p style="color:#8699ac;font-size:12px">Logos/Vorlagen der Veredelung sind in Syncopa unter Shop → Bestellungen abrufbar.</p></div>';
+        return [
+            'betreff' => 'Neue Shop-Bestellung ' . $b['bestellnummer'] . ' – ' . ($b['verein_name'] ?: 'Verein') . ' (' . self::euro($b['summe']) . ')',
+            'html' => $html,
+        ];
     }
 
     // ---------------------------------------------------------------- Angebundene Installationen (Registry)
@@ -489,31 +735,75 @@ class Shop {
 
     /** Eine von einem Verein übermittelte Bestellung speichern. Gibt [id, bestellnummer] zurück. */
     public static function bestellungAnlegen(array $d): array {
-        $positionen = [];
-        foreach ((array)($d['positionen'] ?? []) as $p) {
-            $name = trim((string)($p['artikel_name'] ?? ''));
-            $menge = max(1, (int)($p['menge'] ?? 1));
-            if ($name === '') continue;
-            $positionen[] = [
-                'artikel_name'  => mb_substr($name, 0, 200),
-                'variante'      => mb_substr(trim((string)($p['variante'] ?? '')), 0, 100) ?: null,
-                'artikelnummer' => mb_substr(trim((string)($p['artikelnummer'] ?? '')), 0, 50) ?: null,
-                'einzelpreis'   => round((float)($p['einzelpreis'] ?? 0), 2),
-                'menge'         => $menge,
-            ];
-        }
-        if (!$positionen) throw new RuntimeException('Die Bestellung enthält keine Positionen.');
-        $warenSumme = 0;
-        foreach ($positionen as $p) $warenSumme += $p['einzelpreis'] * $p['menge'];
-        $versand = self::versandkosten((float)$warenSumme);  // serverseitig aus eigenen Einstellungen
-        $summe   = round($warenSumme + $versand, 2);
-
         $db = self::db();
         // eindeutige Bestellnummer (mit ein paar Versuchen gegen Kollision)
         for ($i = 0; $i < 5; $i++) {
             $nr = 'B-' . date('ymd') . '-' . substr(bin2hex(random_bytes(3)), 0, 6);
             if (!$db->fetchOne("SELECT id FROM shop_bestellungen WHERE bestellnummer = ?", [$nr])) break;
         }
+
+        // Veredelung: Preise und Bezeichnungen aus der eigenen Preisliste (nicht vom Besteller übernehmen)
+        $angebot = [];
+        foreach (self::veredelungen(true) as $v) $angebot[(int)$v['id']] = $v;
+        $dateienRoh = (array)($d['dateien'] ?? []);
+        $abgelegt = [];      // Verweis → [datei, original] – jede Datei nur einmal speichern
+        $neueDateien = [];   // für das Aufräumen bei Fehlern
+        $vorlageAblegen = function (string $ref) use ($dateienRoh, &$abgelegt, &$neueDateien, $nr): array {
+            if (isset($abgelegt[$ref])) return $abgelegt[$ref];
+            $roh = $dateienRoh[$ref] ?? null;
+            if (!is_array($roh) || !isset($roh['inhalt'])) throw new RuntimeException('Eine Vorlage (Logo/Schriftzug) fehlt in der Bestellung. Bitte den Artikel erneut in den Warenkorb legen.');
+            $inhalt = base64_decode((string)$roh['inhalt'], true);
+            if ($inhalt === false || $inhalt === '') throw new RuntimeException('Eine Vorlage konnte nicht gelesen werden.');
+            if (strlen($inhalt) > self::BILD_MAX_BYTES) throw new RuntimeException('Eine Vorlage ist größer als 16 MB.');
+            $typ = (new finfo(FILEINFO_MIME_TYPE))->buffer($inhalt);
+            $endung = array_search($typ, self::VORLAGE_TYPEN, true);
+            if ($endung === false) throw new RuntimeException('Eine Vorlage hat ein nicht erlaubtes Dateiformat (erlaubt: JPG, PNG, WebP, PDF).');
+            $name = $nr . '_' . bin2hex(random_bytes(6)) . '.' . ($endung === 'jpeg' ? 'jpg' : $endung);
+            $pfad = self::vorlagenOrdner('bestellung') . DIRECTORY_SEPARATOR . $name;
+            if (file_put_contents($pfad, $inhalt) === false) throw new RuntimeException('Eine Vorlage konnte nicht gespeichert werden.');
+            @chmod($pfad, 0664);
+            $neueDateien[] = $pfad;
+            return $abgelegt[$ref] = ['datei' => $name, 'original' => self::dateinameSauber((string)($roh['original'] ?? $name))];
+        };
+
+        try {
+            $positionen = [];
+            foreach ((array)($d['positionen'] ?? []) as $p) {
+                $name = trim((string)($p['artikel_name'] ?? ''));
+                $menge = max(1, (int)($p['menge'] ?? 1));
+                if ($name === '') continue;
+                $ved = []; $vedPreis = 0.0;
+                foreach ((array)($p['veredelung'] ?? []) as $w) {
+                    $vid = (int)($w['id'] ?? 0);
+                    if (!isset($angebot[$vid])) throw new RuntimeException('Eine gewählte Veredelung wird nicht mehr angeboten. Bitte den Artikel neu in den Warenkorb legen.');
+                    $datei = trim((string)($w['datei'] ?? '')) !== '' ? $vorlageAblegen((string)$w['datei']) : ['datei' => null, 'original' => null];
+                    $ved[] = [
+                        'art' => $angebot[$vid]['art'], 'position' => $angebot[$vid]['position'], 'bezeichnung' => $angebot[$vid]['bezeichnung'],
+                        'preis' => round((float)$angebot[$vid]['preis'], 2),
+                        'hinweis' => mb_substr(trim((string)($w['hinweis'] ?? '')), 0, 300),
+                        'datei' => $datei['datei'], 'original' => $datei['original'],
+                    ];
+                    $vedPreis += (float)$angebot[$vid]['preis'];
+                }
+                $positionen[] = [
+                    'artikel_name'  => mb_substr($name, 0, 200),
+                    'variante'      => mb_substr(trim((string)($p['variante'] ?? '')), 0, 100) ?: null,
+                    'artikelnummer' => mb_substr(trim((string)($p['artikelnummer'] ?? '')), 0, 50) ?: null,
+                    'einzelpreis'   => round((float)($p['einzelpreis'] ?? 0) + $vedPreis, 2),   // Grundpreis + Veredelung je Stück
+                    'menge'         => $menge,
+                    'veredelung'    => $ved ? json_encode($ved, JSON_UNESCAPED_UNICODE) : null,
+                ];
+            }
+            if (!$positionen) throw new RuntimeException('Die Bestellung enthält keine Positionen.');
+        } catch (\Throwable $e) {
+            foreach ($neueDateien as $f) @unlink($f);
+            throw $e;
+        }
+        $warenSumme = 0;
+        foreach ($positionen as $p) $warenSumme += $p['einzelpreis'] * $p['menge'];
+        $versand = self::versandkosten((float)$warenSumme);  // serverseitig aus eigenen Einstellungen
+        $summe   = round($warenSumme + $versand, 2);
+
         $db->beginTransaction();
         try {
             $db->execute(
@@ -536,15 +826,20 @@ class Shop {
             $id = (int)$db->lastInsertId();
             foreach ($positionen as $p) {
                 $db->execute(
-                    "INSERT INTO shop_bestellpositionen (bestellung_id, artikel_name, variante, artikelnummer, einzelpreis, menge) VALUES (?, ?, ?, ?, ?, ?)",
-                    [$id, $p['artikel_name'], $p['variante'], $p['artikelnummer'], $p['einzelpreis'], $p['menge']]
+                    "INSERT INTO shop_bestellpositionen (bestellung_id, artikel_name, variante, artikelnummer, einzelpreis, menge, veredelung) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    [$id, $p['artikel_name'], $p['variante'], $p['artikelnummer'], $p['einzelpreis'], $p['menge'], $p['veredelung']]
                 );
             }
+            $db->execute("INSERT INTO shop_bestellstatus (bestellung_id, status, erstellt_am) VALUES (?, 'neu', NOW())", [$id]);
             $db->commit();
         } catch (\Throwable $e) {
             $db->rollback();
+            foreach ($neueDateien as $f) @unlink($f);
             throw $e;
         }
+        // Benachrichtigung – ein Fehler beim Mailversand darf die Bestellung nicht verhindern
+        try { self::bestellungMelden($id); }
+        catch (\Throwable $e) { error_log('Syncopa Shop: Bestell-Mail ' . $nr . ' fehlgeschlagen: ' . $e->getMessage()); }
         return ['id' => $id, 'bestellnummer' => $nr, 'versandkosten' => $versand, 'summe' => $summe];
     }
 }

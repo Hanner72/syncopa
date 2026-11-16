@@ -1507,7 +1507,9 @@ CREATE TABLE IF NOT EXISTS `shop_artikel` (
   `aktiv` tinyint(1) NOT NULL DEFAULT 1,
   `aktion` tinyint(1) NOT NULL DEFAULT 0,
   `aktion_text` varchar(40) DEFAULT NULL,
+  `aktionspreis` decimal(10,2) DEFAULT NULL,
   `ausverkauft` tinyint(1) NOT NULL DEFAULT 0,
+  `veredelung` tinyint(1) NOT NULL DEFAULT 0,
   `sortierung` int(11) NOT NULL DEFAULT 100,
   `erstellt_am` datetime NOT NULL,
   `aktualisiert_am` datetime DEFAULT NULL,
@@ -1521,6 +1523,7 @@ CREATE TABLE IF NOT EXISTS `shop_varianten` (
   `bezeichnung` varchar(80) NOT NULL,
   `artikelnummer` varchar(50) DEFAULT NULL,
   `preis` decimal(10,2) DEFAULT NULL,
+  `aufschlag` decimal(10,2) NOT NULL DEFAULT 0.00,
   `sortierung` int(11) NOT NULL DEFAULT 100,
   `aktiv` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`),
@@ -1550,6 +1553,10 @@ CREATE TABLE IF NOT EXISTS `shop_bestellungen` (
   `versandkosten` decimal(10,2) NOT NULL DEFAULT 0.00,
   `summe` decimal(10,2) NOT NULL DEFAULT 0.00,
   `status` varchar(20) NOT NULL DEFAULT 'neu',
+  `sendungsnummer` varchar(100) DEFAULT NULL,
+  `tracking_url` varchar(500) DEFAULT NULL,
+  `nachricht` text DEFAULT NULL,
+  `status_geaendert_am` datetime DEFAULT NULL,
   `erstellt_am` datetime NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_bestellnummer` (`bestellnummer`)
@@ -1591,8 +1598,29 @@ CREATE TABLE IF NOT EXISTS `shop_bestellpositionen` (
   `artikelnummer` varchar(50) DEFAULT NULL,
   `einzelpreis` decimal(10,2) NOT NULL DEFAULT 0.00,
   `menge` int(11) NOT NULL DEFAULT 1,
+  `veredelung` text DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_bestellung` (`bestellung_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `shop_bestellstatus` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `bestellung_id` int(11) NOT NULL,
+  `status` varchar(20) NOT NULL,
+  `erstellt_am` datetime NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_bestellung` (`bestellung_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `shop_veredelungen` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `art` varchar(20) NOT NULL,
+  `position` varchar(30) NOT NULL,
+  `preis` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `aktiv` tinyint(1) NOT NULL DEFAULT 0,
+  `sortierung` int(11) NOT NULL DEFAULT 100,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_art_position` (`art`,`position`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 COMMIT;
