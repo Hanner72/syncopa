@@ -5,6 +5,9 @@
 
 class MailKonto {
 
+    /** Name des E-Mail-Programms (Titelleiste, Browser-Tab) – hier an einer Stelle änderbar */
+    public const APP_NAME = 'SyncoMail';
+
     /** Vorlagen für bekannte Anbieter: Name => [imap_host, imap_port, imap_sicherheit, smtp_host, smtp_port, smtp_sicherheit] */
     public const ANBIETER = [
         'world4you'  => ['World4You',             'imap.world4you.com',     993, 'ssl', 'smtp.world4you.com',     465, 'ssl'],

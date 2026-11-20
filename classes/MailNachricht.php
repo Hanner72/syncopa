@@ -11,7 +11,8 @@ class MailNachricht {
 
     /**
      * Baut eine Nachricht als Rohtext (CRLF). $n: von [email, name], an/cc/bcc [[email, name]], betreff, html,
-     * anhaenge [[name, typ, daten]], antwort_auf (Message-ID), referenzen (Text).
+     * anhaenge [[name, typ, daten]], antwort_auf (Message-ID), referenzen (Text);
+     * für Entwürfe optional bcc_im_kopf (true) und kopf_extra [Name => Wert, bereits kodiert/gefaltet].
      * Liefert ['roh' => ..., 'message_id' => ..., 'empfaenger' => [alle Adressen inkl. Bcc]].
      */
     public static function bauen(array $n): array {
@@ -35,8 +36,15 @@ class MailNachricht {
             $kopf['In-Reply-To'] = $n['antwort_auf'];
             $kopf['References'] = trim(($n['referenzen'] ?? '') . ' ' . $n['antwort_auf']);
         }
+        // Nur für Entwürfe: Bcc sichtbar im Kopf und weitere Kopfzeilen (z. B. X-Syncopa-Entwurf)
+        if (!empty($n['bcc_im_kopf']) && !empty($n['bcc'])) {
+            $kopf['Bcc'] = implode(', ', array_map(fn($a) => self::adresse($a[0], $a[1] ?? ''), $n['bcc']));
+        }
         $kopf['MIME-Version'] = '1.0';
         $kopf['X-Mailer'] = 'Syncopa';
+        foreach ((array)($n['kopf_extra'] ?? []) as $name => $wert) {
+            $kopf[$name] = $wert;
+        }
 
         $alternativ = self::grenze();
         $teilAlternativ = "Content-Type: multipart/alternative; boundary=\"$alternativ\"\r\n\r\n"
@@ -166,6 +174,7 @@ class MailNachricht {
             'von'        => self::adressenZerlegen($k['from'][0] ?? ''),
             'an'         => self::adressenZerlegen(implode(', ', $k['to'] ?? [])),
             'cc'         => self::adressenZerlegen(implode(', ', $k['cc'] ?? [])),
+            'bcc'        => self::adressenZerlegen(implode(', ', $k['bcc'] ?? [])),
             'antwort_an' => self::adressenZerlegen($k['reply-to'][0] ?? ''),
             'datum'      => isset($k['date'][0]) && strtotime($k['date'][0]) ? date('Y-m-d H:i:s', strtotime($k['date'][0])) : null,
             'message_id' => trim($k['message-id'][0] ?? ''),
@@ -372,6 +381,12 @@ class MailNachricht {
                 $cids[strtolower($t['cid'])] = 'data:' . $t['typ'] . ';base64,' . base64_encode($t['daten']);
             }
         }
+        // Word/Outlook-Tags mit Namensraum (<o:p>, <v:shape>, <w:…>): der HTML-Parser macht aus <o:p> ein <p> –
+        // ein Absatz im Absatz, der im Browser jede Zeile mit einer Leerzeile Abstand zerreißt. Tags entfernen, Inhalt behalten.
+        $html = preg_replace('#</?[a-z][a-z0-9]*:[a-z][a-z0-9_-]*\b[^>]*>#i', '', $html);
+        // Der Text ist hier bereits UTF-8. Veraltete Angaben im HTML (z. B. <meta … charset=iso-8859-1> von Outlook
+        // oder <?xml encoding="…">) würden den Parser auf den alten Zeichensatz umstellen → „GrÃ¼ÃŸe“ statt „Grüße“.
+        $html = preg_replace(['#<meta\b[^>]*charset[^>]*>#i', '#<\?xml[^>]*\?>#i'], '', $html);
         $dom = new DOMDocument();
         libxml_use_internal_errors(true);
         $dom->loadHTML('<?xml encoding="UTF-8">' . $html, LIBXML_NONET | LIBXML_NOWARNING | LIBXML_NOERROR);

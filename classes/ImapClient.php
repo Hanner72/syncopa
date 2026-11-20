@@ -11,6 +11,7 @@ class ImapClient {
     private array $faehigkeiten = [];
     private ?string $gewaehlt = null;
     private ?array $ordnerCache = null;
+    private string $letzterStatus = '';
 
     /** Sonderordner: Rolle => [RFC-6154-Kennzeichen, übliche Namen] */
     private const SONDER = [
@@ -412,10 +413,25 @@ class ImapClient {
         $this->befehl($this->kann('UIDPLUS') ? "UID EXPUNGE $menge" : 'EXPUNGE');
     }
 
-    /** Nachricht in einem Ordner ablegen (z. B. gesendete Mail in „Gesendet“) */
-    public function ablegen(string $ordner, string $roh, array $kennzeichen = []): void {
+    /**
+     * Nachricht in einem Ordner ablegen (z. B. gesendete Mail in „Gesendet“).
+     * Liefert die UID der abgelegten Nachricht, wenn der Server sie meldet (UIDPLUS: [APPENDUID …]), sonst null.
+     */
+    public function ablegen(string $ordner, string $roh, array $kennzeichen = []): ?int {
         $roh = preg_replace("/\r?\n/", "\r\n", $roh);
         $this->befehl('APPEND ' . $this->zeichenkette($ordner) . ' (' . implode(' ', $kennzeichen) . ') {' . strlen($roh) . '}', [$roh]);
+        return preg_match('/\[APPENDUID \d+ (\d+)\]/i', $this->letzterStatus, $m) ? (int)$m[1] : null;
+    }
+
+    /** UID einer Nachricht im gewählten Ordner anhand ihrer Message-ID (oder null) */
+    public function uidZuMessageId(string $messageId): ?int {
+        $uids = [];
+        foreach ($this->befehl('UID SEARCH HEADER Message-ID {' . strlen($messageId) . '}', [$messageId]) as $a) {
+            if ($a['typ'] === 'SEARCH' && preg_match('/^\* SEARCH(.*)$/i', $a['text'], $m)) {
+                foreach (preg_split('/\s+/', trim($m[1])) as $u) if (ctype_digit($u)) $uids[] = (int)$u;
+            }
+        }
+        return $uids ? max($uids) : null;
     }
 
     // ------------------------------------------------------------------------------------------------
@@ -454,6 +470,7 @@ class ImapClient {
                     throw new RuntimeException('Server meldet: ' . preg_replace('/^(NO|BAD)\s*/i', '', $status));
                 }
                 $this->faehigkeitenLesen($status);
+                $this->letzterStatus = $status;
                 return $antworten;
             }
             if (str_starts_with($zeile, '+')) {
