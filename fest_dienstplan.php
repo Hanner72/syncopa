@@ -111,11 +111,11 @@ foreach ($gridData as $stSchichten) {
 $slotCount = ($endMin - $startMin) / 30;
 $gridW     = $slotCount * $SLOT_W;
 
-// Station-Farben
-$stPalette = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16','#f97316','#6366f1'];
+// Station-Farben: selbst gewählt (Station bearbeiten), sonst Vorschlagsfarbe nach Reihenfolge – an allen Tagen gleich
+$alleFarben = (new FestStation())->farbenFuerFest((int)$festId);
 $stColors  = [];
-foreach ($stationen as $i => $s) {
-    $stColors[$s['id']] = $stPalette[$i % count($stPalette)];
+foreach ($stationen as $s) {
+    $stColors[$s['id']] = $alleFarben[(int)$s['id']] ?? FestStation::PALETTE[0];
 }
 
 $stationenJson = array_map(fn($s) => [

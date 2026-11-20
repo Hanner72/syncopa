@@ -48,9 +48,9 @@ class FestKopieren {
         );
         foreach ($stationen as $s) {
             $this->db->execute(
-                "INSERT INTO fest_stationen (fest_id, name, beschreibung, benoetigte_helfer, oeffnung_von, oeffnung_bis, sortierung)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)",
-                [$nach, $s['name'], $s['beschreibung'], $s['benoetigte_helfer'], $s['oeffnung_von'], $s['oeffnung_bis'], $s['sortierung']]
+                "INSERT INTO fest_stationen (fest_id, name, beschreibung, benoetigte_helfer, oeffnung_von, oeffnung_bis, farbe, sortierung)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                [$nach, $s['name'], $s['beschreibung'], $s['benoetigte_helfer'], $s['oeffnung_von'], $s['oeffnung_bis'], FestStation::farbeOderNull($s['farbe'] ?? null), $s['sortierung']]
             );
         }
         return count($stationen);

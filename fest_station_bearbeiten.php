@@ -32,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'oeffnung_von'      => $_POST['oeffnung_von'] ?? '',
         'oeffnung_bis'      => $_POST['oeffnung_bis'] ?? '',
         'sortierung'        => (int)($_POST['sortierung'] ?? 100),
+        'farbe'             => $_POST['farbe'] ?? '',
     ];
 
     if (empty($data['name'])) {
@@ -52,8 +53,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Farbe: gespeicherte, bei Fehler die eingegebene, sonst die bisher im Dienstplan gezeigte bzw. die nächste freie Vorschlagsfarbe
+$farben = $stationObj->farbenFuerFest((int)$festId);
+if (isset($data['farbe']) && FestStation::farbeOderNull($data['farbe'])) {
+    $farbe = FestStation::farbeOderNull($data['farbe']);
+} elseif ($isEdit) {
+    $farbe = $farben[(int)$id] ?? FestStation::PALETTE[0];
+} else {
+    $frei = array_values(array_diff(FestStation::PALETTE, $farben));
+    $farbe = $frei[0] ?? FestStation::PALETTE[count($farben) % count(FestStation::PALETTE)];
+}
+$farbeVergeben = array_diff_key($farben, $isEdit ? [(int)$id => 1] : []); // Farben der anderen Stationen
+
 include 'includes/header.php';
 ?>
+<style>
+    .farb-wahl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .farb-wahl .muster { width: 32px; height: 32px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0;
+                         box-shadow: inset 0 0 0 2px rgba(255,255,255,.35); position: relative; }
+    .farb-wahl .muster.aktiv { border-color: var(--bs-body-color); box-shadow: 0 0 0 2px var(--bs-body-bg) inset; }
+    .farb-wahl .muster.vergeben::after { content: ''; position: absolute; right: -2px; bottom: -2px; width: 10px; height: 10px; border-radius: 50%;
+                         background: var(--bs-body-bg); border: 2px solid currentColor; }
+    .farb-wahl input[type=color] { width: 44px; height: 34px; padding: 2px; }
+    .farb-vorschau { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px 4px 4px; border-radius: 6px; font-size: 13px; }
+    .farb-vorschau .balken { width: 70px; height: 22px; border-radius: 4px; color: #fff; font-size: 11px; font-weight: 600;
+                             display: flex; align-items: center; justify-content: center; }
+</style>
 
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
@@ -108,6 +133,21 @@ include 'includes/header.php';
                             <div class="form-text">Liegt „Bis" vor „Von" (z.B. 16:00–02:00), wird automatisch der Folgetag angenommen.</div>
                         </div>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="farbe">Farbe im Dienstplan</label>
+                        <div class="farb-wahl">
+                            <?php foreach (FestStation::PALETTE as $p):
+                                $vergeben = array_search($p, $farbeVergeben, true) !== false; ?>
+                            <button type="button" class="muster<?php echo $p === $farbe ? ' aktiv' : ''; ?><?php echo $vergeben ? ' vergeben' : ''; ?>"
+                                    style="background:<?php echo $p; ?>;color:<?php echo $p; ?>" data-farbe="<?php echo $p; ?>"
+                                    title="<?php echo $vergeben ? 'Diese Farbe hat schon eine andere Station' : 'Farbe wählen'; ?>" aria-label="Farbe <?php echo $p; ?>"></button>
+                            <?php endforeach; ?>
+                            <input type="color" class="form-control form-control-color" id="farbe" name="farbe" value="<?php echo htmlspecialchars($farbe); ?>" title="Eigene Farbe wählen">
+                            <span class="farb-vorschau"><span class="balken" id="farbVorschau" style="background:<?php echo htmlspecialchars($farbe); ?>">08:00</span>
+                                <span class="text-muted small">so erscheint die Schicht im Dienstplan</span></span>
+                        </div>
+                        <div class="form-text">Farben mit kleinem Kreis verwendet schon eine andere Station dieses Festes.</div>
+                    </div>
                     <div class="col-md-4 mb-3">
                         <label for="sortierung" class="form-label">Sortierung</label>
                         <input type="number" class="form-control" id="sortierung" name="sortierung"
@@ -129,3 +169,15 @@ include 'includes/header.php';
 </form>
 
 <?php include 'includes/footer.php'; ?>
+<script>
+(function () {
+    var feld = document.getElementById('farbe'), vorschau = document.getElementById('farbVorschau');
+    var muster = document.querySelectorAll('.farb-wahl .muster');
+    function setzen(farbe) {
+        feld.value = farbe; vorschau.style.background = farbe;
+        muster.forEach(function (m) { m.classList.toggle('aktiv', m.dataset.farbe === farbe.toLowerCase()); });
+    }
+    muster.forEach(function (m) { m.addEventListener('click', function () { setzen(m.dataset.farbe); }); });
+    feld.addEventListener('input', function () { setzen(feld.value); });
+})();
+</script>
