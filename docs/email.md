@@ -34,7 +34,8 @@ Unter **Mein Konto** kann jeder Benutzer außerdem seine E-Mail-Adresse und sein
 
 ![E-Mail](screenshots/email1.png)
 
-- **Ordnerleiste links:** alle Postfächer mit ihren Ordnern und der Zahl ungelesener Nachrichten
+- **Titelleiste SyncoMail** oben mit dem aktuellen Postfach und den Umschaltern **E-Mail** / **Kontakte**
+- **Ordnerleiste links:** alle Postfächer mit ihren Ordnern und der Zahl ungelesener Nachrichten, bei **Entwürfe** die Zahl der gespeicherten Entwürfe in eckigen Klammern (z. B. „Entwürfe [3]“)
 - **Liste in der Mitte:** nach Datum gruppiert (Heute, Gestern, Diese Woche …), mit Suche und Filter „Ungelesen“
 - **Lesebereich rechts:** Bilder aus dem Internet werden zum Schutz der Privatsphäre erst auf Klick geladen
 - **Befehlsleiste:** Neue E-Mail, Löschen (auch mit der Entf-Taste), Archivieren, Verschieben nach, Junk, Antworten, Allen antworten, Weiterleiten, Gelesen/Ungelesen, Kennzeichnen
@@ -49,6 +50,15 @@ Beim Schreiben schlägt das **Adressbuch** Mitglieder und Gruppen vor, z. B. „
 - Der Empfänger braucht keine Anmeldung. Der Link enthält einen langen Zufallsschlüssel.
 - Unter **Mein Konto → Meine Download-Links** sieht man, wie oft eine Datei heruntergeladen wurde, kann den Link kopieren oder vorzeitig löschen.
 - **Voraussetzung:** Syncopa muss von außen erreichbar sein. Ein Administrator trägt die öffentliche Adresse unter **E-Mail → Funktions-Postfächer → Große Dateien als Download-Link** ein (z. B. `https://verein.at/syncopa`). Solange dort eine interne Adresse steht, verschickt Syncopa keine Links, die draußen nicht funktionieren würden.
+
+### Entwürfe
+
+- Während des Schreibens speichert SyncoMail die Nachricht **automatisch** als Entwurf (einige Sekunden nach der letzten Änderung). Unten steht dann „Entwurf gespeichert“ mit Uhrzeit.
+- Von Hand geht es mit dem Knopf **Entwurf speichern** oder mit **Strg+S**.
+- Öffnet man eine andere Mail, einen anderen Ordner oder eine neue Nachricht, wird die angefangene Nachricht vorher gesichert, es geht nichts verloren.
+- Entwürfe liegen im Ordner **Entwürfe** am Mailserver und sind damit auch in Outlook oder am Handy sichtbar. Ein Klick auf einen Entwurf öffnet ihn zum Weiterschreiben, mit Empfängern (auch Gruppen), Betreff, Text und Anhängen.
+- **Senden** löscht den Entwurf. **Verwerfen** löscht ihn nach einer Rückfrage.
+- Sehr große Dateien, die als Download-Link verschickt werden, kommen nicht in den Entwurf. Sie werden erst beim Senden hochgeladen.
 
 Unter **„Gesendete speichern in“** wählt man, in welchem Ordner die gesendete Nachricht abgelegt wird. Standard ist „Gesendete Elemente“.
 
@@ -68,7 +78,8 @@ Hier werden Adressen gespeichert, die keine Mitglieder sind, z. B. Gemeinde, Pfa
 - Der Haken **„Für alle mit E-Mail-Zugang sichtbar“** macht einen Kontakt **gemeinsam**: Alle, die ein Postfach in Syncopa nutzen, sehen ihn. Ohne Haken bleibt er **privat** und nur der Ersteller sieht ihn.
 - Ändern und löschen kann einen Kontakt nur, wer ihn angelegt hat, oder ein Administrator. Die anderen sehen gemeinsame Kontakte nur zum Lesen.
 - Beim Schreiben schlägt das Adressbuch Kontakte vor (Hinweis „Kontakt“ bzw. „Kontakt (privat)“).
-- Beim Lesen einer Mail speichert **„+ Kontakt“** neben dem Absender diesen gleich als Kontakt.
+- Beim Lesen einer Mail öffnet **„+ Kontakt“** neben dem Absender einen Dialog, der den Absender gleich als Kontakt speichert. Man bleibt dabei in der Mail.
+- Die Kontaktseite ist aufgebaut wie „Personen“ in Outlook: Filter links, Liste von A bis Z in der Mitte, Visitenkarte rechts. Das Suchfeld sitzt in der Befehlsleiste.
 - **E-Mail schreiben** in der Kontaktliste öffnet eine neue Nachricht an den Kontakt.
 - Mails von Kontakten kommen nie in den Junk-Ordner.
 

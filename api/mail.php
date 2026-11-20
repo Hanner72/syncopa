@@ -73,6 +73,87 @@ function empfaengerLesen(string $text): array {
     return [$adressen, $gruppen];
 }
 
+/** Für Entwürfe: nur gültige Adressen in die Kopfzeilen (Gruppen und Tippfehler bleiben in den Entwurfsdaten erhalten) */
+function entwurfEmpfaenger(string $text): array {
+    $adressen = [];
+    foreach (preg_split('/[,;\n]+/', $text) as $teil) {
+        $teil = trim($teil);
+        if ($teil === '' || str_starts_with($teil, 'gruppe:')) continue;
+        foreach (MailNachricht::adressenZerlegen($teil) as $a) {
+            if (filter_var($a[0], FILTER_VALIDATE_EMAIL)) $adressen[] = $a;
+        }
+    }
+    return $adressen;
+}
+
+/** Hochgeladene Anhänge der Anfrage: [[name, typ, daten], …] und Gesamtgröße. Nie still weglassen – lieber mit Begründung abbrechen. */
+function hochgeladeneAnhaenge(): array {
+    $anhaenge = [];
+    $groesse = 0;
+    foreach ((array)($_FILES['anhaenge']['tmp_name'] ?? []) as $i => $tmp) {
+        $fehler = $_FILES['anhaenge']['error'][$i] ?? UPLOAD_ERR_NO_FILE;
+        $dateiname = (string)($_FILES['anhaenge']['name'][$i] ?? 'Datei');
+        if ($fehler === UPLOAD_ERR_NO_FILE) continue;
+        if ($fehler === UPLOAD_ERR_INI_SIZE || $fehler === UPLOAD_ERR_FORM_SIZE) {
+            throw new RuntimeException("„{$dateiname}“ ist zu groß für einen Anhang (höchstens " . ini_get('upload_max_filesize') . '). Bitte als Download-Link senden.');
+        }
+        if ($fehler !== UPLOAD_ERR_OK || !is_uploaded_file($tmp)) throw new RuntimeException("„{$dateiname}“ konnte nicht hochgeladen werden. Bitte erneut versuchen.");
+        $daten = (string)file_get_contents($tmp);
+        $groesse += strlen($daten);
+        $anhaenge[] = [basename($dateiname), (string)($_FILES['anhaenge']['type'][$i] ?: 'application/octet-stream'), $daten];
+    }
+    return [$anhaenge, $groesse];
+}
+
+/**
+ * Liest eine vorhandene Nachricht (Original einer Antwort/Weiterleitung oder gespeicherter Entwurf).
+ * Liefert [zerlegte Nachricht oder null, ihre Anhänge ohne die abgewählten Teile $ohne, Größe dieser Anhänge].
+ */
+function nachrichtMitAnhaengen(array $konto, string $ordner, int $uid, array $ohne): array {
+    $imap = verbinden($konto);
+    $imap->waehlen($ordner, true);
+    $roh = $imap->rohNachricht($uid);
+    $imap->abmelden();
+    if ($roh === null) return [null, [], 0];
+    $n = MailNachricht::zerlegen($roh);
+    $liste = [];
+    $groesse = 0;
+    foreach ($n['anhaenge'] as $a) {
+        if ($a['inline'] || in_array($a['teil'], $ohne, true)) continue;
+        $liste[] = [$a['name'], $a['typ'], $n['teile'][$a['teil']]['daten']];
+        $groesse += $a['groesse'];
+    }
+    return [$n, $liste, $groesse];
+}
+
+/** Bezug aus einem gespeicherten Entwurf: [In-Reply-To, References ohne diese ID] */
+function entwurfBezug(?array $n): array {
+    $irt = trim($n['kopf']['in-reply-to'][0] ?? '');
+    $ref = trim($n['kopf']['references'][0] ?? '');
+    return $irt === '' ? [null, ''] : [$irt, trim(str_replace($irt, '', $ref))];
+}
+
+/** Gespeicherter Entwurf aus der Anfrage (entwurf_konto, entwurf_ordner, entwurf_uid) oder null */
+function entwurfAusAnfrage(array $konto): ?array {
+    if (empty($_POST['entwurf_uid'])) return null;
+    $k = (int)($_POST['entwurf_konto'] ?? 0);
+    return ['konto' => ($k && $k !== (int)$konto['id']) ? MailKonto::laden($k) : $konto,
+            'ordner' => (string)($_POST['entwurf_ordner'] ?? ''), 'uid' => (int)$_POST['entwurf_uid']];
+}
+
+/** Entwurf endgültig entfernen (nach dem Senden bzw. wenn eine neuere Fassung gespeichert ist). Fehler sind hier egal. */
+function entwurfEntfernen(?array $e): void {
+    if (!$e || $e['ordner'] === '' || $e['uid'] <= 0) return;
+    try {
+        $imap = verbinden($e['konto']);
+        $imap->waehlen($e['ordner']);
+        $imap->endgueltigLoeschen([$e['uid']]);
+        $imap->abmelden();
+    } catch (\Throwable $ex) {
+        error_log('Syncopa Mail: Entwurf konnte nicht entfernt werden: ' . $ex->getMessage());
+    }
+}
+
 /** Empfängergruppen aus Syncopa (nur mit Leserecht auf Mitglieder) */
 function gruppen(): array {
     if (!Session::checkPermission('mitglieder', 'lesen')) return [];
@@ -125,12 +206,15 @@ try {
             foreach ($imap->ordner() as $o) {
                 if (!$o['auswaehlbar']) continue;
                 $ungelesen = 0;
-                if ($o['rolle'] !== 'gesendet' && $o['rolle'] !== 'entwuerfe' && count($liste) < 40) {
+                $anzahl = null; // nur bei „Entwürfe“: Anzahl gespeicherter Entwürfe (wie Outlook: „Entwürfe [3]“)
+                if ($o['rolle'] === 'entwuerfe') {
+                    try { $anzahl = $imap->status($o['name'])['gesamt']; } catch (\Throwable $e) {}
+                } elseif ($o['rolle'] !== 'gesendet' && count($liste) < 40) {
                     try { $ungelesen = $imap->status($o['name'])['ungelesen']; } catch (\Throwable $e) {}
                 }
                 $liste[] = [
                     'name' => $o['name'], 'anzeige' => ORDNER_NAMEN[$o['rolle']] ?? $o['anzeige'],
-                    'rolle' => $o['rolle'], 'ebene' => $o['ebene'], 'ungelesen' => $ungelesen,
+                    'rolle' => $o['rolle'], 'ebene' => $o['ebene'], 'ungelesen' => $ungelesen, 'anzahl' => $anzahl,
                 ];
             }
             $imap->abmelden();
@@ -173,8 +257,15 @@ try {
             $imap->abmelden();
             $n = MailNachricht::zerlegen($roh);
             [$html, $extern] = MailNachricht::anzeigeHtml($n, !empty($_GET['bilder']));
+            // Entwurf zum Weiterschreiben: Entwurfsdaten aus dem Kopf und der Text ohne Dokument-Hülle
+            $entwurf = null;
+            if (!empty($_GET['entwurf'])) {
+                $kodiert = preg_replace('/\s+/', '', $n['kopf']['x-syncopa-entwurf'][0] ?? '');
+                $entwurf = ['daten' => $kodiert !== '' ? json_decode((string)base64_decode($kodiert), true) : null,
+                            'html' => preg_match('#<body[^>]*>(.*)</body>#is', $html, $m) ? $m[1] : $html];
+            }
             antworten(['nachricht' => [
-                'uid' => $uid, 'betreff' => $n['betreff'], 'von' => $n['von'], 'an' => $n['an'], 'cc' => $n['cc'],
+                'uid' => $uid, 'betreff' => $n['betreff'], 'von' => $n['von'], 'an' => $n['an'], 'cc' => $n['cc'], 'bcc' => $n['bcc'], 'entwurf' => $entwurf,
                 'antwort_an' => $n['antwort_an'], 'datum' => $n['datum'], 'message_id' => $n['message_id'], 'referenzen' => $n['referenzen'],
                 'html' => $html, 'externe_bilder' => $extern,
                 'zitat_html' => $n['html'] !== null ? MailNachricht::anzeigeHtml($n, false)[0] : nl2br(htmlspecialchars((string)$n['text'])),
@@ -252,39 +343,24 @@ try {
             if (!$an && !$cc && !$bcc) throw new RuntimeException('Bitte mindestens einen Empfänger angeben.');
             if (!$an) $an = [[$konto['email'], $konto['anzeigename'] ?: '']]; // nur Bcc: an sich selbst
 
-            $anhaenge = [];
-            $groesse = 0;
-            foreach ((array)($_FILES['anhaenge']['tmp_name'] ?? []) as $i => $tmp) {
-                $fehler = $_FILES['anhaenge']['error'][$i] ?? UPLOAD_ERR_NO_FILE;
-                $dateiname = (string)($_FILES['anhaenge']['name'][$i] ?? 'Datei');
-                if ($fehler === UPLOAD_ERR_NO_FILE) continue;
-                // Nie still weglassen: lieber nicht senden und genau sagen, warum
-                if ($fehler === UPLOAD_ERR_INI_SIZE || $fehler === UPLOAD_ERR_FORM_SIZE) {
-                    throw new RuntimeException("„{$dateiname}“ ist zu groß für einen Anhang (höchstens " . ini_get('upload_max_filesize') . '). Bitte als Download-Link senden.');
-                }
-                if ($fehler !== UPLOAD_ERR_OK || !is_uploaded_file($tmp)) throw new RuntimeException("„{$dateiname}“ konnte nicht hochgeladen werden. Bitte erneut versuchen.");
-                $daten = (string)file_get_contents($tmp);
-                $groesse += strlen($daten);
-                $anhaenge[] = [basename((string)$_FILES['anhaenge']['name'][$i]), (string)($_FILES['anhaenge']['type'][$i] ?: 'application/octet-stream'), $daten];
+            [$anhaenge, $groesse] = hochgeladeneAnhaenge();
+            $ohne = array_map('strval', (array)($_POST['ohne_anhang'] ?? []));
+            $entwurf = entwurfAusAnfrage($konto);
+            // Aus einem gespeicherten Entwurf: dessen Anhänge (außer abgewählten) und Bezug übernehmen
+            $entwurfN = null;
+            if ($entwurf) {
+                [$entwurfN, $liste, $g] = nachrichtMitAnhaengen($entwurf['konto'], $entwurf['ordner'], $entwurf['uid'], $ohne);
+                $anhaenge = array_merge($liste, $anhaenge);
+                $groesse += $g;
             }
             // Bezug zur Original-Nachricht (Antwort / Weiterleitung)
             $bezug = null;
             if (!empty($_POST['bezug_uid'])) {
-                $imap = verbinden($konto);
-                $imap->waehlen((string)$_POST['bezug_ordner'], true);
-                $roh = $imap->rohNachricht((int)$_POST['bezug_uid']);
-                $imap->abmelden();
-                if ($roh !== null) {
-                    $bezug = MailNachricht::zerlegen($roh);
-                    // Weiterleiten: Anhänge des Originals mitschicken (außer abgewählten)
-                    if (($_POST['modus'] ?? '') === 'weiterleiten') {
-                        $weg = array_map('strval', (array)($_POST['ohne_anhang'] ?? []));
-                        foreach ($bezug['anhaenge'] as $a) {
-                            if ($a['inline'] || in_array($a['teil'], $weg, true)) continue;
-                            $anhaenge[] = [$a['name'], $a['typ'], $bezug['teile'][$a['teil']]['daten']];
-                            $groesse += $a['groesse'];
-                        }
-                    }
+                // Weiterleiten: Anhänge des Originals mitschicken (außer abgewählten) – beim Entwurf stecken sie schon dort drin
+                [$bezug, $liste, $g] = nachrichtMitAnhaengen($konto, (string)$_POST['bezug_ordner'], (int)$_POST['bezug_uid'], $ohne);
+                if (($_POST['modus'] ?? '') === 'weiterleiten' && !$entwurf) {
+                    $anhaenge = array_merge($anhaenge, $liste);
+                    $groesse += $g;
                 }
             }
             if ($groesse > 20 * 1024 * 1024) throw new RuntimeException('Die Anhänge sind zusammen größer als 20 MB. Große Dateien bitte als Download-Link senden.');
@@ -303,8 +379,8 @@ try {
                 'betreff' => trim((string)($_POST['betreff'] ?? '')),
                 'html' => $html,
                 'anhaenge' => $anhaenge,
-                'antwort_auf' => ($bezug && in_array($_POST['modus'] ?? '', ['antworten', 'allen'], true)) ? $bezug['message_id'] : null,
-                'referenzen' => $bezug['referenzen'] ?? '',
+                'antwort_auf' => ($bezug && in_array($_POST['modus'] ?? '', ['antworten', 'allen'], true)) ? $bezug['message_id'] : entwurfBezug($entwurfN)[0],
+                'referenzen' => ($bezug && in_array($_POST['modus'] ?? '', ['antworten', 'allen'], true)) ? $bezug['referenzen'] : entwurfBezug($entwurfN)[1],
                 'ablage' => trim((string)($_POST['ablage'] ?? '')),
             ]);
             // Original als beantwortet kennzeichnen
@@ -316,9 +392,86 @@ try {
                     $imap->abmelden();
                 } catch (\Throwable $e) {}
             }
+            entwurfEntfernen($entwurf); // gesendet → Entwurf wird nicht mehr gebraucht
             MailSpamfilter::empfaengerAlsSicher((int)$konto['id'], array_column(array_merge($an, $cc), 0));
             unset($_SESSION['mail_ungelesen']);
             antworten(['empfaenger' => count($an) + count($cc) + count($bcc), 'gesendet_ordner' => $erg['gesendet_ordner']]);
+        }
+
+        // Entwurf speichern (automatisch während des Schreibens oder per Knopf). Jede Fassung wird neu im Ordner
+        // „Entwürfe“ abgelegt und die vorige entfernt – so sehen auch andere Mailprogramme immer den aktuellen Stand.
+        case 'entwurf_speichern': {
+            $konto = MailKonto::laden((int)($_POST['konto'] ?? 0));
+            [$anhaenge, $groesse] = hochgeladeneAnhaenge();
+            $ohne = array_map('strval', (array)($_POST['ohne_anhang'] ?? []));
+            $modus = in_array($_POST['modus'] ?? '', ['antworten', 'allen', 'weiterleiten'], true) ? $_POST['modus'] : 'neu';
+            $bezugUid = $modus !== 'neu' ? (int)($_POST['bezug_uid'] ?? 0) : 0;
+            $bezugOrdner = (string)($_POST['bezug_ordner'] ?? '');
+            $alt = entwurfAusAnfrage($konto);
+            $antwortAuf = null;
+            $referenzen = '';
+            $vorhandene = [];
+            if ($alt) {
+                [$altN, $vorhandene, $g] = nachrichtMitAnhaengen($alt['konto'], $alt['ordner'], $alt['uid'], $ohne);
+                $groesse += $g;
+                [$antwortAuf, $referenzen] = entwurfBezug($altN);
+            } elseif ($bezugUid) {
+                [$bezug, $liste, $g] = nachrichtMitAnhaengen($konto, $bezugOrdner, $bezugUid, $ohne);
+                if ($bezug && $modus === 'weiterleiten') { $vorhandene = $liste; $groesse += $g; }
+                if ($bezug && $modus !== 'weiterleiten') { $antwortAuf = $bezug['message_id'] ?: null; $referenzen = $bezug['referenzen']; }
+            }
+            if ($groesse > 20 * 1024 * 1024) throw new RuntimeException('Die Anhänge sind zusammen größer als 20 MB – so kann der Entwurf nicht gespeichert werden.');
+
+            // Empfänger-Felder genau wie eingegeben (inkl. Gruppen) und Bezug als Entwurfsdaten im Kopf
+            $eingabe = json_decode((string)($_POST['felder'] ?? ''), true);
+            $felder = ['an' => [], 'cc' => [], 'bcc' => []];
+            foreach ($felder as $f => $_) {
+                foreach (array_slice((array)($eingabe[$f] ?? []), 0, 500) as $w) {
+                    if (is_array($w) && isset($w[0]) && is_string($w[0])) $felder[$f][] = [mb_substr($w[0], 0, 300), mb_substr((string)($w[1] ?? $w[0]), 0, 300)];
+                }
+            }
+            $daten = ['felder' => $felder, 'modus' => $modus, 'bezug_uid' => $bezugUid ?: null, 'bezug_ordner' => $bezugUid ? $bezugOrdner : null,
+                      'ablage' => mb_substr((string)($_POST['ablage'] ?? ''), 0, 300)];
+            $nachricht = MailNachricht::bauen([
+                'von' => [$konto['email'], $konto['anzeigename'] ?: ''],
+                'an' => entwurfEmpfaenger((string)($_POST['an'] ?? '')),
+                'cc' => entwurfEmpfaenger((string)($_POST['cc'] ?? '')),
+                'bcc' => entwurfEmpfaenger((string)($_POST['bcc'] ?? '')),
+                'bcc_im_kopf' => true,
+                'betreff' => trim((string)($_POST['betreff'] ?? '')),
+                'html' => (string)($_POST['html'] ?? ''),
+                'anhaenge' => array_merge($vorhandene, $anhaenge),
+                'antwort_auf' => $antwortAuf, 'referenzen' => $referenzen,
+                'kopf_extra' => ['X-Syncopa-Entwurf' => rtrim(chunk_split(base64_encode(json_encode($daten, JSON_UNESCAPED_UNICODE)), 76, "\r\n "))],
+            ]);
+            $imap = verbinden($konto);
+            $ordner = $imap->sonderordner('entwuerfe') ?? $imap->ordnerAnlegen(null, 'Drafts');
+            $uid = $imap->ablegen($ordner, $nachricht['roh'], ['\\Draft', '\\Seen']);
+            if ($uid === null) {
+                $imap->waehlen($ordner, true);
+                $uid = $imap->uidZuMessageId($nachricht['message_id']);
+            }
+            $imap->abmelden();
+            if ($alt && !((int)$alt['konto']['id'] === (int)$konto['id'] && $alt['ordner'] === $ordner && $alt['uid'] === $uid)) {
+                entwurfEntfernen($alt);
+            }
+            $teile = MailNachricht::zerlegen($nachricht['roh']);
+            antworten(['konto' => (int)$konto['id'], 'ordner' => $ordner, 'uid' => $uid, 'zeit' => date('H:i'),
+                       'anhaenge' => array_values(array_filter($teile['anhaenge'], fn($a) => !$a['inline']))]);
+        }
+
+        case 'entwurf_loeschen': {
+            $konto = MailKonto::laden((int)($_POST['konto'] ?? 0));
+            entwurfEntfernen(['konto' => $konto, 'ordner' => (string)($_POST['ordner'] ?? ''), 'uid' => (int)($_POST['uid'] ?? 0)]);
+            antworten([]);
+        }
+
+        // Kontakt direkt aus dem Lesebereich speichern (ohne die Seite zu verlassen)
+        case 'kontakt_speichern': {
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') throw new RuntimeException('Ungültige Anfrage.');
+            if (!MailKontakt::darfNutzen()) throw new RuntimeException('Keine Berechtigung für Kontakte.');
+            $id = MailKontakt::speichern($_POST);
+            antworten(['id' => $id]);
         }
 
         // Adressbuch: Mitglieder und Gruppen für die Empfänger-Felder

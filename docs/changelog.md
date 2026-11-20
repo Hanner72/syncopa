@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.20.0]
+
+### Hinzugefügt
+
+- E-Mail: Entwürfe – automatisches Speichern beim Schreiben, Knopf "Entwurf speichern" und Strg+S; angefangene Nachrichten werden beim Wechsel zu einer anderen Mail gesichert statt verworfen
+  - Entwürfe liegen im Ordner "Entwürfe" am Mailserver (auch in anderen Mailprogrammen sichtbar) und öffnen sich per Klick zum Weiterschreiben, mit Empfängern inkl. Gruppen, Cc/Bcc, Anhängen und Bezug zur Original-Mail
+  - Senden bzw. Verwerfen entfernt den Entwurf; Anzahl der Entwürfe in eckigen Klammern beim Ordner ("Entwürfe [3]")
+- E-Mail: Titelleiste "SyncoMail" im Outlook-Stil mit aktuellem Postfach und Umschalter E-Mail / Kontakte
+
+### Geändert
+
+- E-Mail: Befehlsleiste kompakter, damit mehr Knöpfe Platz haben; bei wenig Platz nur noch Symbole
+- E-Mail-Kontakte im Stil von Outlook "Personen": Filter, Liste mit Buchstaben-Trennern, Visitenkarte mit E-Mail senden / Anrufen / Bearbeiten, Suche in der Befehlsleiste
+- E-Mail: "+ Kontakt" beim Absender öffnet einen Dialog direkt in der Mail statt einer neuen Seite
+
+### Bugs
+
+- E-Mail: Umlaute in Outlook-Mails (Zeichensatz-Angabe im HTML) wurden falsch dargestellt, z. B. "GrÃ¼ÃŸe"
+- E-Mail: zu großer Zeilenabstand in Outlook-Mails (Word-Tags wie `<o:p>`)
+
 ## [2.19.0]
 
 ### Hinzugefügt

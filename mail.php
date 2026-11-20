@@ -12,23 +12,13 @@ $konten = array_map(fn($k) => [
     'funktion' => (bool)$k['funktion'], 'signatur' => $k['signatur'] ?? '',
 ], MailKonto::meine());
 $adressbuch = true; // Kontakte für alle; Mitglieder und Gruppen prüft die API nach Berechtigung
+// Name des E-Mail-Programms in der Titelleiste und im Browser-Tab – hier an einer Stelle änderbar
+$mailAppName = MailKonto::APP_NAME;   // zentral in classes/MailKonto.php
 
 include 'includes/header.php';
 ?>
+<link rel="stylesheet" href="assets/css/syncomail.css?v=<?php echo APP_VERSION; ?>">
 <style>
-    .mail-app { --m-akzent: #0f6cbd; --m-akzent-hell: rgba(15,108,189,.10); --m-auswahl: rgba(15,108,189,.16);
-        display: grid; grid-template-rows: auto 1fr; height: calc(100vh - var(--topbar-h, 56px) - 40px); min-height: 520px;
-        background: var(--bg-card); border-radius: 10px; box-shadow: var(--shadow-sm); overflow: hidden; color: var(--text-primary); }
-    [data-theme="dark"] .mail-app { --m-akzent: #479ef5; --m-akzent-hell: rgba(71,158,245,.12); --m-auswahl: rgba(71,158,245,.22); }
-    .mail-befehle { display: flex; align-items: center; gap: 2px; padding: 6px 10px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-    .mail-befehle .btn-cmd { border: 0; background: transparent; color: var(--text-primary); padding: 5px 9px; border-radius: 5px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-    .mail-befehle .btn-cmd:hover:not(:disabled) { background: var(--m-akzent-hell); }
-    .mail-befehle .btn-cmd:disabled { opacity: .4; }
-    .mail-befehle .btn-cmd i { font-size: 15px; color: var(--m-akzent); }
-    .mail-befehle .btn-neu { background: var(--m-akzent); color: #fff; font-weight: 600; padding: 6px 14px; }
-    .mail-befehle .btn-neu i { color: #fff; }
-    .mail-befehle .btn-neu:hover { background: var(--m-akzent) !important; filter: brightness(1.1); }
-    .mail-befehle .trenner { width: 1px; height: 22px; background: var(--border); margin: 0 6px; }
     .mail-haupt { display: grid; grid-template-columns: 230px 380px 1fr; min-height: 0; }
     .mail-ordner, .mail-liste { border-right: 1px solid var(--border); overflow-y: auto; min-height: 0; }
     .mail-ordner { padding: 8px 0; font-size: 13.5px; }
@@ -40,6 +30,7 @@ include 'includes/header.php';
     .mail-ordner-eintrag:hover { background: var(--m-akzent-hell); }
     .mail-ordner-eintrag.aktiv { background: var(--m-auswahl); border-left-color: var(--m-akzent); font-weight: 600; }
     .mail-ordner-eintrag .zahl { color: var(--m-akzent); font-weight: 600; font-size: 12.5px; }
+    .mail-ordner-eintrag .zahl.entwuerfe { color: var(--bs-secondary-color); font-weight: 400; }
     .mail-ordner-eintrag.drop-ziel { outline: 2px dashed var(--m-akzent); outline-offset: -2px; }
     .mail-ordner-eintrag .mehr, .mail-konto-kopf .neu { border: 0; background: none; color: var(--text-secondary); padding: 0 4px; visibility: hidden; line-height: 1; }
     .mail-ordner-eintrag:hover .mehr, .mail-konto-kopf:hover .neu { visibility: visible; }
@@ -121,7 +112,7 @@ include 'includes/header.php';
 </style>
 
 <?php if (!$konten): ?>
-<div class="page-header"><h1 class="page-title"><i class="bi bi-envelope"></i> E-Mail</h1></div>
+<div class="page-header"><h1 class="page-title"><i class="bi bi-envelope"></i> <?php echo htmlspecialchars($mailAppName); ?></h1></div>
 <div class="card">
     <div class="card-body text-center py-5">
         <i class="bi bi-envelope-plus" style="font-size:48px;color:var(--c-primary)"></i>
@@ -133,31 +124,32 @@ include 'includes/header.php';
 </div>
 <?php else: ?>
 <div class="mail-app" id="mailApp" data-ansicht="liste">
+    <?php $syncoAktiv = 'mail'; include 'includes/syncomail_titel.php'; ?>
     <div class="mail-befehle">
         <button class="btn-cmd btn-neu" id="cmdNeu"><i class="bi bi-pencil-square"></i><span>Neue E-Mail</span></button>
         <div class="trenner"></div>
         <button class="btn-cmd mail-zurueck" id="cmdZurueck" title="Zurück"><i class="bi bi-arrow-left"></i></button>
         <button class="btn-cmd" id="cmdLoeschen" data-auswahl disabled title="Löschen (Entf)"><i class="bi bi-trash"></i><span>Löschen</span></button>
-        <button class="btn-cmd" id="cmdArchiv" data-auswahl disabled title="Archivieren"><i class="bi bi-archive"></i><span>Archivieren</span></button>
+        <button class="btn-cmd nebensache" id="cmdArchiv" data-auswahl disabled title="Archivieren"><i class="bi bi-archive"></i><span>Archivieren</span></button>
         <div class="dropdown d-inline-block">
-            <button class="btn-cmd dropdown-toggle" id="cmdVerschieben" data-auswahl disabled data-bs-toggle="dropdown"><i class="bi bi-folder-symlink"></i><span>Verschieben nach</span></button>
+            <button class="btn-cmd dropdown-toggle nebensache" id="cmdVerschieben" data-auswahl disabled data-bs-toggle="dropdown" title="Verschieben nach"><i class="bi bi-folder-symlink"></i><span>Verschieben nach</span></button>
             <ul class="dropdown-menu" id="verschiebenMenue"></ul>
         </div>
         <div class="dropdown d-inline-block">
-            <button class="btn-cmd dropdown-toggle" id="cmdJunk" data-bs-toggle="dropdown" title="Junk-E-Mail"><i class="bi bi-shield-exclamation"></i><span>Junk</span></button>
+            <button class="btn-cmd dropdown-toggle nebensache" id="cmdJunk" data-bs-toggle="dropdown" title="Junk-E-Mail"><i class="bi bi-shield-exclamation"></i><span>Junk</span></button>
             <ul class="dropdown-menu" id="junkMenue"></ul>
         </div>
         <div class="trenner"></div>
-        <button class="btn-cmd" id="cmdAntworten" data-einzeln disabled><i class="bi bi-reply"></i><span>Antworten</span></button>
-        <button class="btn-cmd" id="cmdAllen" data-einzeln disabled><i class="bi bi-reply-all"></i><span>Allen antworten</span></button>
-        <button class="btn-cmd" id="cmdWeiter" data-einzeln disabled><i class="bi bi-forward"></i><span>Weiterleiten</span></button>
+        <button class="btn-cmd" id="cmdAntworten" data-einzeln disabled title="Antworten"><i class="bi bi-reply"></i><span>Antworten</span></button>
+        <button class="btn-cmd" id="cmdAllen" data-einzeln disabled title="Allen antworten"><i class="bi bi-reply-all"></i><span>Allen antworten</span></button>
+        <button class="btn-cmd" id="cmdWeiter" data-einzeln disabled title="Weiterleiten"><i class="bi bi-forward"></i><span>Weiterleiten</span></button>
         <div class="trenner"></div>
-        <button class="btn-cmd" id="cmdGelesen" data-auswahl disabled><i class="bi bi-envelope-open"></i><span>Gelesen/Ungelesen</span></button>
-        <button class="btn-cmd" id="cmdFlagge" data-auswahl disabled><i class="bi bi-flag"></i><span>Kennzeichnen</span></button>
+        <button class="btn-cmd nebensache" id="cmdGelesen" data-auswahl disabled title="Gelesen/Ungelesen"><i class="bi bi-envelope-open"></i><span>Gelesen/Ungelesen</span></button>
+        <button class="btn-cmd nebensache" id="cmdFlagge" data-auswahl disabled title="Kennzeichnen"><i class="bi bi-flag"></i><span>Kennzeichnen</span></button>
         <div class="trenner"></div>
-        <button class="btn-cmd" id="cmdAktualisieren" title="Aktualisieren"><i class="bi bi-arrow-clockwise"></i><span>Aktualisieren</span></button>
+        <button class="btn-cmd nebensache" id="cmdAktualisieren" title="Aktualisieren"><i class="bi bi-arrow-clockwise"></i><span>Aktualisieren</span></button>
         <div class="trenner"></div>
-        <a class="btn-cmd text-decoration-none" href="mail_kontakte.php" title="Kontakte"><i class="bi bi-person-lines-fill"></i><span>Kontakte</span></a>
+        <a class="btn-cmd nebensache text-decoration-none" href="mail_kontakte.php" title="Kontakte"><i class="bi bi-person-lines-fill"></i><span>Kontakte</span></a>
     </div>
     <div class="mail-haupt">
         <nav class="mail-ordner" id="ordnerBereich"></nav>
@@ -225,6 +217,30 @@ include 'includes/header.php';
     </div>
 </div>
 
+<div class="modal fade" id="kontaktSchnellModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form class="modal-content" autocomplete="off">
+            <div class="modal-header"><h5 class="modal-title"><i class="bi bi-person-plus"></i> Als Kontakt speichern</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body row g-3 m-0">
+                <div class="col-md-6"><label class="form-label" for="ks-vorname">Vorname</label><input class="form-control" id="ks-vorname" name="vorname" maxlength="100"></div>
+                <div class="col-md-6"><label class="form-label" for="ks-nachname">Nachname</label><input class="form-control" id="ks-nachname" name="nachname" maxlength="100"></div>
+                <div class="col-md-6"><label class="form-label" for="ks-organisation">Organisation</label><input class="form-control" id="ks-organisation" name="organisation" maxlength="150"></div>
+                <div class="col-md-6"><label class="form-label" for="ks-funktion">Funktion</label><input class="form-control" id="ks-funktion" name="funktion" maxlength="150"></div>
+                <div class="col-md-7"><label class="form-label" for="ks-email">E-Mail *</label><input type="email" class="form-control" id="ks-email" name="email" required maxlength="190"></div>
+                <div class="col-md-5"><label class="form-label" for="ks-telefon">Telefon</label><input class="form-control" id="ks-telefon" name="telefon" maxlength="50"></div>
+                <div class="col-12">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="oeffentlich" value="1" id="ks-oeffentlich">
+                        <label class="form-check-label" for="ks-oeffentlich">Für alle mit E-Mail-Zugang sichtbar</label>
+                    </div>
+                    <div class="form-text">Ohne Haken bleibt der Kontakt privat. Adresse und Notizen kannst du später unter Kontakte ergänzen.</div>
+                </div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button><button type="submit" class="btn btn-primary">Speichern</button></div>
+        </form>
+    </div>
+</div>
+
 <template id="vorlageSchreiben">
     <form class="mail-schreiben" autocomplete="off">
         <div class="zeile"><label>Von</label>
@@ -255,7 +271,9 @@ include 'includes/header.php';
                     <option value="7">7 Tage</option><option value="14">14 Tage</option><option value="30" selected>30 Tage</option><option value="90">90 Tage</option>
                 </select>
             </label>
+            <button type="button" class="btn btn-outline-secondary" data-entwurf-speichern title="Als Entwurf speichern (Strg+S) – passiert beim Schreiben auch automatisch"><i class="bi bi-floppy"></i> Entwurf speichern</button>
             <span class="text-muted small ms-2" data-status></span>
+            <span class="text-muted small" data-entwurf-status></span>
             <label class="ablage-wahl ms-auto mb-0" title="In welchem Ordner die gesendete Nachricht gespeichert wird">
                 <i class="bi bi-folder-check"></i> Gesendete speichern in
                 <select class="form-select form-select-sm" data-ablage></select>
@@ -276,6 +294,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const leseBereich = document.getElementById('leseBereich');
     const zustand = { konto: KONTEN[0].id, ordner: 'INBOX', rolle: 'posteingang', ordnerListe: {}, nachrichten: [], auswahl: [], offen: null, suche: '', ungelesen: '' };
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+    // Titelleiste: Name im Browser-Tab, aktuelles Postfach rechts oben
+    document.title = <?php echo json_encode($mailAppName); ?> + ' – ' + document.title;
+    function titelKonto() {
+        const k = KONTEN.find(x => x.id === zustand.konto);
+        const el = document.getElementById('titelKonto');
+        if (el && k) { el.textContent = k.email; el.title = k.anzeigename || k.bezeichnung || k.email; }
+    }
+    titelKonto();
     const ORDNER_SYMBOL = { posteingang: 'bi-inbox', entwuerfe: 'bi-file-earmark-text', gesendet: 'bi-send', papierkorb: 'bi-trash', spam: 'bi-exclamation-octagon', archiv: 'bi-archive' };
 
     function api(aktion, daten = {}, post = false) {
@@ -300,7 +326,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 : liste.map(o => `<div class="mail-ordner-eintrag ${k.id === zustand.konto && o.name === zustand.ordner ? 'aktiv' : ''}"
                       data-konto="${k.id}" data-ordner="${esc(o.name)}" data-rolle="${o.rolle || ''}" style="padding-left:${22 + 14 * Math.min(o.ebene, 3)}px">
                       <i class="bi ${ORDNER_SYMBOL[o.rolle] || 'bi-folder2'}"></i><span>${esc(o.anzeige)}</span>
-                      ${o.ungelesen ? `<span class="zahl">${o.ungelesen}</span>` : ''}
+                      ${o.ungelesen ? `<span class="zahl">${o.ungelesen}</span>` : ''}${o.anzahl ? `<span class="zahl entwuerfe" title="${o.anzahl === 1 ? '1 gespeicherter Entwurf' : o.anzahl + ' gespeicherte Entwürfe'}">[${o.anzahl}]</span>` : ''}
                       <button type="button" class="mehr" data-menue title="Ordner-Aktionen"><i class="bi bi-three-dots"></i></button></div>`).join('');
             return `<div class="mail-konto"><div class="mail-konto-kopf" title="${esc(k.email)}"><i class="bi bi-chevron-down"></i>
                 ${k.funktion ? '<i class="bi bi-people" title="Funktions-Postfach"></i>' : ''}<span class="text-truncate">${esc(k.bezeichnung)}</span>
@@ -324,7 +350,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (kopf) { kopf.parentElement.classList.toggle('zu'); return; }
         const o = e.target.closest('.mail-ordner-eintrag');
         if (!o) return;
-        zustand.konto = +o.dataset.konto; zustand.ordner = o.dataset.ordner; zustand.rolle = o.dataset.rolle;
+        zustand.konto = +o.dataset.konto; zustand.ordner = o.dataset.ordner; zustand.rolle = o.dataset.rolle; titelKonto();
         document.getElementById('listenTitel').textContent = o.querySelector('span').textContent;
         zustand.suche = ''; document.getElementById('mailSuche').value = '';
         ordnerZeichnen(); listeLaden(); leer(); ansicht('liste');
@@ -403,7 +429,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const uids = zustand.nachrichten.map(n => n.uid), a = uids.indexOf(zustand.auswahl[0]), b = uids.indexOf(uid);
             zustand.auswahl = uids.slice(Math.min(a, b), Math.max(a, b) + 1); listeZeichnen(); knoepfe(); return;
         }
-        zustand.auswahl = [uid]; listeZeichnen(); knoepfe(); oeffnen(uid);
+        zustand.auswahl = [uid]; listeZeichnen(); knoepfe();
+        zustand.rolle === 'entwuerfe' ? entwurfOeffnen(uid) : oeffnen(uid);
     });
     mailListe.addEventListener('dragstart', e => {
         const z = e.target.closest('.mail-zeile'); if (!z) return;
@@ -420,12 +447,13 @@ document.addEventListener('DOMContentLoaded', function () {
     }));
 
     // ---------------- Lesen ----------------
-    function leer() { zustand.offen = null; leseBereich.innerHTML = '<div class="mail-leer"><i class="bi bi-envelope-open"></i><p class="mt-2 mb-0">Wählen Sie ein Element aus, um es zu lesen.</p></div>'; knoepfe(); }
+    function leer() { zustand.entwurfSichern?.(); zustand.offen = null; leseBereich.innerHTML = '<div class="mail-leer"><i class="bi bi-envelope-open"></i><p class="mt-2 mb-0">Wählen Sie ein Element aus, um es zu lesen.</p></div>'; knoepfe(); }
     function farbe(text) { let h = 0; for (const c of text) h = (h * 31 + c.charCodeAt(0)) % 360; return `hsl(${h},45%,45%)`; }
     function initialen(a) { const n = (a?.[1] || a?.[0] || '?').replace(/["']/g, '').trim(); const t = n.split(/[\s.@]+/).filter(Boolean); return ((t[0]?.[0] || '') + (t[1]?.[0] || '')).toUpperCase() || '?'; }
     function groesse(b) { return b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB'; }
     function anhangSymbol(typ) { return typ.includes('pdf') ? 'bi-file-earmark-pdf' : typ.startsWith('image/') ? 'bi-file-earmark-image' : typ.includes('word') ? 'bi-file-earmark-word' : (typ.includes('excel') || typ.includes('sheet')) ? 'bi-file-earmark-excel' : 'bi-file-earmark'; }
     function oeffnen(uid, bilder = 0) {
+        zustand.entwurfSichern?.();
         leseBereich.innerHTML = '<div class="mail-leer"><span class="spinner-border text-primary"></span></div>';
         ansicht('lesen');
         api('nachricht', { konto: zustand.konto, ordner: zustand.ordner, uid, bilder, junk: istJunkOrdner() ? 1 : '' }).then(d => {
@@ -442,7 +470,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         <div class="mail-avatar" style="background:${farbe(absender[0])}">${esc(initialen(absender))}</div>
                         <div class="flex-grow-1 min-w-0">
                             <div><strong>${esc(absender[1] || absender[0])}</strong> <span class="meta">&lt;${esc(absender[0])}&gt;</span>
-                                <a class="meta ms-1 text-decoration-none" href="mail_kontakte.php?neu=1&email=${encodeURIComponent(absender[0])}&name=${encodeURIComponent(absender[1] || '')}" target="_blank" title="Als Kontakt speichern"><i class="bi bi-person-plus"></i> Kontakt</a></div>
+                                <a class="meta ms-1 text-decoration-none" href="#" data-cmd="kontakt" title="Als Kontakt speichern"><i class="bi bi-person-plus"></i> Kontakt</a></div>
                             <div class="meta">An: ${esc(personText(n.an))}</div>
                             ${n.cc.length ? `<div class="meta">Cc: ${esc(personText(n.cc))}</div>` : ''}
                         </div>
@@ -474,7 +502,30 @@ document.addEventListener('DOMContentLoaded', function () {
         const b = e.target.closest('[data-cmd]'); if (!b) return; e.preventDefault();
         if (b.dataset.cmd === 'bilder') oeffnen(zustand.offen.uid, 1);
         else if (b.dataset.cmd === 'keinjunk') junkAktion('kein_junk', [zustand.offen.uid]);
+        else if (b.dataset.cmd === 'kontakt') kontaktDialog((zustand.offen && zustand.offen.von && zustand.offen.von[0]) || ['', '']);
         else schreiben(b.dataset.cmd);
+    });
+
+    // ---------------- Kontakt speichern (Dialog, bleibt in SyncoMail) ----------------
+    const kontaktModal = document.getElementById('kontaktSchnellModal');
+    function kontaktDialog([email, name]) {
+        const f = kontaktModal.querySelector('form'), teile = String(name || '').trim().split(/\s+/).filter(Boolean);
+        f.reset();
+        f.elements.email.value = email || '';
+        f.elements.vorname.value = teile.length > 1 ? teile.slice(0, -1).join(' ') : '';
+        f.elements.nachname.value = teile.length > 1 ? teile[teile.length - 1] : '';
+        f.elements.organisation.value = teile.length === 1 ? teile[0] : '';
+        bootstrap.Modal.getOrCreateInstance(kontaktModal).show();
+    }
+    kontaktModal.querySelector('form').addEventListener('submit', e => {
+        e.preventDefault();
+        const f = e.target, knopf = f.querySelector('[type=submit]');
+        knopf.disabled = true;
+        api('kontakt_speichern', new FormData(f), true).then(r => {
+            if (!r.success) { meldung(r.error || 'Speichern fehlgeschlagen.'); return; }
+            bootstrap.Modal.getOrCreateInstance(kontaktModal).hide();
+            meldung('Kontakt gespeichert.', 'success');
+        }).catch(() => meldung('Speichern fehlgeschlagen.')).finally(() => { knopf.disabled = false; });
     });
 
     // ---------------- Aktionen ----------------
@@ -697,10 +748,31 @@ document.addEventListener('DOMContentLoaded', function () {
         const s = KONTEN.find(k => k.id === +kontoId)?.signatur || '';
         return s ? `<div class="signatur"><br>${esc(s).replace(/\n/g, '<br>')}</div>` : '';
     }
+    /** Entwurf aus dem Ordner „Entwürfe“ zum Weiterschreiben öffnen */
+    function entwurfOeffnen(uid) {
+        // derselbe Entwurf ist schon offen (z. B. gerade gespeichert) → nichts tun
+        if (leseBereich.querySelector('.mail-schreiben') && zustand.schreibEntwurf?.uid === uid) return;
+        zustand.entwurfSichern?.();
+        const konto = zustand.konto, ordner = zustand.ordner;
+        leseBereich.innerHTML = '<div class="mail-leer"><span class="spinner-border text-primary"></span></div>';
+        ansicht('lesen');
+        api('nachricht', { konto, ordner, uid, bilder: 1, entwurf: 1 }).then(d => {
+            if (!d.success) { leseBereich.innerHTML = `<div class="mail-leer text-danger">${esc(d.error)}</div>`; return; }
+            zustand.offen = null;
+            schreiben('neu', { entwurf: { konto, ordner, uid, n: d.nachricht } });
+        });
+    }
+
     function schreiben(modus, vorgabe) {
-        const o = zustand.offen;
-        if (modus !== 'neu' && !o) return;
-        if (leseBereich.querySelector('.mail-schreiben') && !confirm('Die angefangene Nachricht verwerfen?')) return;
+        const ent = vorgabe?.entwurf || null;              // gespeicherter Entwurf zum Weiterschreiben
+        const entDaten = ent?.n.entwurf?.daten || null;
+        if (ent) modus = entDaten?.modus || 'neu';
+        const o = ent ? null : zustand.offen;
+        if (!ent && modus !== 'neu' && !o) return;
+        // Ursprüngliche Nachricht einer Antwort/Weiterleitung
+        const bezug = ent ? (entDaten?.bezug_uid ? { uid: entDaten.bezug_uid, ordner: entDaten.bezug_ordner } : null)
+                          : (modus !== 'neu' ? { uid: o.uid, ordner: zustand.ordner } : null);
+        zustand.entwurfSichern?.(); // angefangene Nachricht nicht verwerfen, sondern als Entwurf sichern
         leseBereich.innerHTML = '';
         leseBereich.appendChild(document.getElementById('vorlageSchreiben').content.cloneNode(true));
         const f = leseBereich.querySelector('form'), editor = f.querySelector('.mail-editor');
@@ -710,7 +782,14 @@ document.addEventListener('DOMContentLoaded', function () {
         f.querySelectorAll('.chips').forEach(c => felder[c.dataset.feld] = chipsFeld(c));
         const eigene = KONTEN.map(k => k.email.toLowerCase());
         let originalAnhaenge = [];
-        if (modus === 'antworten' || modus === 'allen') {
+        if (ent) {
+            const n = ent.n, fl = entDaten?.felder;
+            feldKonto.value = ent.konto;
+            ['an', 'cc', 'bcc'].forEach(k => (fl ? (fl[k] || []) : (n[k] || []).map(a => [a[1] ? `"${a[1]}" <${a[0]}>` : a[0], a[1] || a[0]]))
+                .forEach(([w, t]) => felder[k].hinzu(w, t)));
+            feldBetreff.value = n.betreff || '';
+            originalAnhaenge = (n.anhaenge || []).map(a => ({ ...a, mit: true }));
+        } else if (modus === 'antworten' || modus === 'allen') {
             const an = (o.antwort_an.length ? o.antwort_an : o.von);
             an.forEach(a => felder.an.hinzu(a[1] ? `"${a[1]}" <${a[0]}>` : a[0], a[1] || a[0]));
             if (modus === 'allen') {
@@ -724,8 +803,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         (vorgabe?.an || []).forEach(a => felder.an.hinzu(a[1] ? `"${a[1]}" <${a[0]}>` : a[0], a[1] || a[0]));
         if (felder.cc.werte().length) f.querySelector('[data-zeile="cc"]').classList.remove('d-none');
-        let html = '<p><br></p>' + signaturHtml(feldKonto.value);
-        if (modus !== 'neu') {
+        if (felder.bcc.werte().length) f.querySelectorAll('[data-zeile]').forEach(z => z.classList.remove('d-none'));
+        let html = ent ? (ent.n.entwurf?.html || '') : '<p><br></p>' + signaturHtml(feldKonto.value);
+        if (!ent && modus !== 'neu') {
             const v = o.von[0] || ['', ''];
             html += `<hr><div style="font-size:13px"><b>Von:</b> ${esc(v[1] ? v[1] + ' <' + v[0] + '>' : v[0])}<br><b>Gesendet:</b> ${esc(new Date((o.datum || '').replace(' ', 'T')).toLocaleString('de-AT'))}<br>
                 <b>An:</b> ${esc(personText(o.an))}<br>${o.cc.length ? `<b>Cc:</b> ${esc(personText(o.cc))}<br>` : ''}<b>Betreff:</b> ${esc(o.betreff)}</div><br><blockquote>${o.zitat_html}</blockquote>`;
@@ -740,6 +820,7 @@ document.addEventListener('DOMContentLoaded', function () {
             ablage.closest('.ablage-wahl').classList.toggle('d-none', !liste.length);
         }
         ablageFuellen();
+        if (entDaten?.ablage && [...ablage.options].some(x => x.value === entDaten.ablage)) ablage.value = entDaten.ablage;
         // Signatur und Ablage beim Wechsel des Absenders anpassen
         feldKonto.addEventListener('change', () => { const s = editor.querySelector('.signatur'); if (s) s.outerHTML = signaturHtml(feldKonto.value) || ''; ablageFuellen(); });
         f.querySelector('[data-zeige="ccbcc"]').addEventListener('click', () => f.querySelectorAll('[data-zeile]').forEach(z => z.classList.remove('d-none')));
@@ -772,16 +853,97 @@ document.addEventListener('DOMContentLoaded', function () {
         anhangBereich.addEventListener('click', e => {
             const b = e.target.closest('button'); if (!b) return;
             if (b.dataset.orig !== undefined) originalAnhaenge.find(a => a.teil === b.dataset.orig).mit = false; else dateien.splice(+b.dataset.neu, 1);
-            anhaengeZeichnen();
+            anhaengeZeichnen(); aenderung();
         });
         f.querySelector('[data-dateien]').addEventListener('change', e => { dateien = dateien.concat([...e.target.files]); e.target.value = ''; anhaengeZeichnen(); });
         anhaengeZeichnen();
-        f.querySelector('[data-verwerfen]').addEventListener('click', () => { if (confirm('Nachricht verwerfen?')) { zustand.offen ? oeffnen(zustand.offen.uid) : leer(); } });
+        // ---- Entwurf: automatisch (einige Sekunden nach der letzten Änderung), per Knopf oder Strg+S,
+        //      und beim Verlassen (andere Nachricht öffnen, neue Nachricht, Tab wechseln)
+        const entwurf = ent ? { konto: ent.konto, ordner: ent.ordner, uid: ent.uid } : { konto: null, ordner: null, uid: null };
+        zustand.schreibEntwurf = entwurf;
+        const entwurfStatus = f.querySelector('[data-entwurf-status]');
+        let geaendert = false, autoTimer = null, laeuft = null, nochmal = false, fertig = false;
+        function aenderung() {
+            if (fertig) return;
+            geaendert = true;
+            clearTimeout(autoTimer);
+            autoTimer = setTimeout(() => entwurfSpeichern('auto'), 5000);
+        }
+        function entwurfSpeichern(anlass) {
+            clearTimeout(autoTimer);
+            if (laeuft) { nochmal = true; return laeuft; }
+            geaendert = false;
+            const fd = new FormData();
+            fd.append('konto', feldKonto.value);
+            ['an', 'cc', 'bcc'].forEach(k => fd.append(k, felder[k].werte().join(', ')));
+            fd.append('felder', JSON.stringify({ an: felder.an.paare(), cc: felder.cc.paare(), bcc: felder.bcc.paare() }));
+            fd.append('betreff', feldBetreff.value);
+            fd.append('html', editor.innerHTML);
+            if (ablage.value) fd.append('ablage', ablage.value);
+            if (bezug) { fd.append('modus', modus); fd.append('bezug_uid', bezug.uid); fd.append('bezug_ordner', bezug.ordner); }
+            if (entwurf.uid) { fd.append('entwurf_konto', entwurf.konto); fd.append('entwurf_ordner', entwurf.ordner); fd.append('entwurf_uid', entwurf.uid); }
+            originalAnhaenge.filter(a => !a.mit).forEach(a => fd.append('ohne_anhang[]', a.teil));
+            const mit = dateien.filter(d => !alsLink.has(d)); // sehr große Dateien (Download-Link) erst beim Senden
+            mit.forEach(d => fd.append('anhaenge[]', d));
+            entwurfStatus.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Entwurf wird gespeichert …';
+            laeuft = api('entwurf_speichern', fd, true).then(d => {
+                if (!d.success) {
+                    geaendert = true;
+                    entwurfStatus.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> Entwurf nicht gespeichert</span>';
+                    if (anlass !== 'auto') meldung(d.error);
+                    return;
+                }
+                Object.assign(entwurf, { konto: d.konto, ordner: d.ordner, uid: d.uid });
+                // Die Anhänge stecken jetzt im Entwurf
+                originalAnhaenge = d.anhaenge.map(a => ({ ...a, mit: true }));
+                dateien = dateien.filter(x => !mit.includes(x));
+                anhaengeZeichnen();
+                entwurfStatus.innerHTML = '<i class="bi bi-check2"></i> Entwurf gespeichert ' + esc(d.zeit);
+                if (anlass !== 'auto') meldung('Entwurf gespeichert.', 'success');
+                if (zustand.rolle === 'entwuerfe' && +zustand.konto === +d.konto) listeLaden();
+                ordnerLaden(d.konto); // Anzahl bei „Entwürfe“
+            }).catch(() => {
+                geaendert = true;
+                entwurfStatus.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-triangle"></i> Entwurf nicht gespeichert (keine Verbindung)</span>';
+            }).finally(() => {
+                laeuft = null;
+                if (nochmal) { nochmal = false; if (geaendert) entwurfSpeichern('auto'); }
+            });
+            return laeuft;
+        }
+        // Verlassen des Schreibbereichs: Änderungen sichern, danach nicht mehr reagieren
+        zustand.entwurfSichern = () => {
+            zustand.entwurfSichern = null; zustand.entwurfOffen = null; zustand.schreibEntwurf = null;
+            if (!fertig && geaendert) entwurfSpeichern('verlassen');
+            fertig = true; clearTimeout(autoTimer);
+        };
+        zustand.entwurfOffen = () => !fertig && (geaendert || !!laeuft);
+        zustand.entwurfJetzt = () => { if (!fertig && geaendert) entwurfSpeichern('auto'); };
+        f.querySelector('[data-entwurf-speichern]').addEventListener('click', () => entwurfSpeichern('knopf'));
+        f.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); entwurfSpeichern('knopf'); } });
+        ['input', 'change', 'chipsgeaendert'].forEach(t => f.addEventListener(t, e => { if (!e.target.closest?.('[data-entwurf-speichern]')) aenderung(); }));
+
+        f.querySelector('[data-verwerfen]').addEventListener('click', () => {
+            if (!confirm(entwurf.uid ? 'Nachricht verwerfen? Der gespeicherte Entwurf wird gelöscht.' : 'Nachricht verwerfen?')) return;
+            fertig = true; clearTimeout(autoTimer);
+            zustand.entwurfSichern = null; zustand.entwurfOffen = null; zustand.schreibEntwurf = null;
+            (laeuft || Promise.resolve()).then(() => {
+                if (!entwurf.uid) return;
+                api('entwurf_loeschen', { konto: entwurf.konto, ordner: entwurf.ordner, uid: entwurf.uid }, true)
+                    .then(() => { if (zustand.rolle === 'entwuerfe') listeLaden(); ordnerLaden(entwurf.konto); });
+            });
+            o ? oeffnen(o.uid) : leer();
+        });
         f.addEventListener('submit', e => {
             e.preventDefault();
             if (!felder.an.werte().length && !felder.cc.werte().length && !felder.bcc.werte().length) { meldung('Bitte mindestens einen Empfänger angeben.'); return; }
             if (f.querySelector('.chip.falsch')) { meldung('Bitte die rot markierten Adressen korrigieren.'); return; }
             if (!feldBetreff.value.trim() && !confirm('Ohne Betreff senden?')) return;
+            const knopf = f.querySelector('[type="submit"]'), status = f.querySelector('[data-status]');
+            knopf.disabled = true;
+            fertig = true; clearTimeout(autoTimer); // während des Sendens kein automatisches Speichern
+            const zurueck = () => { knopf.disabled = false; status.textContent = ''; fertig = false; };
+            (laeuft || Promise.resolve()).then(() => {   // ein laufendes Speichern abwarten, damit der aktuelle Entwurf gelöscht wird
             const fd = new FormData();
             fd.append('konto', feldKonto.value);
             ['an', 'cc', 'bcc'].forEach(k => fd.append(k, felder[k].werte().join(', ')));
@@ -789,16 +951,12 @@ document.addEventListener('DOMContentLoaded', function () {
             fd.append('html', editor.innerHTML);
             if (ablage.value) fd.append('ablage', ablage.value);
             dateien.filter(d => !alsLink.has(d)).forEach(d => fd.append('anhaenge[]', d));
-            if (modus !== 'neu') {
-                fd.append('modus', modus); fd.append('bezug_uid', o.uid); fd.append('bezug_ordner', zustand.ordner);
-                originalAnhaenge.filter(a => !a.mit).forEach(a => fd.append('ohne_anhang[]', a.teil));
-            }
-            const knopf = f.querySelector('[type="submit"]'), status = f.querySelector('[data-status]');
-            knopf.disabled = true;
-            const fertig = () => { knopf.disabled = false; status.textContent = ''; };
+            if (bezug) { fd.append('modus', modus); fd.append('bezug_uid', bezug.uid); fd.append('bezug_ordner', bezug.ordner); }
+            originalAnhaenge.filter(a => !a.mit).forEach(a => fd.append('ohne_anhang[]', a.teil));
+            if (entwurf.uid) { fd.append('entwurf_konto', entwurf.konto); fd.append('entwurf_ordner', entwurf.ordner); fd.append('entwurf_uid', entwurf.uid); }
             // Große Dateien zuerst in Stücken hochladen (bereits hochgeladene nicht noch einmal)
             const grosse = dateien.filter(d => alsLink.has(d));
-            (async () => {
+            return (async () => {
                 for (const d of grosse) {
                     if (!freigabeIds.has(d)) freigabeIds.set(d, await grossHochladen(d, p => { status.innerHTML = `<span class="spinner-border spinner-border-sm"></span> ${esc(d.name)} wird hochgeladen … ${p} %`; }));
                     fd.append('freigaben[]', freigabeIds.get(d));
@@ -807,15 +965,18 @@ document.addEventListener('DOMContentLoaded', function () {
             })().then(() => {
             status.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Wird gesendet …';
             return api('senden', fd, true).then(d => {
-                if (!d.success) { knopf.disabled = false; status.textContent = ''; meldung(d.error); return; }
+                if (!d.success) { zurueck(); meldung(d.error); return; }
                 meldung(`Gesendet an ${d.empfaenger} Empfänger.`, 'success');
+                zustand.entwurfSichern = null; zustand.entwurfOffen = null; zustand.schreibEntwurf = null;
                 if (o && modus !== 'weiterleiten' && modus !== 'neu') { const x = zustand.nachrichten.find(n => n.uid === o.uid); if (x) x.beantwortet = true; listeZeichnen(); }
+                if (entwurf.uid) { if (zustand.rolle === 'entwuerfe') listeLaden(); ordnerLaden(entwurf.konto); }
                 o ? oeffnen(o.uid) : leer();
             });
-            }).catch(err => { fertig(); meldung(err && err.message ? err.message : 'Keine Verbindung zum Server.'); });
+            });
+            }).catch(err => { zurueck(); meldung(err && err.message ? err.message : 'Keine Verbindung zum Server.'); });
         });
         knoepfe(); ansicht('lesen');
-        (modus === 'neu' || modus === 'weiterleiten' ? f.querySelector('[data-feld="an"] input') : editor).focus();
+        (!ent && (modus === 'neu' || modus === 'weiterleiten') ? f.querySelector('[data-feld="an"] input') : editor).focus();
     }
 
     /** Große Datei in Stücken hochladen, liefert die ID des Download-Links. Einzelne Stücke werden bis zu dreimal versucht. */
@@ -856,6 +1017,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 c.querySelector('button').addEventListener('click', () => { werte.splice(i, 1); zeichnen(); });
                 box.insertBefore(c, eingabe);
             });
+            box.dispatchEvent(new CustomEvent('chipsgeaendert', { bubbles: true })); // für das automatische Speichern als Entwurf
         }
         function hinzu(wert, text) { wert = wert.trim(); if (!wert) return; werte.push({ wert, text: text || wert }); zeichnen(); }
         function schliessen() { vorschlag?.remove(); vorschlag = null; aktiv = -1; }
@@ -888,7 +1050,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         eingabe.addEventListener('blur', () => setTimeout(() => { if (eingabe.value.trim()) { aktiv = -1; uebernehmen(); } schliessen(); }, 150));
         box.addEventListener('click', e => { if (e.target === box) eingabe.focus(); });
-        return { hinzu, werte: () => werte.map(w => w.wert) };
+        return { hinzu, werte: () => werte.map(w => w.wert), paare: () => werte.map(w => [w.wert, w.text]) };
     }
 
     // ---------------- Start ----------------
@@ -900,6 +1062,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     listeLaden();
     if (window.innerWidth >= 992) ansicht('liste');
+    // Entwurf sichern, wenn der Tab in den Hintergrund geht; vor dem Schließen mit ungesicherten Änderungen warnen
+    document.addEventListener('visibilitychange', () => { if (document.hidden) zustand.entwurfJetzt?.(); });
+    window.addEventListener('beforeunload', e => { if (zustand.entwurfOffen?.()) { zustand.entwurfJetzt?.(); e.preventDefault(); e.returnValue = ''; } });
     // Aufruf aus den Kontakten: mail.php?an=adresse&name=Name öffnet gleich eine neue Nachricht
     const startParam = new URLSearchParams(location.search);
     if (startParam.get('an')) { schreiben('neu', { an: [[startParam.get('an'), startParam.get('name') || '']] }); history.replaceState(null, '', 'mail.php'); }
