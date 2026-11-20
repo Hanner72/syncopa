@@ -28,14 +28,25 @@ if (!empty($fest['datum_von'])) {
     }
 }
 
+// Farben wie im Dienstplan
+$stationsFarben = $stationObj->farbenFuerFest((int)$festId);
+
 // Tages-Konfigs aller Stationen vorausladen (für Modal)
 $tageKonfigs = [];
 foreach ($stationen as $s) {
     $tageKonfigs[$s['id']] = $stationObj->getTageKonfigs($s['id'], $alleDaten);
 }
 
+$darfSortieren = Session::checkPermission('fest', 'schreiben') && count($stationen) > 1;
+
 include 'includes/header.php';
 ?>
+<style>
+    .st-griff { cursor: grab; color: var(--bs-secondary-color); padding: 2px 6px 2px 0; touch-action: none; }
+    .st-griff:hover { color: var(--bs-body-color); }
+    .st-geist { opacity: .45; background: rgba(var(--bs-primary-rgb), .08) !important; }
+    .st-gewaehlt { box-shadow: 0 4px 14px rgba(0,0,0,.18); }
+</style>
 
 <?php include 'includes/fest_tabs.php'; ?>
 
@@ -60,6 +71,9 @@ include 'includes/header.php';
         </div>
         <?php else: ?>
         <div class="table-responsive">
+        <?php if ($darfSortieren): ?>
+        <div class="text-muted small mb-2"><i class="bi bi-arrows-move"></i> Reihenfolge per Drag &amp; Drop am Griff <i class="bi bi-grip-vertical"></i> ändern – sie gilt auch im Dienstplan.</div>
+        <?php endif; ?>
         <table class="table table-hover" id="stationenTable">
             <thead>
                 <tr>
@@ -82,9 +96,9 @@ include 'includes/header.php';
                         if ($tk['aktiv']) $aktiveTagCount++;
                     }
                 ?>
-                <tr>
-                    <td class="text-muted"><?php echo $s['sortierung']; ?></td>
-                    <td><strong><?php echo htmlspecialchars($s['name']); ?></strong></td>
+                <tr data-id="<?php echo (int)$s['id']; ?>">
+                    <td class="text-muted text-nowrap"><?php if ($darfSortieren): ?><i class="bi bi-grip-vertical st-griff" title="Ziehen zum Sortieren"></i><?php endif; ?><span class="st-sort"><?php echo $s['sortierung']; ?></span></td>
+                    <td><span class="d-inline-block rounded-circle align-middle me-2" style="width:12px;height:12px;background:<?php echo htmlspecialchars($stationsFarben[(int)$s['id']] ?? FestStation::PALETTE[0]); ?>" title="Farbe im Dienstplan"></span><strong><?php echo htmlspecialchars($s['name']); ?></strong></td>
                     <td class="text-muted small"><?php echo htmlspecialchars($s['beschreibung'] ?? '–'); ?></td>
                     <td class="text-center">
                         <span class="badge bg-primary"><?php echo $s['benoetigte_helfer']; ?></span>
@@ -172,14 +186,45 @@ include 'includes/header.php';
 </div>
 
 <?php include 'includes/footer.php'; ?>
+<?php if ($darfSortieren): ?>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<?php endif; ?>
 <script>
 var tageKonfigs = <?php echo json_encode($tageKonfigs); ?>;
 var alleDaten   = <?php echo json_encode($alleDaten); ?>;
 var tageModal   = new bootstrap.Modal(document.getElementById('tageModal'));
 
+// Drag & Drop: Reihenfolge sofort speichern (ohne DataTables, das die Zeilen selbst sortieren würde)
+<?php if ($darfSortieren): ?>
+(function () {
+    var tbody = document.querySelector('#stationenTable tbody');
+    if (!tbody || !window.Sortable) return;
+    var vorher;
+    new Sortable(tbody, {
+        handle: '.st-griff', animation: 150, ghostClass: 'st-geist', chosenClass: 'st-gewaehlt',
+        onStart: function () { vorher = Array.from(tbody.children); },
+        onEnd: function (evt) {
+            if (evt.oldIndex === evt.newIndex) return;
+            var ids = Array.from(tbody.querySelectorAll('tr[data-id]')).map(function (tr) { return +tr.dataset.id; });
+            fetch('api/fest_stationen_sortieren.php', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fest_id: <?php echo (int)$festId; ?>, ids: ids })
+            }).then(function (r) { return r.json(); }).then(function (d) {
+                if (!d.success) throw new Error(d.error || 'Speichern fehlgeschlagen.');
+                tbody.querySelectorAll('tr[data-id]').forEach(function (tr) { tr.querySelector('.st-sort').textContent = d.sortierung[tr.dataset.id]; });
+                if (window.showToast) showToast('Reihenfolge gespeichert.', 'success');
+            }).catch(function (e) {
+                vorher.forEach(function (tr) { tbody.appendChild(tr); }); // alte Reihenfolge wiederherstellen
+                if (window.showToast) showToast(e.message || 'Speichern fehlgeschlagen.', 'danger'); else alert(e.message);
+            });
+        }
+    });
+})();
+<?php else: ?>
 if (typeof $ !== 'undefined' && $.fn.DataTable) {
     $('#stationenTable').DataTable({ order: [[0, 'asc']] });
 }
+<?php endif; ?>
 
 function fillTageModal(stationId, konfigs) {
     var tbody = document.getElementById('tageBody');

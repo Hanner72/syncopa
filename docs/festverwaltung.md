@@ -95,7 +95,12 @@ Stationen sind die Stände und Bereiche eines Festes – beim Dorffest zum Beisp
 | Beschreibung | – | Aufgaben und Besonderheiten der Station |
 | Benötigte Helfer | – | Wie viele Personen pro Schicht gebraucht werden (Standardwert) |
 | Öffnung von / bis | – | Standard-Öffnungszeiten |
+| Farbe im Dienstplan | – | Eine der Vorschlagsfarben oder eine beliebige eigene Farbe; Farben mit kleinem Kreis hat schon eine andere Station. Die Farbe gilt an allen Festtagen und bleibt beim Umsortieren gleich |
 | Sortierung | – | Kleinere Zahl erscheint zuerst |
+
+### Reihenfolge per Drag & Drop
+
+In der Stationsliste lässt sich die Reihenfolge direkt ändern: Station am Griff ⋮⋮ vorne in der Zeile anfassen und an die gewünschte Stelle ziehen. Die Reihenfolge wird sofort gespeichert (Sortierung 10, 20, 30 …) und gilt auch im Dienstplan.
 
 ### Stationen pro Tag aktivieren oder deaktivieren
 

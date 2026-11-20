@@ -7,6 +7,45 @@ class FestStation {
 
     private static bool $tableChecked = false;
 
+    /** Vorschlagsfarben (auch Ersatz, solange einer Station keine eigene Farbe zugewiesen ist) */
+    public const PALETTE = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16','#f97316','#6366f1'];
+
+    /** Gültige Farbe (#rrggbb) oder null – ältere Einträge enthalten z. B. noch „primary“ */
+    public static function farbeOderNull($farbe): ?string {
+        $farbe = strtolower(trim((string)$farbe));
+        return preg_match('/^#[0-9a-f]{6}$/', $farbe) ? $farbe : null;
+    }
+
+    /**
+     * Stationen ohne eigene Farbe bekommen die Farbe, die sie gerade im Dienstplan haben, fest gespeichert.
+     * Sonst hinge die Farbe an der Position und würde sich beim Verschieben oder Löschen einer Station ändern.
+     * $festId = null: alle Feste. Liefert die Anzahl der festgelegten Farben.
+     */
+    public function farbenFestlegen(?int $festId = null): int {
+        $feste = $festId !== null ? [$festId] : array_map('intval', array_column($this->db->fetchAll(
+            "SELECT DISTINCT fest_id FROM fest_stationen WHERE farbe IS NULL OR farbe NOT REGEXP '^#[0-9a-fA-F]{6}$'"), 'fest_id'));
+        $anzahl = 0;
+        foreach ($feste as $f) {
+            $farben = $this->farbenFuerFest($f);
+            foreach ($this->getByFest($f) as $s) {
+                if (self::farbeOderNull($s['farbe'] ?? null) === null) {
+                    $this->db->execute("UPDATE fest_stationen SET farbe = ? WHERE id = ?", [$farben[(int)$s['id']], $s['id']]);
+                    $anzahl++;
+                }
+            }
+        }
+        return $anzahl;
+    }
+
+    /** Farben aller Stationen eines Festes: [station_id => #rrggbb]. Ohne eigene Farbe: Vorschlagsfarbe nach Reihenfolge. */
+    public function farbenFuerFest(int $festId): array {
+        $farben = [];
+        foreach ($this->getByFest($festId) as $i => $s) {
+            $farben[(int)$s['id']] = self::farbeOderNull($s['farbe'] ?? null) ?? self::PALETTE[$i % count(self::PALETTE)];
+        }
+        return $farben;
+    }
+
     public function __construct() {
         $this->db = Database::getInstance();
         if (!self::$tableChecked) {
@@ -115,8 +154,8 @@ class FestStation {
     }
 
     public function create(array $data): int {
-        $sql = "INSERT INTO fest_stationen (fest_id, name, beschreibung, benoetigte_helfer, oeffnung_von, oeffnung_bis, sortierung)
-                VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO fest_stationen (fest_id, name, beschreibung, benoetigte_helfer, oeffnung_von, oeffnung_bis, farbe, sortierung)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         $this->db->execute($sql, [
             (int)$data['fest_id'],
             $data['name'],
@@ -124,13 +163,14 @@ class FestStation {
             (int)($data['benoetigte_helfer'] ?? 1),
             $data['oeffnung_von'] ?: null,
             $data['oeffnung_bis'] ?: null,
+            self::farbeOderNull($data['farbe'] ?? null),
             (int)($data['sortierung'] ?? 100)
         ]);
         return $this->db->lastInsertId();
     }
 
     public function update(int $id, array $data): void {
-        $sql = "UPDATE fest_stationen SET name=?, beschreibung=?, benoetigte_helfer=?, oeffnung_von=?, oeffnung_bis=?, sortierung=?
+        $sql = "UPDATE fest_stationen SET name=?, beschreibung=?, benoetigte_helfer=?, oeffnung_von=?, oeffnung_bis=?, farbe=?, sortierung=?
                 WHERE id=?";
         $this->db->execute($sql, [
             $data['name'],
@@ -138,9 +178,39 @@ class FestStation {
             (int)($data['benoetigte_helfer'] ?? 1),
             $data['oeffnung_von'] ?: null,
             $data['oeffnung_bis'] ?: null,
+            self::farbeOderNull($data['farbe'] ?? null),
             (int)($data['sortierung'] ?? 100),
             $id
         ]);
+    }
+
+    /**
+     * Neue Reihenfolge der Stationen eines Festes (Drag & Drop): $ids in gewünschter Reihenfolge.
+     * Vergibt 10, 20, 30 … (Platz für spätere Einordnung per Hand). Liefert [station_id => sortierung].
+     */
+    public function anordnen(int $festId, array $ids): array {
+        $vorhanden = array_map('intval', array_column($this->getByFest($festId), 'id'));
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        sort($vorhanden);
+        $pruefen = $ids;
+        sort($pruefen);
+        if (!$vorhanden || $pruefen !== $vorhanden) {
+            throw new RuntimeException('Die Stationsliste ist nicht mehr aktuell. Bitte die Seite neu laden.');
+        }
+        $this->farbenFestlegen($festId); // Farben vor dem Umsortieren festhalten
+        $ergebnis = [];
+        $this->db->beginTransaction();
+        try {
+            foreach ($ids as $i => $id) {
+                $ergebnis[$id] = ($i + 1) * 10;
+                $this->db->execute("UPDATE fest_stationen SET sortierung = ? WHERE id = ? AND fest_id = ?", [$ergebnis[$id], $id, $festId]);
+            }
+            $this->db->commit();
+        } catch (\Throwable $e) {
+            $this->db->rollback();
+            throw $e;
+        }
+        return $ergebnis;
     }
 
     public function delete(int $id): void {

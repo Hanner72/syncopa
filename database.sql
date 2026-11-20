@@ -914,7 +914,7 @@ CREATE TABLE IF NOT EXISTS `fest_stationen` (
   `oeffnung_von`      TIME NULL,
   `oeffnung_bis`      TIME NULL,
   `benoetigte_helfer` INT NOT NULL DEFAULT 1,
-  `farbe`             VARCHAR(20) NULL DEFAULT 'primary',
+  `farbe`             VARCHAR(20) NULL DEFAULT NULL,
   `sortierung`        INT NOT NULL DEFAULT 0,
   `erstellt_am`       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (`fest_id`) REFERENCES `feste`(`id`) ON DELETE CASCADE

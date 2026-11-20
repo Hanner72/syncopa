@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.21.0]
+
+### Hinzugefügt
+
+- Festverwaltung: eigene Farbe je Station (Vorschlagsfarben oder freie Farbwahl, Vorschau), wird im Dienstplan und in der Stationsliste angezeigt und beim Kopieren eines Festes übernommen
+- Festverwaltung: Stationen per Drag & Drop sortieren, Reihenfolge wird sofort gespeichert und gilt im Dienstplan (`api/fest_stationen_sortieren.php`)
+
+### Bugs
+
+- Festverwaltung: Farbe einer Station im Dienstplan hing an ihrer Position und änderte sich beim Umsortieren bzw. von Tag zu Tag – jede Station hat jetzt eine fest gespeicherte Farbe (bisherige Farben bleiben erhalten)
+
 ## [2.20.0]
 
 ### Hinzugefügt

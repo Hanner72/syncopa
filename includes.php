@@ -423,7 +423,7 @@ require_once __DIR__ . '/classes/FestAbrechnung.php';
         oeffnung_von      TIME NULL,
         oeffnung_bis      TIME NULL,
         benoetigte_helfer INT NOT NULL DEFAULT 1,
-        farbe             VARCHAR(20) NULL DEFAULT 'primary',
+        farbe             VARCHAR(20) NULL DEFAULT NULL,
         sortierung        INT NOT NULL DEFAULT 0,
         erstellt_am       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (fest_id) REFERENCES feste(id) ON DELETE CASCADE
@@ -1321,6 +1321,16 @@ require_once __DIR__ . '/classes/FestAbrechnung.php';
             erstellt_am DATETIME NOT NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     } catch (\Throwable $e) { /* bereits vorhanden */ }
+})();
+
+// Fest-Stationen: jede Station bekommt eine feste Farbe (bisher hing sie ohne eigene Wahl an der Position
+// und änderte sich beim Umsortieren). Die Farbe, die sie zuletzt im Dienstplan hatte, bleibt erhalten.
+(function() {
+    try {
+        $db = Database::getInstance();
+        $offen = $db->fetchOne("SELECT COUNT(*) AS n FROM fest_stationen WHERE farbe IS NULL OR farbe NOT REGEXP '^#[0-9a-fA-F]{6}$'");
+        if ((int)($offen['n'] ?? 0) > 0) (new FestStation())->farbenFestlegen();
+    } catch (\Throwable $e) { /* Tabelle noch nicht vorhanden */ }
 })();
 
 // Schutz-Kopfzeilen senden und POST-Anfragen angemeldeter Benutzer auf das Prüfzeichen prüfen
