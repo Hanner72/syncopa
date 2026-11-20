@@ -7,6 +7,11 @@ class Session {
         if (session_status() === PHP_SESSION_NONE) {
             ini_set('session.cookie_httponly', 1);
             ini_set('session.use_only_cookies', 1);
+            ini_set('session.use_strict_mode', 1);        // keine vom Angreifer vorgegebenen Sitzungskennungen
+            ini_set('session.cookie_samesite', 'Lax');    // Cookie nicht bei fremden Formular-Absendungen mitschicken
+            if (class_exists('Sicherheit') && Sicherheit::istHttps()) {
+                ini_set('session.cookie_secure', 1);      // Cookie nur über verschlüsselte Verbindung
+            }
             session_start();
         }
     }
@@ -52,7 +57,20 @@ class Session {
     public static function getRole() {
         return self::get('rolle', 'mitglied');
     }
-    
+
+    /** Gibt true zurück wenn der Benutzer Admin-Rechte hat (mind. eine Admin-Rolle) */
+    public static function isAdmin(): bool {
+        // Neue Session: ist_admin gesetzt
+        if (self::has('ist_admin')) return (bool)self::get('ist_admin', false);
+        // Fallback für alte Sessions (vor Mehrfachrollen-Update)
+        return self::get('rolle') === 'admin';
+    }
+
+    /** Alle Rollen-IDs des eingeloggten Benutzers */
+    public static function getRollenIds(): array {
+        return self::get('rollen_ids', []);
+    }
+
     public static function requireLogin() {
         if (!self::isLoggedIn()) {
             header('Location: login.php');
@@ -60,8 +78,12 @@ class Session {
         }
     }
     
-    public static function setFlashMessage($type, $message) {
-        self::set('flash_message', ['type' => $type, 'message' => $message]);
+    /**
+     * Meldung für die nächste Seite. Der Text wird als reiner Text angezeigt (sicher, auch mit Eingaben oder
+     * Fehlermeldungen darin). Nur für fest im Programm geschriebene Meldungen mit Formatierung $html = true setzen.
+     */
+    public static function setFlashMessage($type, $message, bool $html = false) {
+        self::set('flash_message', ['type' => $type, 'message' => $html ? $message : htmlspecialchars((string)$message, ENT_QUOTES, 'UTF-8')]);
     }
     
     public static function getFlashMessage() {
@@ -73,16 +95,81 @@ class Session {
         return null;
     }
     
-    public static function checkPermission($modul, $aktion = 'lesen') {
-        $rolle = self::getRole();
-        
-        $db = Database::getInstance();
-        $sql = "SELECT {$aktion} FROM berechtigungen WHERE rolle = ? AND modul = ?";
-        $result = $db->fetchOne($sql, [$rolle, $modul]);
-        
-        return $result && $result[$aktion] == 1;
+    // --- Formations-Kontext ---
+
+    /** Gibt die aktiv gewählte Formation-ID zurück (null = kein Filter / alle) */
+    public static function getFormationId(): ?int {
+        $id = self::get('active_formation_id', null);
+        return ($id !== null) ? (int)$id : null;
     }
-    
+
+    /** Setzt die aktive Formation für diese Session */
+    public static function setFormationId(?int $id): void {
+        if ($id === null) {
+            self::remove('active_formation_id');
+        } else {
+            self::set('active_formation_id', $id);
+        }
+        self::remove('formation_ids'); // Cache leeren
+    }
+
+    /**
+     * IDs aller Formationen, denen der eingeloggte Benutzer angehört.
+     * Wird in der Session gecacht (bis setFormationId() aufgerufen wird).
+     */
+    public static function getFormationIds(): array {
+        if (self::has('formation_ids')) return self::get('formation_ids', []);
+        if (!self::isLoggedIn()) return [];
+        $db  = Database::getInstance();
+        $uid = self::getUserId();
+        $rows = $db->fetchAll(
+            "SELECT mf.formation_id
+             FROM mitglied_formationen mf
+             JOIN formationen f ON mf.formation_id = f.id
+             WHERE f.aktiv = 1
+               AND mf.mitglied_id IN (
+                   SELECT id FROM mitglieder WHERE benutzer_id = ?
+                   UNION
+                   SELECT mitglied_id FROM benutzer WHERE id = ? AND mitglied_id IS NOT NULL
+               )",
+            [$uid, $uid]
+        );
+        $ids = array_column($rows, 'formation_id');
+        self::set('formation_ids', $ids);
+        return $ids;
+    }
+
+    public static function checkPermission($modul, $aktion = 'lesen'): bool {
+        // Admins haben immer alle Rechte
+        if (self::isAdmin()) return true;
+
+        $rollenIds = self::getRollenIds();
+
+        // Fallback für alte Sessions: rolle_id aus benutzer-Tabelle direkt abfragen
+        if (empty($rollenIds) && self::isLoggedIn()) {
+            $db = Database::getInstance();
+            $rows = $db->fetchAll(
+                "SELECT rolle_id FROM benutzer_rollen WHERE benutzer_id = ?",
+                [self::getUserId()]
+            );
+            $rollenIds = array_column($rows, 'rolle_id');
+        }
+
+        if (empty($rollenIds)) return false;
+
+        $db = Database::getInstance();
+        $placeholders = implode(',', array_fill(0, count($rollenIds), '?'));
+        // Prüft ob IRGENDEINE der zugewiesenen Rollen das Recht hat
+        $sql = "SELECT MAX(b.`{$aktion}`) as hat_recht
+                FROM berechtigungen b
+                JOIN rollen r ON r.name = b.rolle
+                WHERE r.id IN ({$placeholders}) AND b.modul = ?";
+        $params = array_merge(array_values($rollenIds), [$modul]);
+        $result = $db->fetchOne($sql, $params);
+
+        return $result && $result['hat_recht'] == 1;
+    }
+
     public static function requirePermission($modul, $aktion = 'lesen') {
         if (!self::checkPermission($modul, $aktion)) {
             self::setFlashMessage('danger', 'Keine Berechtigung für diese Aktion!');

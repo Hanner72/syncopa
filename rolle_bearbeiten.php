@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'name' => trim($_POST['name']),
         'beschreibung' => $_POST['beschreibung'] ?? null,
         'ist_admin' => isset($_POST['ist_admin']) ? 1 : 0,
-        'farbe' => $_POST['farbe'] ?? 'secondary',
+        'farbe' => RollenFarbe::pruefen($_POST['farbe'] ?? '') ?? RollenFarbe::hex($rolle['farbe'] ?? 'secondary'),
         'sortierung' => $_POST['sortierung'] ?? 100,
         'aktiv' => isset($_POST['aktiv']) ? 1 : 0
     ];
@@ -71,6 +71,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Farben: aktuelle, die der anderen Rollen und Vorschläge
+$farbeAktuell = RollenFarbe::hex($rolle['farbe'] ?? null);
+if (!$isEdit) $farbeAktuell = null;
+$andereFarben = $db->fetchAll("SELECT name, farbe FROM rollen WHERE aktiv = 1 AND id <> ? ORDER BY sortierung, name", [(int)($id ?? 0)]);
+$farbVorschlaege = RollenFarbe::vorschlaege(array_column($andereFarben, 'farbe'));
+if ($farbeAktuell === null) $farbeAktuell = $farbVorschlaege[0] ?? RollenFarbe::ALT['secondary'];
+
 include 'includes/header.php';
 ?>
 
@@ -96,17 +103,11 @@ include 'includes/header.php';
                 </div>
                 
                 <div class="col-md-3 mb-3">
-                    <label for="farbe" class="form-label">Badge-Farbe</label>
-                    <select class="form-select" id="farbe" name="farbe">
-                        <option value="primary" <?php echo ($rolle['farbe'] ?? '') === 'primary' ? 'selected' : ''; ?>>Blau (Primary)</option>
-                        <option value="secondary" <?php echo ($rolle['farbe'] ?? 'secondary') === 'secondary' ? 'selected' : ''; ?>>Grau (Secondary)</option>
-                        <option value="success" <?php echo ($rolle['farbe'] ?? '') === 'success' ? 'selected' : ''; ?>>Grün (Success)</option>
-                        <option value="danger" <?php echo ($rolle['farbe'] ?? '') === 'danger' ? 'selected' : ''; ?>>Rot (Danger)</option>
-                        <option value="warning" <?php echo ($rolle['farbe'] ?? '') === 'warning' ? 'selected' : ''; ?>>Gelb (Warning)</option>
-                        <option value="info" <?php echo ($rolle['farbe'] ?? '') === 'info' ? 'selected' : ''; ?>>Cyan (Info)</option>
-                        <option value="dark" <?php echo ($rolle['farbe'] ?? '') === 'dark' ? 'selected' : ''; ?>>Dunkel (Dark)</option>
-                        <option value="purple" <?php echo ($rolle['farbe'] ?? '') === 'purple' ? 'selected' : ''; ?>>Lila (Purple)</option>
-                    </select>
+                    <label for="farbe" class="form-label">Farbe</label>
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="color" class="form-control form-control-color" id="farbe" name="farbe" value="<?php echo htmlspecialchars($farbeAktuell); ?>" title="Farbe wählen">
+                        <span class="badge" id="farbeVorschau" style="<?php echo RollenFarbe::stil($farbeAktuell); ?>;font-size:12px"><?php echo htmlspecialchars($rolle['name'] ?? 'rolle'); ?></span>
+                    </div>
                 </div>
                 
                 <div class="col-md-3 mb-3">
@@ -117,6 +118,23 @@ include 'includes/header.php';
                 </div>
             </div>
             
+            <div class="mb-3">
+                <div class="small text-muted mb-1">Vorschläge – Farben, die sich von den anderen Rollen gut unterscheiden:</div>
+                <div class="d-flex flex-wrap gap-2">
+                    <?php foreach ($farbVorschlaege as $vf): ?>
+                    <button type="button" class="rf-vorschlag" data-farbe="<?php echo $vf; ?>" style="background:<?php echo $vf; ?>" title="<?php echo $vf; ?>"></button>
+                    <?php endforeach; ?>
+                </div>
+                <?php if ($andereFarben): ?>
+                <div class="small text-muted mt-2 mb-1">Schon vergeben:</div>
+                <div class="d-flex flex-wrap gap-1">
+                    <?php foreach ($andereFarben as $af): ?>
+                    <span class="badge" style="<?php echo RollenFarbe::stil($af['farbe']); ?>"><?php echo htmlspecialchars($af['name']); ?></span>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+
             <div class="mb-3">
                 <label for="beschreibung" class="form-label">Beschreibung</label>
                 <textarea class="form-control" id="beschreibung" name="beschreibung" rows="2"><?php echo htmlspecialchars($rolle['beschreibung'] ?? ''); ?></textarea>
@@ -154,7 +172,7 @@ include 'includes/header.php';
             </div>
             <?php endif; ?>
             
-            <div class="d-flex justify-content-between">
+            <div class="d-flex justify-content-between page-actions-sticky">
                 <a href="rollen.php" class="btn btn-secondary"><i class="bi bi-x"></i> Abbrechen</a>
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-save"></i> <?php echo $isEdit ? 'Aktualisieren' : 'Erstellen'; ?>
@@ -169,5 +187,33 @@ include 'includes/header.php';
     background-color: #6f42c1 !important;
 }
 </style>
+
+<style>
+.rf-vorschlag { width: 30px; height: 30px; border-radius: 6px; border: 2px solid rgba(0,0,0,.08); cursor: pointer; padding: 0; }
+.rf-vorschlag:hover { transform: scale(1.12); }
+.rf-vorschlag.aktiv { outline: 2px solid var(--c-primary); outline-offset: 2px; }
+</style>
+<script>
+(function () {
+    var feld = document.getElementById('farbe'), vorschau = document.getElementById('farbeVorschau'), name = document.getElementById('name');
+    if (!feld) return;
+    function textfarbe(hex) {
+        var c = [1, 3, 5].map(function (i) { var v = parseInt(hex.substr(i, 2), 16) / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+        var l = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+        return 1.05 / (l + 0.05) >= 3 ? '#ffffff' : '#1f2937';
+    }
+    function zeigen() {
+        vorschau.style.backgroundColor = feld.value;
+        vorschau.style.color = textfarbe(feld.value);
+        document.querySelectorAll('.rf-vorschlag').forEach(function (b) { b.classList.toggle('aktiv', b.dataset.farbe === feld.value.toLowerCase()); });
+    }
+    feld.addEventListener('input', zeigen);
+    if (name) name.addEventListener('input', function () { vorschau.textContent = name.value || 'rolle'; });
+    document.querySelectorAll('.rf-vorschlag').forEach(function (b) {
+        b.addEventListener('click', function () { feld.value = b.dataset.farbe; zeigen(); });
+    });
+    zeigen();
+})();
+</script>
 
 <?php include 'includes/footer.php'; ?>

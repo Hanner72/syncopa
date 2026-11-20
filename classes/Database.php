@@ -16,7 +16,11 @@ class Database {
             
             $this->conn = new PDO($dsn, DB_USER, DB_PASS, $options);
         } catch (PDOException $e) {
-            die("Datenbankverbindung fehlgeschlagen: " . $e->getMessage());
+            // Technische Details nur ins Fehlerprotokoll, nicht an den Besucher
+            error_log("Syncopa: Datenbankverbindung fehlgeschlagen: " . $e->getMessage());
+            if (PHP_SAPI === 'cli') die("Datenbankverbindung fehlgeschlagen: " . $e->getMessage() . "\n");
+            http_response_code(503);
+            die("Die Datenbank ist gerade nicht erreichbar. Bitte später noch einmal versuchen.");
         }
     }
     

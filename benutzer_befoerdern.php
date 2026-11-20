@@ -54,6 +54,6 @@ $db->execute(
     [Session::getUserId(), 'benutzer_befoerdern', 'Benutzer ' . $benutzer['benutzername'] . ' wurde zum Mitglied befördert', $_SERVER['REMOTE_ADDR']]
 );
 
-Session::setFlashMessage('success', 'Benutzer "' . htmlspecialchars($benutzer['benutzername']) . '" wurde erfolgreich zum Mitglied befördert.');
+Session::setFlashMessage('success', 'Benutzer "' . $benutzer['benutzername'] . '" wurde erfolgreich zum Mitglied befördert.');
 header('Location: index.php');
 exit;

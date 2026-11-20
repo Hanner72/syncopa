@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<link rel="icon" type="image/png" href="img/logo.png">
+<style>*,*::before,*::after{box-sizing:border-box}body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Syncopa Vorstellung</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Konzept: eine Konzertbühne (16:9) – Screenshots stehen wie Solisten im Scheinwerferlicht, das Kapitel-Menü ist das Konzertprogramm. */
+:root {
+  --nacht: #0c1524;        /* Bühnenhintergrund */
+  --buehne: #14233a;       /* Flächen auf der Bühne */
+  --linie: rgba(214, 226, 245, 0.14);
+  --text: #eef2f8;
+  --text2: #a5b4ca;
+  --messing: #e2ab4b;      /* Messing, Akzent */
+  --messing-hell: #f3cf86;
+  --blau: #4f7fb8;         /* Syncopa-Blau */
+  --orange: #f0852a;       /* Syncopa-Logo */
+  --gruen: #5fb38a;
+  --rot: #e07a6b;
+  --schrift-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --schrift: "Figtree", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+html, body { background: var(--nacht); color: var(--text); }
+body { font-family: var(--schrift); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px; }
+.seite { max-width: 1280px; margin: 0 auto; display: grid; gap: 12px; }
+
+/* ---------- Bühne ---------- */
+.rahmen { position: relative; width: 100%; aspect-ratio: 16 / 9; max-width: 100%; border-radius: 14px; overflow: hidden; background: var(--nacht); box-shadow: 0 0 0 1px var(--linie), 0 30px 80px rgba(0,0,0,.5); }
+.buehne { position: absolute; left: 0; top: 0; width: 1600px; height: 900px; transform-origin: 0 0; overflow: hidden;
+  background: radial-gradient(1100px 640px at 72% 38%, #1b3150 0%, transparent 70%), radial-gradient(700px 500px at 10% 90%, #1a2a43 0%, transparent 70%), var(--nacht); }
+.buehne::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(1600px 900px at 50% 50%, transparent 60%, rgba(0,0,0,.45)); }
+.szene { position: absolute; inset: 0; visibility: hidden; }
+.szene.aktiv { visibility: visible; }
+
+/* Einblenden: Elemente mit .ein erscheinen nacheinander (--d = Verzögerung) */
+.aktiv .ein { animation: ein .9s cubic-bezier(.2,.7,.2,1) var(--d, 0s) both; }
+.aktiv .ein-links { animation: einLinks .9s cubic-bezier(.2,.7,.2,1) var(--d, 0s) both; }
+.aktiv .ein-gross { animation: einGross 1.1s cubic-bezier(.2,.7,.2,1) var(--d, 0s) both; }
+@keyframes ein { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+@keyframes einLinks { from { opacity: 0; transform: translateX(-36px); } to { opacity: 1; transform: none; } }
+@keyframes einGross { from { opacity: 0; transform: scale(.94) translateY(30px); } to { opacity: 1; transform: none; } }
+
+/* Kopf- und Fußzeile auf der Bühne (Konzertprogramm) */
+.programmzeile { position: absolute; left: 80px; right: 80px; bottom: 34px; display: flex; justify-content: space-between; align-items: center; font-size: 17px; color: var(--text2); letter-spacing: .04em; z-index: 5; }
+.programmzeile b { color: var(--messing); font-weight: 600; font-variant-numeric: tabular-nums; }
+.programmzeile .marke { display: flex; align-items: center; gap: 10px; font-family: var(--schrift-display); font-weight: 700; color: var(--text); letter-spacing: .08em; text-transform: uppercase; font-size: 15px; }
+.programmzeile .marke img { height: 26px; }
+
+/* Text-Spalte */
+.spalte { position: absolute; left: 80px; top: 110px; width: 500px; display: flex; flex-direction: column; gap: 22px; }
+.eyebrow { font-size: 18px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--messing); display: flex; align-items: center; gap: 14px; }
+.eyebrow::before { content: ""; width: 34px; height: 2px; background: var(--messing); }
+h2 { font-family: var(--schrift-display); font-weight: 800; font-size: 60px; line-height: 1.02; letter-spacing: -.02em; margin: 0; text-wrap: balance; }
+.punkte { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.punkte li { font-size: 24px; line-height: 1.32; color: #d9e2ef; padding-left: 34px; position: relative; }
+.punkte li::before { content: ""; position: absolute; left: 4px; top: 11px; width: 12px; height: 12px; border-radius: 50%; background: var(--messing); box-shadow: 0 0 0 5px rgba(226,171,75,.18); }
+.punkte li b { color: var(--text); font-weight: 700; }
+.leise { font-size: 19px; color: var(--text2); line-height: 1.45; }
+
+/* Browserfenster mit Kamera */
+.fenster { position: absolute; left: 640px; top: 104px; width: 880px; border-radius: 14px; overflow: hidden; background: #0f1a2b;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 40px 90px rgba(0,0,0,.55), 0 0 120px rgba(79,127,184,.18); }
+.fenster.breit { left: 120px; width: 1360px; top: 96px; }
+.fenster .leiste { height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 14px; background: #1c2a40; border-bottom: 1px solid rgba(255,255,255,.06); }
+.fenster .leiste i { width: 11px; height: 11px; border-radius: 50%; background: #3a4a63; }
+.fenster .leiste i:nth-child(1) { background: #e0675a; } .fenster .leiste i:nth-child(2) { background: #e4b14a; } .fenster .leiste i:nth-child(3) { background: #5fb38a; }
+.fenster .adresse { margin-left: 14px; flex: 1; height: 22px; border-radius: 6px; background: #111c2e; color: #8ea0ba; font-size: 13px; display: flex; align-items: center; padding: 0 12px; letter-spacing: .02em; }
+.ansicht { position: relative; aspect-ratio: 16 / 10; overflow: hidden; background: #f3f5f8; }
+.kamera { position: absolute; inset: 0; transform-origin: 0 0; transition: transform 1.6s cubic-bezier(.45,.05,.25,1); --s: 1; }
+.kamera img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top left; transition: opacity .7s ease; }
+.kamera img.weg { opacity: 0; }
+.markierung { position: absolute; border-radius: calc(10px / var(--s)); box-shadow: 0 0 0 calc(3px / var(--s)) var(--messing), 0 0 0 calc(9px / var(--s)) rgba(226,171,75,.25), 0 0 0 9999px rgba(8,14,26,.38);
+  opacity: 0; transition: opacity .6s ease, left 1.2s ease, top 1.2s ease, width 1.2s ease, height 1.2s ease; pointer-events: none; }
+.markierung.an { opacity: 1; }
+.hinweis { position: absolute; z-index: 3; max-width: 340px; background: var(--messing); color: #1d1406; font-weight: 700; font-size: 19px; line-height: 1.28; padding: 12px 16px; border-radius: 10px;
+  box-shadow: 0 14px 30px rgba(0,0,0,.4); opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; pointer-events: none; }
+.hinweis.an { opacity: 1; transform: none; }
+
+/* Handy */
+.handy { position: absolute; width: 250px; aspect-ratio: 390 / 844; border-radius: 34px; padding: 10px; background: #0a0f18; box-shadow: 0 0 0 2px #2b3950, 0 30px 70px rgba(0,0,0,.6); }
+.handy img { width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 26px; display: block; }
+.handy::before { content: ""; position: absolute; top: 16px; left: 50%; width: 70px; height: 18px; margin-left: -35px; border-radius: 10px; background: #0a0f18; z-index: 2; }
+
+/* Titel */
+.titel { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+.titel .innen { display: flex; flex-direction: column; align-items: center; gap: 26px; }
+.titel img { width: 300px; }
+.titel h1 { font-family: var(--schrift-display); font-weight: 800; font-size: 50px; letter-spacing: -.01em; margin: 0; line-height: 1.1; text-wrap: balance; max-width: 1100px; }
+.titel .zeile { font-size: 24px; color: var(--text2); max-width: 980px; line-height: 1.45; }
+.titel .widmung { font-size: 17px; letter-spacing: .18em; text-transform: uppercase; color: var(--messing); }
+.notenlinien { position: absolute; left: 0; right: 0; top: 50%; height: 120px; margin-top: -60px; opacity: .1; background: repeating-linear-gradient(to bottom, var(--text) 0 2px, transparent 2px 28px); pointer-events: none; }
+.abspielen { margin-top: 10px; display: inline-flex; align-items: center; gap: 14px; font: 700 24px var(--schrift); color: #1d1406; background: var(--messing); border: 0; border-radius: 999px; padding: 18px 34px; cursor: pointer; box-shadow: 0 16px 40px rgba(226,171,75,.3); }
+.abspielen:hover { background: var(--messing-hell); }
+.abspielen:focus-visible { outline: 3px solid var(--text); outline-offset: 4px; }
+
+/* Ausgangslage: verstreute Zettel */
+.zettel { position: absolute; transition: left 1.3s cubic-bezier(.6,0,.2,1), top 1.3s cubic-bezier(.6,0,.2,1), opacity 1s ease .5s, scale 1.3s ease, rotate 1.3s ease; }
+.zettel > div { padding: 16px 22px; border-radius: 10px; font-size: 22px; font-weight: 600; background: #20314d; color: #d7e1ef; box-shadow: 0 16px 34px rgba(0,0,0,.35); display: flex; gap: 12px; align-items: center; white-space: nowrap; }
+.zettel svg { width: 28px; height: 28px; stroke: var(--messing); fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.sammeln .zettel { left: 720px !important; top: 410px !important; opacity: 0; scale: .4; rotate: 0deg !important; }
+/* Ruhezustand beim Öffnen: Titel sofort sichtbar */
+.ruhe .ein, .ruhe .ein-links, .ruhe .ein-gross { animation: none !important; }
+.mitte-karte { position: absolute; left: 520px; top: 300px; width: 560px; padding: 34px; border-radius: 22px; text-align: center; background: linear-gradient(160deg, #1f3657, #162741);
+  box-shadow: 0 0 0 1px rgba(226,171,75,.4), 0 30px 80px rgba(0,0,0,.5); opacity: 0; transform: scale(.85); transition: opacity .8s ease 1s, transform .9s cubic-bezier(.2,.7,.2,1) 1s; }
+.sammeln .mitte-karte { opacity: 1; transform: none; }
+.mitte-karte img { width: 150px; }
+.mitte-karte p { font-size: 26px; line-height: 1.4; margin: 14px 0 0; }
+
+/* Modul-Raster */
+.raster { position: absolute; left: 80px; right: 80px; top: 250px; display: grid; grid-template-columns: repeat(7, 1fr); gap: 18px; }
+.kachel { background: rgba(28, 44, 70, .85); border: 1px solid var(--linie); border-radius: 16px; padding: 20px 16px; display: flex; flex-direction: column; gap: 12px; min-height: 160px; }
+.kachel svg { width: 38px; height: 38px; stroke: var(--messing); fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.kachel b { font-size: 21px; font-weight: 700; }
+.kachel small { font-size: 15.5px; color: var(--text2); line-height: 1.35; }
+.kopf-mitte { position: absolute; left: 80px; right: 80px; top: 96px; display: flex; flex-direction: column; gap: 14px; }
+.kopf-mitte h2 { font-size: 56px; }
+
+/* BMV-Schaubild */
+.knoten { position: absolute; width: 300px; padding: 26px; border-radius: 20px; background: #1b2c47; border: 1px solid var(--linie); box-shadow: 0 30px 60px rgba(0,0,0,.4); }
+.knoten b { font-family: var(--schrift-display); font-size: 32px; display: block; }
+.knoten small { font-size: 17px; color: var(--text2); line-height: 1.4; display: block; margin-top: 8px; }
+.knoten.syncopa { border-color: rgba(226,171,75,.5); }
+.spur { position: absolute; height: 2px; background: linear-gradient(90deg, rgba(165,180,202,.15), rgba(226,171,75,.55)); }
+.spur span { position: absolute; top: -17px; left: 50%; transform: translateX(-50%); font-size: 17px; font-weight: 600; color: #cfd9e8; white-space: nowrap; }
+.spur i { position: absolute; top: -5px; left: 0; width: 12px; height: 12px; border-radius: 50%; background: var(--messing); box-shadow: 0 0 14px var(--messing); }
+.aktiv .spur i { animation: fliessen 2.6s linear var(--d, 0s) infinite both; }
+@keyframes fliessen { from { left: 0; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } to { left: calc(100% - 12px); opacity: 0; } }
+.vorschau-karte { position: absolute; left: 660px; top: 600px; width: 520px; padding: 18px 22px; border-radius: 14px; background: #f3f5f8; color: #1e2a3a; box-shadow: 0 24px 60px rgba(0,0,0,.45); }
+.vorschau-karte b { font-size: 18px; }
+.chips { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.chip { font-size: 16px; font-weight: 700; padding: 6px 12px; border-radius: 999px; }
+.chip.neu { background: #d9f2e4; color: #1d6b43; } .chip.ge { background: #fdeccb; color: #8a5a0b; } .chip.un { background: #e3e9f2; color: #3c4d66; } .chip.ok { background: #4471a3; color: #fff; }
+
+/* Live-Probe */
+.tablet { position: absolute; border-radius: 22px; padding: 14px; background: #0a0f18; box-shadow: 0 0 0 2px #2b3950, 0 30px 60px rgba(0,0,0,.5); }
+.tablet .blatt { background: #fbfaf6; border-radius: 10px; height: 100%; padding: 14px 16px; color: #222; display: flex; flex-direction: column; gap: 8px; }
+.tablet .stimme { font-weight: 700; font-size: 15px; color: #1e2a3a; display: flex; justify-content: space-between; gap: 8px; }
+.tablet .stimme em { font-style: normal; color: #b0710e; }
+.tablet svg { width: 100%; flex: 1; }
+.funk { position: absolute; border: 2px solid var(--messing); border-radius: 50%; opacity: 0; }
+.aktiv .funk { animation: funk 2.4s ease-out var(--d, 0s) infinite; }
+@keyframes funk { from { transform: scale(.3); opacity: .9; } to { transform: scale(1.6); opacity: 0; } }
+
+/* Karten (Technik) */
+.karten { position: absolute; left: 80px; right: 80px; top: 300px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+.karte { background: rgba(28, 44, 70, .85); border: 1px solid var(--linie); border-radius: 18px; padding: 26px; display: flex; flex-direction: column; gap: 10px; }
+.karte b { font-size: 25px; } .karte small { font-size: 19px; color: var(--text2); line-height: 1.4; }
+
+/* Schluss */
+.kontakt { display: flex; gap: 22px; justify-content: center; flex-wrap: wrap; }
+.kontakt div { padding: 16px 24px; border-radius: 14px; background: rgba(28, 44, 70, .85); border: 1px solid var(--linie); text-align: left; }
+.kontakt small { display: block; font-size: 15px; letter-spacing: .14em; text-transform: uppercase; color: var(--messing); margin-bottom: 4px; }
+.kontakt span { font-size: 23px; font-weight: 600; user-select: all; }
+
+/* ---------- Bedienleiste ---------- */
+.fortschritt { display: flex; gap: 3px; height: 10px; }
+.fortschritt button { flex: var(--w) 1 0; min-width: 0; height: 100%; border: 0; padding: 0; border-radius: 3px; background: rgba(165, 180, 202, .2); cursor: pointer; position: relative; overflow: hidden; }
+.fortschritt button span { position: absolute; inset: 0; width: var(--f, 0%); background: var(--messing); }
+.fortschritt button:hover { background: rgba(165, 180, 202, .35); }
+.fortschritt button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.leiste-unten { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.knopf { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 42px; min-width: 42px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--linie);
+  background: #17263e; color: var(--text); font: 600 15px var(--schrift); cursor: pointer; }
+.knopf:hover { border-color: rgba(226,171,75,.6); }
+.knopf:focus-visible, select:focus-visible { outline: 2px solid var(--messing); outline-offset: 2px; }
+.knopf.haupt { background: var(--messing); color: #1d1406; border-color: transparent; min-width: 54px; }
+.knopf svg { width: 18px; height: 18px; fill: currentColor; }
+.zeit { font-variant-numeric: tabular-nums; color: var(--text2); font-size: 15px; }
+.kapitel-name { font-weight: 600; font-size: 16px; flex: 1; min-width: 160px; }
+.kapitel-name b { color: var(--messing); font-variant-numeric: tabular-nums; margin-right: 8px; }
+select { height: 42px; border-radius: 10px; border: 1px solid var(--linie); background: #17263e; color: var(--text); font: 600 15px var(--schrift); padding: 0 10px; }
+.programm { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px 18px; padding: 16px 18px; border-radius: 14px; background: #111d31; border: 1px solid var(--linie); }
+.programm h3 { grid-column: 1 / -1; margin: 0 0 6px; font: 700 15px var(--schrift); letter-spacing: .16em; text-transform: uppercase; color: var(--messing); }
+.programm button { all: unset; cursor: pointer; display: flex; gap: 10px; align-items: baseline; padding: 6px 4px; border-radius: 6px; font-size: 15px; color: #cfd9e8; }
+.programm button b { color: var(--messing); font-variant-numeric: tabular-nums; min-width: 22px; }
+.programm button em { font-style: normal; color: var(--text2); margin-left: auto; font-variant-numeric: tabular-nums; font-size: 13px; }
+.programm button:hover, .programm button.jetzt { color: var(--text); background: rgba(226,171,75,.1); }
+.programm button:focus-visible { outline: 2px solid var(--messing); }
+.hinweis-text { font-size: 13px; color: var(--text2); }
+
+/* Aufnahme-Modus (für das Video): nur die Bühne */
+html.aufnahme body { padding: 0; }
+html.aufnahme .seite { max-width: none; gap: 0; }
+html.aufnahme .rahmen { border-radius: 0; box-shadow: none; }
+html.aufnahme .steuerung, html.aufnahme .programm, html.aufnahme .abspielen, html.aufnahme .hinweis-text { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .aktiv .ein, .aktiv .ein-links, .aktiv .ein-gross { animation: none; }
+  .kamera, .zettel, .mitte-karte, .markierung { transition: none; }
+  .aktiv .spur i, .aktiv .funk { animation: none; }
+}
+@media (max-width: 640px) { .kapitel-name { order: -1; flex-basis: 100%; } }
+</style>
+
+</head>
+<body>
+<div class="seite">
+  <div class="rahmen" id="rahmen"><div class="buehne" id="buehne"></div></div>
+  <div class="steuerung" style="display:grid;gap:10px">
+    <div class="fortschritt" id="fortschritt" aria-label="Kapitel"></div>
+    <div class="leiste-unten">
+      <button class="knopf" id="zurueck" title="Voriges Kapitel (←)" aria-label="Voriges Kapitel"><svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+      <button class="knopf haupt" id="spielen" title="Abspielen / Pause (Leertaste)" aria-label="Abspielen"><svg viewBox="0 0 24 24" id="spielSymbol"><path d="M7 4v16l13-8z"/></svg></button>
+      <button class="knopf" id="weiter" title="Nächstes Kapitel (→)" aria-label="Nächstes Kapitel"><svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+      <span class="zeit" id="zeit">0:00 / 0:00</span>
+      <span class="kapitel-name" id="kapitelName"></span>
+      <label class="zeit" for="tempo">Tempo</label>
+      <select id="tempo">
+        <option value="0.75">Andante (langsam)</option>
+        <option value="1" selected>Moderato (normal)</option>
+        <option value="1.4">Allegro (schnell)</option>
+      </select>
+      <button class="knopf" id="vollbild" title="Vollbild (F)"><svg viewBox="0 0 24 24"><path d="M4 4h6v2H6v4H4zm10 0h6v6h-2V6h-4zM4 14h2v4h4v2H4zm14 0h2v6h-6v-2h4z"/></svg>Vollbild</button>
+    </div>
+  </div>
+  <nav class="programm" id="programm" aria-label="Programm"><h3>Programm</h3></nav>
+  <p class="hinweis-text">Alle Bildschirmfotos zeigen die echte Syncopa-Oberfläche mit einem erfundenen Beispielverein („Musikverein Musterdorf“). Namen und Kontaktdaten sind frei erfunden. <a id="videoLink" href="Syncopa-Vorstellung.webm" download hidden style="color:var(--messing)">Video herunterladen (WebM)</a></p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  const AUFNAHME = !!window.__AUFNAHME;
+  if (AUFNAHME) document.documentElement.classList.add('aufnahme');
+  const BEWEGUNG = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Im Aufnahmemodus bestimmt das Aufnahmeprogramm die Zeit (Bild für Bild), sonst die echte Uhr
+  let aufnahmeZeit = 0; const warteschlange = [];
+  function spaeter(ms, fn) { if (AUFNAHME) warteschlange.push({ zeit: aufnahmeZeit + ms, fn }); else setTimeout(fn, ms); }
+
+  // ------------------------------------------------------------------ Bausteine
+  const IKON = {
+    leute: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.4 2.7-6 6-6s6 2.6 6 6"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2c3 .2 5.5 2.6 5.5 5.8"/>',
+    medaille: '<circle cx="12" cy="15" r="5"/><path d="M8.5 11 6 3h4l2 5 2-5h4l-2.5 8"/><path d="m12 12.8.9 1.6 1.8.3-1.3 1.3.3 1.8-1.7-.9-1.7.9.3-1.8-1.3-1.3 1.8-.3z"/>',
+    fahne: '<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/>',
+    kalender: '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M8 14h2M12 14h2M16 14h0"/>',
+    noten: '<path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>',
+    funk: '<circle cx="12" cy="12" r="2"/><path d="M8.5 15.5a5 5 0 0 1 0-7M15.5 8.5a5 5 0 0 1 0 7M5.6 18.4a9 9 0 0 1 0-12.8M18.4 5.6a9 9 0 0 1 0 12.8"/>',
+    trompete: '<path d="M3 10v4h4l9 4V6l-9 4z"/><path d="M16 9h3a2 2 0 0 1 0 4h-3M8 14v4"/>',
+    tracht: '<path d="M8 3 4 6l2 4 2-1v12h8V9l2 1 2-4-4-3-2 2h-4z"/><path d="M12 9v8"/>',
+    muenzen: '<ellipse cx="9" cy="7" rx="6" ry="2.6"/><path d="M3 7v4c0 1.4 2.7 2.6 6 2.6s6-1.2 6-2.6V7"/><path d="M9 16.4c0 1.4 2.7 2.6 6 2.6s6-1.2 6-2.6v-4c0-1.4-2.7-2.6-6-2.6"/>',
+    zelt: '<path d="M2 20 12 4l10 16z"/><path d="M12 4v16M8 20l4-6 4 6"/>',
+    brief: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 7 8.5-7"/>',
+    ebenen: '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
+    schild: '<path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6z"/><path d="m9 12 2 2 4-4"/>',
+    handy: '<rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18h2"/>',
+  };
+  const ikon = n => `<svg viewBox="0 0 24 24" aria-hidden="true">${IKON[n]}</svg>`;
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+  function spalte(eyebrow, titel, punkte, leise) {
+    return `<div class="spalte">
+      <div class="eyebrow ein-links" style="--d:.1s">${eyebrow}</div>
+      <h2 class="ein" style="--d:.25s">${titel}</h2>
+      <ul class="punkte">${punkte.map((p, i) => `<li class="ein" style="--d:${0.7 + i * 0.45}s">${p}</li>`).join('')}</ul>
+      ${leise ? `<p class="leise ein" style="--d:${0.9 + punkte.length * 0.45}s">${leise}</p>` : ''}
+    </div>`;
+  }
+  function fenster(bild, adresse, breit) {
+    return `<div class="fenster ein-gross ${breit ? 'breit' : ''}" style="--d:.35s">
+      <div class="leiste"><i></i><i></i><i></i><div class="adresse">mv-musterdorf.at/syncopa/${esc(adresse)}</div></div>
+      <div class="ansicht"><div class="kamera"><img src="img/${bild}.webp" alt=""><div class="markierung"></div></div><div class="hinweis"></div></div>
+    </div>`;
+  }
+  const handy = (bild, x, y, d, w = 250, dreh = 0) =>
+    `<div class="handy ein-gross" style="left:${x}px;top:${y}px;width:${w}px;--d:${d}s;rotate:${dreh}deg"><img src="img/${bild}.webp" alt=""></div>`;
+
+  // Kamera-Schritte für Szenen mit Browserfenster
+  const F = (t, r, text, wo) => [t, 'fokus', r, text, wo];
+  const GANZ = (t) => [t, 'ganz'];
+  const BILD = (t, name, adresse) => [t, 'bild', name, adresse];
+
+  // ------------------------------------------------------------------ Szenen
+  const SZENEN = [
+    { id: 'titel', name: 'Syncopa', dauer: 8000, html: () => `
+      <div class="notenlinien"></div>
+      <div class="titel"><div class="innen">
+        <div class="widmung ein" style="--d:.1s">Vorstellung für den Blasmusikverband</div>
+        <img class="ein-gross" style="--d:.2s" src="img/logo.png" alt="Syncopa">
+        <h1 class="ein" style="--d:.6s">Die Vereinsverwaltung für Musikvereine</h1>
+        <div class="zeile ein" style="--d:1s">Mitglieder, Ehrungen, Ausrückungen, Noten, Instrumente, Trachten, Kassa, Feste und E-Mail in einer Anwendung, verbunden mit dem BMV-Datenservice.</div>
+        <button class="abspielen ein" style="--d:1.3s" data-start><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>Vorstellung abspielen</button>
+      </div></div>` },
+
+    { id: 'ausgangslage', name: 'Ausgangslage', dauer: 10000, html: () => {
+      const z = [['leute', 'Excel-Liste der Mitglieder', 130, 170, -4], ['noten', 'Notenkartei im Archivkasten', 980, 150, 3], ['fahne', 'Zu- und Absagen per WhatsApp', 210, 470, 2],
+        ['zelt', 'Zettel für den Festdienst', 1050, 420, -3], ['muenzen', 'Kassabuch auf Papier', 560, 640, 2], ['brief', 'Vereinspost an private Adressen', 1000, 680, -2], ['medaille', 'Ehrungen im Kopf des Obmanns', 470, 110, 3]];
+      return `<div class="kopf-mitte" style="top:60px;align-items:center;text-align:center">
+          <div class="eyebrow ein" style="--d:.1s">Ausgangslage</div>
+          <h2 class="ein" style="--d:.2s;font-size:52px">Vereinsarbeit ist oft auf viele Orte verteilt</h2></div>
+        <div class="zettelfeld">${z.map(([e, t, x, y, r], i) => `<div class="zettel" style="left:${x}px;top:${y + 90}px;rotate:${r}deg"><div class="ein" style="--d:${0.6 + i * 0.3}s">${ikon(e)}${t}</div></div>`).join('')}
+          <div class="mitte-karte"><img src="img/logo.png" alt=""><p>Syncopa bringt alles an einen Ort: im Browser, am Handy, für alle Funktionärinnen und Funktionäre.</p></div></div>`; },
+      schritte: [[5200, 'klasse', '.zettelfeld', 'sammeln']] },
+
+    { id: 'ueberblick', name: 'Überblick', dauer: 11000, html: () => {
+      const k = [['leute', 'Mitglieder', 'Stammdaten, Register, Mitgliedsarten'], ['medaille', 'Ehrungen', 'Laufbahn und fällige Ehrenzeichen'], ['fahne', 'Ausrückungen', 'Termine mit Zu- und Absagen'],
+        ['kalender', 'Kalender', 'Alle Termine, zum Abonnieren'], ['noten', 'Noten', 'Archiv, Stimmen, Notenbücher'], ['funk', 'Live-Probe', 'Jeder sieht seine Stimme'], ['trompete', 'Instrumente', 'Inventar, Verleih, Wartung'],
+        ['tracht', 'Trachten', 'Wer hat welches Stück'], ['muenzen', 'Kassabuch', 'Einnahmen, Ausgaben, Beiträge'], ['zelt', 'Festverwaltung', 'Dienstplan, Einkauf, Abrechnung'], ['brief', 'E-Mail', 'Vereinspostfächer mit Spamfilter'],
+        ['ebenen', 'Formationen', 'Musikkapelle, Jugend, Böhmische'], ['schild', 'Rollen & Rechte', 'Jeder sieht, was er braucht'], ['handy', 'Am Handy', 'Wie eine App am Startbildschirm']];
+      return `<div class="kopf-mitte"><div class="eyebrow ein-links" style="--d:.1s">Überblick</div>
+          <h2 class="ein" style="--d:.2s">Ein Bereich für jede Aufgabe im Verein</h2>
+          <p class="leise ein" style="--d:.4s;font-size:22px">Obmann, Kapellmeister, Kassier, Archivar, Instrumenten- und Trachtenwart, Jugendreferent: Alle arbeiten mit denselben Daten.</p></div>
+        <div class="raster">${k.map(([i, t, s], n) => `<div class="kachel ein" style="--d:${0.8 + n * 0.16}s">${ikon(i)}<b>${t}</b><small>${s}</small></div>`).join('')}</div>`; } },
+
+    { id: 'startseite', name: 'Startseite', dauer: 11000, html: () => spalte('Startseite', 'Alles Wichtige auf einen Blick', [
+        '<b>Nächste Ausrückungen</b> mit Ort und Uhrzeit', '<b>Geburtstage</b>, runde Jubiläen hervorgehoben', 'Mitglieder, Notenbestand und <b>Instrumentenwert</b>', 'Jede Rolle sieht <b>nur ihre Bereiche</b>'])
+        + fenster('dashboard', 'index.php'),
+      schritte: [F(1800, [15.5, 13.5, 84, 15.5], 'Die wichtigsten Zahlen des Vereins', 'unten'), F(4300, [15.7, 31.5, 40.8, 41.7], 'Nächste Termine, direkt verlinkt', 'rechts'),
+        F(6800, [15.7, 74.5, 40.8, 25], 'Geburtstage, runde markiert', 'oben'), F(9000, [58.1, 31.5, 40.8, 41.8], 'Besetzung nach Register', 'links')] },
+
+    { id: 'mitglieder', name: 'Mitglieder', dauer: 12000, html: () => spalte('Mitglieder', 'Die Mitgliederliste, die mitdenkt', [
+        '<b>Sofortsuche</b> über Name, Register, Instrument und Kontakt', '<b>Mitgliedsarten</b> wie im BMV: aktiv, unterstützend, MusikschülerIn, Ehrenmitglied', '<b>Gastmusiker</b> spielen mit, werden aber nicht gemeldet', 'Filter bleiben beim Seitenwechsel <b>erhalten</b>'])
+        + fenster('mitglieder_suche', 'mitglieder.php'),
+      schritte: [F(1800, [15, 12, 52, 30], 'Tippen genügt: Die Liste filtert sofort', 'unten'), F(5200, [42, 14, 30, 50], 'Mitgliedsart statt „Status“', 'links'), F(8400, [16, 30, 82, 60], 'Alle Klarinetten auf einen Blick', 'oben'), GANZ(10800)] },
+
+    { id: 'laufbahn', name: 'Laufbahn', dauer: 12000, html: () => spalte('Laufbahn', 'Die ganze musikalische Laufbahn', [
+        '<b>Instrumente, Funktionen, Ehrungen, Prüfungen</b> und Mitgliedsart', 'Mitgliedsjahre werden <b>automatisch gezählt</b>', 'Herkunft je Eintrag: <b>aus dem BMV</b> oder in Syncopa ergänzt'],
+        'Eigene Einträge sind für eine spätere Übertragung an den BMV vorgemerkt.')
+        + fenster('mitglied_ehrungen', 'mitglied_detail.php'),
+      schritte: [F(1800, [44, 13, 55, 9], 'Ein Reiter je Bereich der Laufbahn', 'unten'), F(4600, [44.5, 24.5, 54, 6.5], 'Das nächste Ehrenzeichen wird vorausberechnet', 'unten'),
+        F(7400, [44.5, 28.5, 54, 52], 'Ehrenzeichen mit Datum und Herkunft', 'links'), F(9800, [44.5, 81, 30, 5], 'BMV oder Syncopa: immer sichtbar', 'oben')] },
+
+    { id: 'bmv', name: 'BMV-Anbindung', dauer: 13000, html: () => {
+      const spuren = ['Vereinsdaten', 'Mitglieder', 'Funktionen & Ehrungen', 'Prüfungen', 'Noten', 'Inventar'];
+      return `<div class="kopf-mitte"><div class="eyebrow ein-links" style="--d:.1s">Anbindung an den BMV</div>
+          <h2 class="ein" style="--d:.2s">Daten aus dem BMV, ohne doppelte Eingabe</h2></div>
+        <div class="knoten ein-links" style="left:80px;top:300px;--d:.5s"><b>BMV-Datenservice</b><small>Die führende Datenbank des Verbands. Syncopa liest nur, es wird nichts verändert.</small></div>
+        <div class="knoten syncopa ein" style="left:1220px;top:300px;--d:.7s"><img src="img/logo.png" alt="" style="width:120px"><small>Übernimmt die Daten in die Vereinsverwaltung und ergänzt, was der Verein selbst braucht.</small></div>
+        ${spuren.map((s, i) => `<div class="spur ein" style="left:400px;width:800px;top:${300 + i * 46}px;--d:${1 + i * 0.25}s"><span>${s}</span><i style="--d:${1.2 + i * 0.4}s"></i></div>`).join('')}
+        <div class="vorschau-karte ein" style="--d:3.2s;left:540px;top:640px"><b>Vorschau vor jeder Übernahme</b>
+          <div class="chips"><span class="chip neu">neu im BMV</span><span class="chip ge">geändert</span><span class="chip un">unverändert</span><span class="chip ok">✓ Übernehmen</span></div></div>
+        <ul class="punkte" style="position:absolute;left:80px;top:600px;width:420px;gap:10px">
+          <li class="ein" style="--d:4.4s;font-size:20px">Hinweis, sobald es im BMV <b>neue Daten</b> gibt</li>
+          <li class="ein" style="--d:5s;font-size:20px">Noten mit <b>eigenen Archivnummern</b></li>
+          <li class="ein" style="--d:5.6s;font-size:20px">Inventar aus dem <b>BMV-Export</b></li></ul>
+        <ul class="punkte" style="position:absolute;left:1220px;top:600px;width:320px;gap:10px">
+          <li class="ein" style="--d:6.2s;font-size:20px">Standardnamen für alle <b>BMV-Nummern</b></li>
+          <li class="ein" style="--d:6.8s;font-size:20px">Rückübertragung an den BMV <b>vorbereitet</b></li></ul>`; } },
+
+    { id: 'ehrungen', name: 'Ehrungen', dauer: 10000, html: () => spalte('Ehrungen', 'Keine Ehrung mehr übersehen', [
+        '<b>Fällige Ehrenzeichen</b> je Jahr aus den Mitgliedsjahren berechnet', 'Regeln einstellbar, Ehrenzeichen des <b>Steirischen Blasmusikverbands</b> hinterlegt', 'Liste aller <b>verliehenen Ehrungen</b>'])
+        + fenster('ehrungen', 'ehrungen.php'),
+      schritte: [F(2000, [15.5, 19, 84, 30], 'Wer ist 2027 dran? Mit Mitgliedsjahren', 'unten'), GANZ(8000)] },
+
+    { id: 'ausrueckungen', name: 'Ausrückungen', dauer: 13000, html: () => spalte('Ausrückungen', 'Wer kommt? Die Antwort steht schon da', [
+        'Termine mit <b>Ort, Treffpunkt und Tracht</b>', 'Musikerinnen und Musiker <b>sagen am Handy zu</b> oder ab', 'Übersicht der Zusagen <b>nach Register</b>', 'Je Ausrückung die passende <b>Formation</b>'])
+        + fenster('ausrueckungen', 'ausrueckungen.php'),
+      schritte: [F(1800, [68, 30, 22, 50], 'Zusagen, Absagen und offene Antworten', 'links'), BILD(5200, 'ausrueckung', 'ausrueckung_detail.php?id=16'), GANZ(5200),
+        F(6400, [15.7, 50, 26.6, 50], 'Zusagen nach Register sortiert', 'rechts'), [8600, 'handy']] },
+
+    { id: 'kalender', name: 'Kalender', dauer: 9000, html: () => spalte('Kalender', 'Ein Kalender für alle Termine', [
+        'Ausrückungen, Proben und <b>Vereinstermine</b> zusammen', 'Monat, Woche oder Liste', '<b>Abonnieren</b> am Handy und in Outlook (iCal)'])
+        + fenster('kalender', 'kalender.php'),
+      schritte: [F(1800, [15.7, 14.7, 83.2, 57.8], 'Alle Termine des Vereins', 'unten'), F(5200, [70, 6, 29, 9], 'Einmal abonnieren, immer aktuell', 'unten')] },
+
+    { id: 'noten', name: 'Noten', dauer: 12000, html: () => spalte('Noten', 'Das Notenarchiv im Griff', [
+        'Jedes Werk mit <b>Archivnummer</b>, Komponist, Genre und Grad', 'Eine Partitur-PDF wird <b>automatisch nach Stimmen</b> aufgeteilt', '<b>Notenbücher</b> wie Marschbuch oder Konzertmappe', 'Notenbestand aus dem <b>BMV übernehmen</b>'])
+        + fenster('noten', 'noten.php'),
+      schritte: [F(1800, [16, 24, 82, 50], 'Das ganze Archiv, durchsuchbar', 'oben'), BILD(6000, 'notenbuch', 'notenbucher.php'), GANZ(6000), F(7400, [15.5, 25, 41, 20], 'Mappen für Konzert und Marsch', 'unten')] },
+
+    { id: 'live', name: 'Live-Probe', dauer: 11000, html: () => {
+      const notenzeile = (seed) => { let s = seed, x = '', y; const r = () => (s = (s * 9301 + 49297) % 233280) / 233280;
+        for (let l = 0; l < 5; l++) x += `<line x1="0" x2="300" y1="${20 + l * 9}" y2="${20 + l * 9}" stroke="#555" stroke-width="1"/>`;
+        for (let n = 0; n < 9; n++) { y = 16 + Math.round(r() * 8) * 4.5; x += `<ellipse cx="${30 + n * 30}" cy="${y}" rx="5.5" ry="4" fill="#222" transform="rotate(-20 ${30 + n * 30} ${y})"/><line x1="${35 + n * 30}" x2="${35 + n * 30}" y1="${y}" y2="${y - 24}" stroke="#222" stroke-width="1.4"/>`; }
+        return `<svg viewBox="0 0 300 70" preserveAspectRatio="none">${x}</svg>`; };
+      const tab = (x, y, w, h, stimme, d, seed) => `<div class="tablet ein-gross" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;--d:${d}s"><div class="blatt">
+        <div class="stimme">${w >= 300 ? '<span>Florentiner Marsch</span>' : ''}<em>${stimme}</em></div>${notenzeile(seed)}${notenzeile(seed + 7)}</div></div>`;
+      return spalte('Live-Probe', 'Ein Klick, und jeder sieht seine Stimme', [
+          'Der Kapellmeister wählt das Stück am Tablet', 'Alle Geräte zeigen <b>automatisch die eigene Stimme</b>', 'Notizen direkt in den Noten'])
+        + `<div class="funk" style="left:890px;top:80px;width:400px;height:400px;--d:1.6s"></div><div class="funk" style="left:890px;top:80px;width:400px;height:400px;--d:2.8s"></div>`
+        + tab(840, 110, 500, 330, 'Partitur', 0.6, 3)
+        + tab(640, 530, 205, 165, '1. Klarinette', 2.2, 11) + tab(870, 530, 205, 165, '2. Trompete', 2.6, 21)
+        + tab(1100, 530, 205, 165, 'Tenorhorn', 3, 31) + tab(1330, 530, 205, 165, 'Tuba', 3.4, 41)
+        + `<div class="leise ein" style="position:absolute;left:640px;top:720px;width:895px;text-align:center;--d:4s">Jedes Tablet zeigt dasselbe Stück, aber die Stimme seines Musikers.</div>`; } },
+
+    { id: 'inventar', name: 'Instrumente & Trachten', dauer: 12000, html: () => spalte('Instrumente & Trachten', 'Wissen, was der Verein besitzt', [
+        'Instrumente mit <b>Inventarnummer</b>, Zustand und Versicherungswert', '<b>Verleih</b> an Mitglieder und Wartungen mit Fälligkeit', 'Trachten: <b>wer welches Stück</b> in welcher Größe hat'])
+        + fenster('instrumente', 'instrumente.php'),
+      schritte: [F(1800, [16, 14, 83, 45], 'An wen ist welches Instrument verliehen?', 'unten'), F(4400, [70, 6, 29, 9], 'Bestand aus dem BMV übernehmen', 'unten'), BILD(7200, 'uniformen', 'uniformen.php'), GANZ(7200), F(8200, [16, 9, 83, 26], 'Trachten je Mitglied', 'unten')] },
+
+    { id: 'kassa', name: 'Kassabuch', dauer: 9000, html: () => spalte('Kassabuch', 'Die Kassa übersichtlich geführt', [
+        '<b>Einnahmen und Ausgaben</b> mit Belegnummer', 'Saldo und Kategorien je Jahr', '<b>Mitgliedsbeiträge</b> nach Mitgliedsart verwalten'])
+        + fenster('finanzen', 'finanzen.php'),
+      schritte: [F(1800, [15.5, 13.5, 84, 14], 'Einnahmen, Ausgaben und Saldo des Jahres', 'unten'), F(5000, [16, 56, 82, 42], 'Jede Buchung nachvollziehbar', 'oben')] },
+
+    { id: 'fest', name: 'Festverwaltung', dauer: 14000, html: () => spalte('Festverwaltung', 'Das Zeltfest, gut organisiert', [
+        '<b>Stationen</b> wie Schank, Grill, Kassa und Bar', '<b>Dienstplan</b> je Tag mit Zeitleiste', '<b>Einkauf</b>, Verträge mit Musikgruppen und Aufgaben', '<b>Abrechnung</b> und Vorlage für das nächste Jahr'])
+        + fenster('fest', 'fest_detail.php?id=1'),
+      schritte: [F(1800, [15.5, 12.5, 84, 17], 'Stationen, Helfer, offene Aufgaben', 'unten'), BILD(4800, 'dienstplan', 'fest_dienstplan.php'), GANZ(4800), F(5800, [16, 22, 83, 76], 'Wer steht wann an welcher Station?', 'oben'),
+        BILD(9600, 'fest_todos', 'fest_todos.php'), GANZ(9600), F(10600, [16, 40, 83, 32], 'Aufgaben mit Fälligkeit und Zuständigkeit', 'oben')] },
+
+    { id: 'email', name: 'E-Mail', dauer: 15000, html: () => spalte('E-Mail', 'Die Vereinspost gehört dem Verein', [
+        '<b>Funktions-Postfächer</b> wie obmann@…: wer die Rolle hat, sieht die Post', 'Adressbuch mit Mitgliedern, <b>Registern und Formationen</b>', 'Gruppen gehen <b>automatisch als Bcc</b>', '<b>Spamfilter</b>, der dazulernt'],
+        'Wechselt das Amt, wechselt nur die Rolle. Es werden keine Passwörter weitergegeben.')
+        + fenster('mail_lesen', 'mail.php'),
+      schritte: [F(1800, [15.5, 15, 16.5, 30], 'Postfach „Obmann“ mit eigenen Ordnern', 'rechts'), F(4200, [57.5, 15, 41.5, 45], 'Lesen, antworten, weiterleiten', 'links'),
+        BILD(6800, 'mail_schreiben', 'mail.php'), GANZ(6800), F(7800, [50, 20, 45, 30], 'Alle aktiven Mitglieder mit einem Klick', 'unten'),
+        BILD(11000, 'mail_junk', 'mail.php'), GANZ(11000), F(12000, [57.5, 29.5, 41.5, 9], 'Aussortiert, mit Begründung', 'unten')] },
+
+    { id: 'rollen', name: 'Formationen & Rollen', dauer: 11000, html: () => spalte('Formationen & Rollen', 'Jeder sieht, was er braucht', [
+        'Mehrere <b>Formationen</b>: Musikkapelle, Jugendkapelle, Böhmische', '<b>Rechte je Bereich</b>: lesen, schreiben, löschen', 'Mehrere Rollen je Person, <b>Gastmusiker</b> mit Lesezugang'])
+        + fenster('formationen', 'formationen.php'),
+      schritte: [F(1800, [15.5, 12.5, 84, 26], 'Jede Formation mit eigenen Mitgliedern', 'unten'), BILD(4800, 'rollen', 'berechtigungen_matrix.php'), GANZ(4800), F(5800, [15.5, 18, 84, 60], 'Rechte-Matrix: Rolle × Bereich', 'oben')] },
+
+    { id: 'handy', name: 'Am Handy', dauer: 11000, html: () => spalte('Überall dabei', 'Am Handy wie am Computer', [
+        'Läuft <b>im Browser</b>, ohne Installation', 'Lässt sich <b>wie eine App</b> auf den Startbildschirm legen', '<b>Hell- und Dunkelmodus</b>'])
+        + `<div class="fenster ein-gross" style="left:640px;top:180px;width:640px;--d:.3s"><div class="leiste"><i></i><i></i><i></i><div class="adresse">Dunkelmodus</div></div><div class="ansicht"><div class="kamera"><img src="img/dashboard_dunkel.webp" alt=""></div></div></div>`
+        + handy('handy_dashboard', 1010, 120, 1.2, 230, -4) + handy('handy_ausrueckung', 1180, 230, 1.6, 230, 3) + handy('handy_mail', 1330, 110, 2, 230, 6) },
+
+    { id: 'technik', name: 'Technik & Datenschutz', dauer: 11000, html: () => {
+      const k = [['Eigener Webspace', 'Läuft auf dem Webspace des Vereins mit PHP und MySQL, ohne Zusatzsoftware.'], ['Daten bleiben beim Verein', 'Kein fremder Cloud-Dienst: Die Daten liegen auf dem eigenen Server.'],
+        ['Rollen statt Passwörter teilen', 'Jede Person meldet sich selbst an und bekommt die Rechte ihrer Funktion.'], ['Updates per Knopfdruck', 'Neue Versionen spielt der Administrator direkt in Syncopa ein.'],
+        ['Verschlüsselte Postfach-Zugänge', 'Passwörter der E-Mail-Postfächer werden verschlüsselt gespeichert.'], ['BMV nur lesend', 'Syncopa ändert nichts im BMV, solange der Verein es nicht ausdrücklich will.']];
+      return `<div class="kopf-mitte"><div class="eyebrow ein-links" style="--d:.1s">Technik & Datenschutz</div><h2 class="ein" style="--d:.2s">Einfach betrieben, sorgsam mit Daten</h2></div>
+        <div class="karten" style="top:260px">${k.map(([t, s], i) => `<div class="karte ein" style="--d:${0.6 + i * 0.3}s"><b>${t}</b><small>${s}</small></div>`).join('')}</div>`; } },
+
+    { id: 'schluss', name: 'Ausklang', dauer: 10000, html: () => `
+      <div class="notenlinien"></div>
+      <div class="titel"><div class="innen">
+        <img class="ein-gross" style="--d:.1s;width:240px" src="img/logo.png" alt="Syncopa">
+        <h1 class="ein" style="--d:.5s;font-size:64px">Weniger Verwaltung. Mehr Zeit für die Musik.</h1>
+        <div class="kontakt ein" style="--d:1.2s">
+          <div><small>Demo ansehen</small><span>syncopa.dannerbam.eu</span></div>
+          <div><small>Quellcode</small><span>github.com/Hanner72/syncopa</span></div>
+          <div><small>Entwickelt von</small><span>Johann Danner</span></div>
+        </div>
+        <div class="zeile ein" style="--d:1.8s;font-size:20px">Danke für die Aufmerksamkeit.</div>
+      </div></div>` },
+  ];
+
+  // ------------------------------------------------------------------ Aufbau
+  const buehne = document.getElementById('buehne'), rahmen = document.getElementById('rahmen');
+  const GESAMT = SZENEN.reduce((s, z) => s + z.dauer, 0);
+  const minuten = ms => { const s = Math.round(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+  let start = 0; SZENEN.forEach(z => { z.beginn = start; start += z.dauer; });
+
+  SZENEN.forEach((z, i) => {
+    const el = document.createElement('section');
+    el.className = 'szene'; el.id = 'szene-' + z.id;
+    el.setAttribute('aria-label', z.name);
+    el.innerHTML = z.html() + (i > 0 && i < SZENEN.length - 1 ? `<div class="programmzeile"><span class="marke"><img src="img/logo.png" alt="">Musikverein Musterdorf · Beispiel</span><span><b>${String(i).padStart(2, '0')}</b> &nbsp;${esc(z.name)}</span></div>` : '');
+    buehne.appendChild(el); z.el = el;
+  });
+
+  const fortschritt = document.getElementById('fortschritt'), programm = document.getElementById('programm');
+  SZENEN.forEach((z, i) => {
+    const b = document.createElement('button');
+    b.style.setProperty('--w', z.dauer); b.title = `${i}. ${z.name}`; b.setAttribute('aria-label', `Kapitel ${i}: ${z.name}`);
+    b.innerHTML = '<span></span>'; b.onclick = () => gehe(i, true); fortschritt.appendChild(b); z.balken = b;
+    const p = document.createElement('button');
+    p.innerHTML = `<b>${i === 0 ? '♪' : i}</b>${esc(z.name)}<em>${minuten(z.beginn)}</em>`; p.onclick = () => gehe(i, true); programm.appendChild(p); z.eintrag = p;
+  });
+
+  function skalieren() {
+    const k = rahmen.clientWidth / 1600;
+    buehne.style.transform = `scale(${k})`;
+  }
+  new ResizeObserver(skalieren).observe(rahmen); skalieren();
+
+  // ------------------------------------------------------------------ Kamera
+  function kameraSetzen(z, rect, text, wo) {
+    const ansicht = z.el.querySelector('.ansicht'); if (!ansicht) return;
+    const kam = ansicht.querySelector('.kamera'), mark = ansicht.querySelector('.markierung'), hin = ansicht.querySelector('.hinweis');
+    if (!rect) { kam.style.transform = 'none'; kam.style.setProperty('--s', 1); mark.classList.remove('an'); hin.classList.remove('an'); return; }
+    let [x, y, w, h] = rect; h = Math.min(h, 100 - y);
+    const rand = 3, px = Math.max(0, x - rand), py = Math.max(0, y - rand), pw = Math.min(100 - px, w + 2 * rand), ph = Math.min(100 - py, h + 2 * rand);
+    const s = Math.max(1, Math.min(2.4, 100 / pw, 100 / ph));
+    const cx = px + pw / 2, cy = py + ph / 2;
+    let tx = 50 - s * cx, ty = 50 - s * cy;
+    tx = Math.min(0, Math.max(100 - 100 * s, tx)); ty = Math.min(0, Math.max(100 - 100 * s, ty));
+    kam.style.setProperty('--s', s);
+    kam.style.transform = `translate(${tx}%, ${ty}%) scale(${s})`;
+    Object.assign(mark.style, { left: x + '%', top: y + '%', width: w + '%', height: h + '%' });
+    mark.classList.add('an');
+    hin.classList.remove('an');
+    if (text) {
+      // Position des Hinweises auf dem Bildschirm (nach Zoom)
+      const sx = tx + s * x, sy = ty + s * y, sw = s * w, sh = s * h;
+      hin.textContent = text;
+      const st = hin.style; st.left = st.top = st.right = st.bottom = 'auto';
+      // sichtbarer Bereich der Markierung im Fenster (Prozent), Hinweis ca. 40 % breit und 15 % hoch
+      const bx = Math.max(0, sx), by = Math.max(0, sy), bx2 = Math.min(100, sx + sw), by2 = Math.min(100, sy + sh);
+      const HB = 40, HH = 15, platz = { unten: 100 - by2 >= HH + 3, oben: by >= HH + 3, rechts: 100 - bx2 >= HB + 3, links: bx >= HB + 3 };
+      const ziel = [wo, 'unten', 'oben', 'rechts', 'links'].find(w => platz[w]) || 'innen';
+      const linksBei = Math.min(Math.max(bx, 2), 100 - HB - 2) + '%';
+      if (ziel === 'unten') { st.left = linksBei; st.top = (by2 + 2.5) + '%'; }
+      else if (ziel === 'oben') { st.left = linksBei; st.bottom = (100 - by + 2.5) + '%'; }
+      else if (ziel === 'rechts') { st.left = (bx2 + 2) + '%'; st.top = Math.min(Math.max(by, 3), 100 - HH - 3) + '%'; }
+      else if (ziel === 'links') { st.right = (100 - bx + 2) + '%'; st.top = Math.min(Math.max(by, 3), 100 - HH - 3) + '%'; }
+      else { st.left = '3%'; st.bottom = '4%'; }
+      spaeter(900, () => hin.classList.add('an'));
+    }
+  }
+  function bildWechseln(z, name, adresse) {
+    const ansicht = z.el.querySelector('.ansicht'); if (!ansicht) return;
+    const kam = ansicht.querySelector('.kamera'), alt = kam.querySelector('img');
+    const neu = document.createElement('img'); neu.src = `img/${name}.webp`; neu.alt = ''; neu.className = 'weg';
+    alt.after(neu); void neu.offsetWidth; getComputedStyle(neu).opacity;
+    spaeter(30, () => { neu.classList.remove('weg'); alt.classList.add('weg'); });
+    spaeter(1000, () => alt.remove());
+    const adr = z.el.querySelector('.adresse'); if (adr) adr.textContent = 'mv-musterdorf.at/syncopa/' + adresse;
+  }
+  function schrittAusfuehren(z, s) {
+    const [, art, a, b, c] = s;
+    if (art === 'fokus') kameraSetzen(z, a, b, c);
+    else if (art === 'ganz') kameraSetzen(z, null);
+    else if (art === 'bild') bildWechseln(z, a, b);
+    else if (art === 'klasse') z.el.querySelector(a).classList.add(b);
+    else if (art === 'handy') {
+      const d = document.createElement('div'); d.innerHTML = handy('handy_ausrueckung', 1250, 250, 0, 230, 4); const h = d.firstElementChild;
+      z.el.appendChild(h);
+    }
+  }
+
+  // ------------------------------------------------------------------ Ablauf
+  let aktuell = -1, uhr = 0, laeuft = false, tempo = 1, zuletzt = 0, erledigt = 0;
+  function szeneAufbauen(i) {
+    const z = SZENEN[i];
+    // frisch aufbauen, damit Animationen und Kamera von vorne beginnen
+    z.el.innerHTML = z.html() + (z.el.querySelector('.programmzeile')?.outerHTML || '');
+    const startKnopf = z.el.querySelector('[data-start]'); if (startKnopf) startKnopf.onclick = () => abspielen(true);
+  }
+  function gehe(i, vonHand) {
+    if (vonHand) buehne.classList.remove('ruhe');
+    i = Math.max(0, Math.min(SZENEN.length - 1, i));
+    if (aktuell >= 0) SZENEN[aktuell].el.classList.remove('aktiv');
+    aktuell = i; uhr = 0; erledigt = 0;
+    szeneAufbauen(i);
+    void SZENEN[i].el.offsetWidth;
+    SZENEN[i].el.classList.add('aktiv');
+    SZENEN.forEach((z, n) => { z.balken.style.setProperty('--f', n < i ? '100%' : '0%'); z.eintrag.classList.toggle('jetzt', n === i); });
+    document.getElementById('kapitelName').innerHTML = `<b>${i === 0 ? '♪' : String(i).padStart(2, '0')}</b>${esc(SZENEN[i].name)}`;
+    if (vonHand && !AUFNAHME) { try { history.replaceState(null, '', '#' + SZENEN[i].id); } catch (e) {} }
+    animationenTempo();
+    anzeigen();
+  }
+  function animationenTempo() {
+    if (!document.getAnimations) return;
+    document.getAnimations().forEach(a => { a.playbackRate = tempo; });
+  }
+  function pausieren(still) {
+    if (!document.getAnimations) return;
+    document.getAnimations().forEach(a => still ? a.pause() : a.play());
+  }
+  function abspielen(an) {
+    buehne.classList.remove('ruhe');
+    laeuft = an;
+    document.getElementById('spielSymbol').innerHTML = an ? '<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>' : '<path d="M7 4v16l13-8z"/>';
+    document.getElementById('spielen').setAttribute('aria-label', an ? 'Pause' : 'Abspielen');
+    if (an && aktuell === 0 && uhr < 10) uhr = SZENEN[0].dauer - 2600; // Titel kurz stehen lassen
+    pausieren(!an); animationenTempo(); zuletzt = performance.now();
+  }
+  function anzeigen() {
+    const z = SZENEN[aktuell];
+    z.balken.style.setProperty('--f', Math.min(100, uhr / z.dauer * 100) + '%');
+    document.getElementById('zeit').textContent = `${minuten(z.beginn + uhr)} / ${minuten(GESAMT)}`;
+  }
+  function takt(jetzt) {
+    const dt = jetzt - zuletzt; zuletzt = jetzt;
+    if (!AUFNAHME) tick(dt);
+    requestAnimationFrame(takt);
+  }
+  function tick(dt) {
+    if (laeuft) {
+      uhr += dt * tempo;
+      const z = SZENEN[aktuell], schritte = z.schritte || [];
+      while (erledigt < schritte.length && schritte[erledigt][0] <= uhr) { schrittAusfuehren(z, schritte[erledigt]); erledigt++; animationenTempo(); }
+      if (uhr >= z.dauer) {
+        if (aktuell < SZENEN.length - 1) gehe(aktuell + 1);
+        else { laeuft = false; abspielen(false); window.__FERTIG = true; }
+      }
+      anzeigen();
+    }
+  }
+  // Ein Einzelbild weiter (nur Aufnahme): Uhr, Warteschlange und alle CSS-Animationen exakt setzen
+  window.__bild = (dt) => {
+    aufnahmeZeit += dt;
+    for (let i = 0; i < warteschlange.length; i++) if (warteschlange[i].zeit <= aufnahmeZeit) { warteschlange.splice(i, 1)[0].fn(); i--; }
+    tick(dt);
+    document.getAnimations().forEach(a => {
+      if (a.__start === undefined) a.__start = aufnahmeZeit - dt;
+      a.pause(); a.currentTime = Math.max(0, aufnahmeZeit - a.__start);
+    });
+  };
+
+  document.getElementById('spielen').onclick = () => abspielen(!laeuft);
+  document.getElementById('weiter').onclick = () => gehe(aktuell + 1, true);
+  document.getElementById('zurueck').onclick = () => gehe(uhr > 2500 ? aktuell : aktuell - 1, true);
+  document.getElementById('tempo').onchange = e => { tempo = parseFloat(e.target.value) || 1; animationenTempo(); };
+  document.getElementById('vollbild').onclick = () => {
+    const ziel = document.querySelector('.seite');
+    try { (document.fullscreenElement ? document.exitFullscreen() : ziel.requestFullscreen())?.catch?.(() => {}); } catch (e) {}
+  };
+  document.addEventListener('keydown', e => {
+    if (e.target.closest && e.target.closest('select')) return;
+    if (e.key === ' ' || e.key === 'k') { e.preventDefault(); abspielen(!laeuft); }
+    else if (e.key === 'ArrowRight') gehe(aktuell + 1, true);
+    else if (e.key === 'ArrowLeft') gehe(aktuell - 1, true);
+    else if (e.key === 'f') document.getElementById('vollbild').click();
+  });
+
+  const anker = (location.hash || '').slice(1);
+  const startBei = Math.max(0, SZENEN.findIndex(z => z.id === anker));
+  fetch('Syncopa-Vorstellung.webm', { method: 'HEAD' }).then(r => { if (r.ok) document.getElementById('videoLink').hidden = false; }).catch(() => {});
+  if (!AUFNAHME && startBei === 0) buehne.classList.add('ruhe');
+  gehe(startBei);
+  if (!BEWEGUNG) document.getElementById('tempo').value = '1';
+  // Aufnahme: Start erst auf Zeichen des Aufnahmeprogramms (nach dem Laden von Schriften und Bildern)
+  window.__los = () => { tempo = 1; abspielen(true); uhr = 0; zuletzt = performance.now(); gehe(0); };
+  zuletzt = performance.now(); requestAnimationFrame(takt);
+})();
+</script>
+
+</body>
+</html>
