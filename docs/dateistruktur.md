@@ -49,6 +49,7 @@ syncopa/
 │   ├── BmvApi.php                  # BMV: Zugang zum Datenservice (nur lesend)
 │   ├── BmvDaten.php                # BMV: Vereinsdaten übernehmen, Prüfung auf neue Daten
 │   ├── BmvMitgliederSync.php       # BMV: Mitglieder abgleichen (neu, geändert, nur in Syncopa)
+│   ├── BmvInstrumente.php          # BMV: Register und Instrumententypen aus SetupRegister/SetupInstrumente
 │   ├── BmvZusatzdaten.php          # BMV: Funktionen, Ehrungen, Instrumente, Prüfungen, Mitgliedsarten, Namenslisten (Setup*)
 │   ├── BmvNoten.php                # BMV: Notenarchiv übernehmen
 │   ├── BmvInventar.php             # BMV: Inventar aus dem CSV-Export übernehmen

@@ -99,11 +99,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $api->istKonfiguriert()) {
             Session::setFlashMessage('success', 'Noten übernommen: ' . $e['neu'] . ' neu, ' . $e['zusammen'] . ' zusammengeführt, '
                 . $e['ergaenzt'] . ' ergänzt, ' . $e['unveraendert'] . ' unverändert'
                 . ($e['uebersprungen'] ? ', ' . $e['uebersprungen'] . ' ohne Notenmaterial übersprungen' : '') . '.');
-        } elseif (($_POST['aktion'] ?? '') === 'instrumente_zuordnen') {
-            BmvZusatzdaten::instrumentZuordnungSpeichern((array)($_POST['instrument_typ'] ?? []));
-            Session::setFlashMessage('success', 'Zuordnung der Instrumente gespeichert.');
-            header('Location: ' . $seitenUrl);
-            exit;
         }
         BmvDaten::pruefen($api); // Hinweis in den Einstellungen auf den neuen Stand bringen
     } catch (Throwable $e) {
@@ -152,23 +147,6 @@ if ($bereich === 'inventar') {
     );
 }
 
-if ($bereich === 'mitglieder' && !$fehler) {
-    // BMV-Instrumente, die im Verein vorkommen oder schon zugeordnet sind, mit Anzahl der Einträge
-    $instrumentVerwendung = [];
-    foreach (Database::getInstance()->fetchAll(
-        "SELECT instrument_code AS code, COUNT(*) AS anzahl FROM bmv_mitglied_daten WHERE instrument_code IS NOT NULL GROUP BY instrument_code
-         UNION ALL SELECT bmv_code, COUNT(*) FROM mitglied_instrumente WHERE bmv_code IS NOT NULL GROUP BY bmv_code"
-    ) as $r) {
-        $instrumentVerwendung[(int)$r['code']] = ($instrumentVerwendung[(int)$r['code']] ?? 0) + (int)$r['anzahl'];
-    }
-    $instrumentZuordnung = BmvZusatzdaten::instrumentZuordnung();
-    $instrumentCodes = array_keys($instrumentVerwendung + $instrumentZuordnung);
-    usort($instrumentCodes, fn($a, $b) => strcasecmp(BmvZusatzdaten::name('instrument', $a), BmvZusatzdaten::name('instrument', $b)));
-    $instrumentTypen = Database::getInstance()->fetchAll(
-        "SELECT it.id, it.name, it.bmv_automatisch, r.name AS register_name FROM instrument_typen it
-         LEFT JOIN register r ON r.id = it.register_id ORDER BY r.sortierung IS NULL, r.sortierung, it.name"
-    );
-}
 
 $einstellungen = [];
 foreach (Database::getInstance()->fetchAll("SELECT schluessel, wert FROM einstellungen WHERE schluessel IN ('bmv_letzte_sync_verein', 'bmv_verein_nr')") as $r) {
@@ -611,6 +589,7 @@ document.getElementById('notenSuche')?.addEventListener('input', function () {
     <div class="card-body">
         <p class="text-muted small">
             Werden beim Übernehmen mitgeholt, die Namen dazu kommen direkt aus den Namenslisten des BMV.
+            Register und Instrumente unter Stammdaten werden dabei mit dem BMV abgeglichen.
             Einträge, die im BMV gelöscht wurden, werden auch in Syncopa entfernt.
             Eigene Einträge aus Syncopa bleiben erhalten; gibt es denselben Eintrag auch im BMV, wird er damit verknüpft.
         </p>
@@ -641,53 +620,6 @@ document.getElementById('notenSuche')?.addEventListener('input', function () {
     </div>
 </div>
 
-<?php if ($instrumentCodes): ?>
-<div class="card mb-3">
-    <div class="card-header d-flex justify-content-between align-items-center" role="button"
-         data-bs-toggle="collapse" data-bs-target="#instrumentZuordnung" aria-expanded="false">
-        <h5 class="mb-0"><i class="bi bi-diagram-3"></i> Instrumente zuordnen</h5>
-        <span class="text-muted small"><?php echo count($instrumentCodes); ?> BMV-Instrumente <i class="bi bi-chevron-down"></i></span>
-    </div>
-    <div class="collapse" id="instrumentZuordnung">
-    <form method="POST">
-        <input type="hidden" name="aktion" value="instrumente_zuordnen">
-        <div class="card-body pb-0">
-            <p class="text-muted small mb-2">
-                Welches Syncopa-Instrument gehört zu welchem BMV-Instrument? So kommen BMV- und eigene Instrumente in einer Liste zusammen.
-                Mehrere BMV-Instrumente dürfen dasselbe Syncopa-Instrument haben. Ohne Zuordnung wird beim Holen ein Instrument mit gleichem Namen
-                genommen oder neu angelegt. Die Namen kommen aus dem BMV.
-            </p>
-        </div>
-        <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
-            <thead><tr><th class="ps-3">Instrument im BMV</th><th>Syncopa-Instrument</th><th class="text-end pe-3" style="width:90px">Einträge</th></tr></thead>
-            <tbody>
-            <?php foreach ($instrumentCodes as $code): ?>
-            <tr>
-                <td class="ps-3"><?php echo htmlspecialchars(BmvZusatzdaten::name('instrument', $code)); ?> <span class="text-muted small">Nr. <?php echo (int)$code; ?></span></td>
-                <td>
-                    <select class="form-select form-select-sm" name="instrument_typ[<?php echo (int)$code; ?>]">
-                        <option value="">– wird beim Holen automatisch zugeordnet –</option>
-                        <?php foreach ($instrumentTypen as $typ): ?>
-                        <option value="<?php echo (int)$typ['id']; ?>" <?php echo ($instrumentZuordnung[$code] ?? null) === (int)$typ['id'] ? 'selected' : ''; ?>>
-                            <?php echo htmlspecialchars($typ['name'] . ($typ['register_name'] ? ' (' . $typ['register_name'] . ')' : '') . ($typ['bmv_automatisch'] ? ' – neu aus BMV' : '')); ?>
-                        </option>
-                        <?php endforeach; ?>
-                    </select>
-                </td>
-                <td class="text-end pe-3 text-muted"><?php echo (int)($instrumentVerwendung[$code] ?? 0); ?></td>
-            </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-        </div>
-        <div class="card-body d-flex justify-content-end">
-            <button type="submit" class="btn btn-outline-primary"><i class="bi bi-save"></i> Zuordnung speichern</button>
-        </div>
-    </form>
-    </div>
-</div>
-<?php endif; ?>
 
 <?php $zusatzAenderungen = $zusatzVergleich['neu'] + $zusatzVergleich['geaendert'] + $zusatzVergleich['entfernt']; ?>
 <form method="POST" class="d-flex justify-content-end"

@@ -33,13 +33,23 @@ Register sind die musikalischen Gruppen im Verein (z.B. nach Instrumentenfamilie
 
 > ⚠️ **Hinweis:** Ein Register kann nur gelöscht werden, wenn ihm **keine Mitglieder** mehr zugeordnet sind.
 
+### Register und Instrumente aus dem BMV
+
+Ist die [BMV-Anbindung](einstellungen.md#bmv-anbindung) eingerichtet, kommen Register und Instrumententypen aus dem BMV (Zugriffspunkte `SetupRegister` und `SetupInstrumente`). Eine Zuordnung von Hand ist dann nicht nötig.
+
+- Abgeglichen wird beim [Holen der Mitglieder](bmv-daten.md#mitglieder), einmal am Tag beim Öffnen von „BMV Daten holen → Mitglieder“ und mit dem Knopf **Mit BMV abgleichen** in beiden Reitern.
+- Einträge mit dem Kennzeichen **BMV** haben Name, Reihenfolge bzw. Register aus dem BMV und lassen sich nur dort ändern.
+- Ein vorhandener Instrumententyp wird mit dem BMV-Instrument verknüpft, wenn er schon zugeordnet war oder gleich heißt; er bekommt dann den Namen aus dem BMV (z. B. „Klarinette in Bb“ → „B-Klarinette“). Mitglieder und Inventar bleiben daran hängen.
+- **Eigene Typen** ohne Gegenstück im BMV (z. B. Lyra) bleiben und lassen sich weiter bearbeiten; ebenso lassen sich eigene Register anlegen.
+- Beim **ersten Abgleich** werden die bisherigen eigenen Register durch die BMV-Register ersetzt: Eigene Typen und Mitglieder kommen in das passende BMV-Register (nach den Instrumenten, die vorher darin waren; Mitglieder nach ihrem Hauptinstrument), danach werden die alten Register gelöscht.
+
 ---
 
 ## Instrumententypen verwalten
 
 ![Instrumententypen verwalten](screenshots/stammdaten2.png)
 
-Instrumententypen definieren die verfügbaren Instrumentgattungen im Inventar.
+Instrumententypen definieren die verfügbaren Instrumentgattungen im Inventar. Mit BMV-Anbindung kommen sie aus dem BMV, siehe [Register und Instrumente aus dem BMV](#register-und-instrumente-aus-dem-bmv); von Hand angelegt werden nur noch eigene Typen.
 
 1. Navigiere zu **Administration → Stammdaten → Instrumententypen**
 2. Klicke **+ Neuer Instrumententyp**

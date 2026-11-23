@@ -117,7 +117,7 @@ include 'includes/header.php';
                 </thead>
                 <tbody>
                     <?php foreach ($mitglieder as $m): ?>
-                    <tr>
+                    <tr data-id="<?php echo (int)$m['id']; ?>" data-name="<?php echo htmlspecialchars($m['nachname'] . ' ' . $m['vorname']); ?>">
                         <td>
                             <strong><?php echo htmlspecialchars($m['mitgliedsnummer']); ?></strong>
                         </td>
@@ -246,6 +246,16 @@ $(document).ready(function() {
         ],
         dom: '<"row align-items-center mb-2"<"col-auto"l>><"table-responsive"t><"row align-items-center mt-2"<"col-sm-5"i><"col-sm-7"p>>'
     });
+    // Reihenfolge (mit Suche und Sortierung) für „Vorige/Nächste“ beim Bearbeiten merken
+    const reihenfolgeMerken = () => {
+        try {
+            const liste = tabelle.rows({ search: 'applied', order: 'applied' }).nodes().toArray()
+                .map(tr => [Number(tr.dataset.id), tr.dataset.name || '']);
+            sessionStorage.setItem('mitglieder_reihenfolge', JSON.stringify(liste));
+        } catch (e) { /* ohne Speicher gilt die Reihenfolge vom Server */ }
+    };
+    tabelle.on('draw', reihenfolgeMerken);
+    reihenfolgeMerken();
     const suche = document.getElementById('search');
     suche.value = tabelle.search(); // gemerkten Suchbegriff anzeigen
     suche.addEventListener('input', () => tabelle.search(suche.value).draw());

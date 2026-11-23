@@ -89,6 +89,14 @@ Die Liste filtert sofort beim Tippen bzw. Auswählen. Suche, Filter, Sortierung 
 
 > 💡 **Tipp:** Das formationsspezifische Register erscheint nur beim **Bearbeiten** eines bestehenden Mitglieds und nur, wenn oben eine Formation ausgewählt ist. Mehr zum Formations-Konzept: → [Formationen](formationen.md)
 
+### Zwischen Mitgliedern blättern
+
+Beim **Bearbeiten** stehen oben rechts Pfeile zum **vorigen** und **nächsten** Mitglied, dazwischen die Position (z. B. „3 / 54“). Tastenkürzel: **Alt+←** und **Alt+→**.
+
+- Die Reihenfolge ist die der Mitgliederliste – mit Suche, Sortierung und den Filtern Mitgliedsart und Register, wie zuletzt eingestellt.
+- Hast du schon etwas geändert, fragt Syncopa vor dem Wechseln nach, ob die Änderungen verworfen werden sollen.
+- **Aktualisieren & nächstes** (unten) speichert und öffnet gleich das nächste Mitglied zum Bearbeiten – praktisch, um viele Mitglieder nacheinander durchzugehen.
+
 ---
 
 ## Mitglied einer Formation zuordnen

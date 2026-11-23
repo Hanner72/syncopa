@@ -683,6 +683,13 @@ require_once __DIR__ . '/classes/FestAbrechnung.php';
         $db->execute("ALTER TABLE bmv_bezeichnungen ADD COLUMN instrument_typ_id INT NULL");
     }
     // Namen kommen aus den Namenslisten des BMV; anzeigen = 0: wird im BMV nicht mehr zur Auswahl angeboten
+    // Register und Instrumententypen aus den Namenslisten des BMV (SetupRegister/SetupInstrumente), siehe classes/BmvInstrumente.php
+    if (!$spalte('register', 'bmv_code')) {
+        $db->execute("ALTER TABLE register ADD COLUMN bmv_code INT NULL, ADD UNIQUE KEY uk_register_bmv (bmv_code)");
+    }
+    if (!$spalte('instrument_typen', 'bmv_code')) {
+        $db->execute("ALTER TABLE instrument_typen ADD COLUMN bmv_code INT NULL, ADD UNIQUE KEY uk_instrument_typ_bmv (bmv_code)");
+    }
     if (!$spalte('bmv_bezeichnungen', 'anzeigen')) {
         $db->execute("ALTER TABLE bmv_bezeichnungen ADD COLUMN anzeigen TINYINT(1) NULL");
     }
