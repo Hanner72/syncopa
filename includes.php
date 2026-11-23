@@ -682,6 +682,10 @@ require_once __DIR__ . '/classes/FestAbrechnung.php';
     if (!$spalte('bmv_bezeichnungen', 'instrument_typ_id')) {
         $db->execute("ALTER TABLE bmv_bezeichnungen ADD COLUMN instrument_typ_id INT NULL");
     }
+    // Namen kommen aus den Namenslisten des BMV; anzeigen = 0: wird im BMV nicht mehr zur Auswahl angeboten
+    if (!$spalte('bmv_bezeichnungen', 'anzeigen')) {
+        $db->execute("ALTER TABLE bmv_bezeichnungen ADD COLUMN anzeigen TINYINT(1) NULL");
+    }
     // Beim Holen automatisch angelegte Instrumentarten (dürfen nach dem Umzuordnen wieder entfernt werden)
     if (!$spalte('instrument_typen', 'bmv_automatisch')) {
         $db->execute("ALTER TABLE instrument_typen ADD COLUMN bmv_automatisch TINYINT(1) NOT NULL DEFAULT 0");

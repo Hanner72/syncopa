@@ -106,12 +106,21 @@ Welche Art ein Mitglied gerade hat, steht beim Mitglied im Reiter **Mitgliedsart
 | Gast | Kein Vereinsmitglied, z. B. Gastmusiker/innen: spielt nur in den Formationen mit, denen er/sie zugeordnet ist, wird nie an den BMV übertragen und zählt nicht bei Beiträgen, Ehrungen und Statistik |
 | Beitrag € | Eigener Beitrag für diese Art; leer = Standardbeitrag aus den [Einstellungen](einstellungen.md#mitgliedsbeiträge) |
 | Farbe | Farbe des Abzeichens in Listen |
-| Reihenf. | Reihenfolge in Auswahllisten |
 | Mitglieder | Wie viele Mitglieder diese Art gerade haben |
 
 - Neue Art: in der leeren letzten Zeile eintragen und **Mitgliedsarten speichern**.
+- **Reihenfolge** (in Auswahllisten und Übersichten): Zeile am Griff <i class="bi bi-grip-vertical"></i> ganz links ziehen. Die neue Reihenfolge wird sofort gespeichert.
 - Eine Art, die bei Mitgliedern eingetragen ist, lässt sich nicht löschen.
 - Holt Syncopa aus dem BMV eine Art, die es hier noch nicht gibt, wird sie automatisch mit ihrem Namen angelegt.
+
+### Abgleich mit dem BMV
+
+Mit **Mit BMV abgleichen** (und automatisch beim [Holen der Mitglieder](bmv-daten.md#mitglieder)) gleicht Syncopa den Katalog mit der Liste der Mitgliedsarten im BMV ab (`SetupMitgliederart`):
+
+- Gibt es die Nummer schon, gilt der **Name aus dem BMV**. Deine Einstellungen (aktiv, beitragspflichtig, Beitrag, Farbe, Reihenfolge) bleiben.
+- Gibt es eine **eigene Art** (Nummer ab 9001) mit gleichem Namen, wird sie **auf die BMV-Nummer umgestellt**, samt aller Zeiträume bei den Mitgliedern.
+- Fehlende Arten werden **angelegt**, zunächst als nicht aktiv und nicht beitragspflichtig. Bitte danach prüfen.
+- Hinter dem Namen zeigt **BMV**, dass es die Nummer im BMV gibt, **eigene**, dass es sie nur in Syncopa gibt.
 
 > 💡 Welche Mitgliedsarten für **Ehrungen** als Mitgliedsjahre zählen, wird unter [Ehrungen → Regeln](ehrungen.md#regeln-nur-administratoren) eingestellt.
 

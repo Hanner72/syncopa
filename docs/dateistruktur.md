@@ -49,7 +49,7 @@ syncopa/
 │   ├── BmvApi.php                  # BMV: Zugang zum Datenservice (nur lesend)
 │   ├── BmvDaten.php                # BMV: Vereinsdaten übernehmen, Prüfung auf neue Daten
 │   ├── BmvMitgliederSync.php       # BMV: Mitglieder abgleichen (neu, geändert, nur in Syncopa)
-│   ├── BmvZusatzdaten.php          # BMV: Funktionen, Ehrungen, Instrumente, Prüfungen, Mitgliedsarten, Bezeichnungen
+│   ├── BmvZusatzdaten.php          # BMV: Funktionen, Ehrungen, Instrumente, Prüfungen, Mitgliedsarten, Namenslisten (Setup*)
 │   ├── BmvNoten.php                # BMV: Notenarchiv übernehmen
 │   ├── BmvInventar.php             # BMV: Inventar aus dem CSV-Export übernehmen
 │   └── BmvJahresbericht.php        # BMV: Jahresbericht berechnen, abschließen, PDF
@@ -58,7 +58,7 @@ syncopa/
 │   ├── header.php, footer.php      # Seitenkopf mit Menü / Seitenfuß mit Skripten, Toasts, Bestätigungs-Modal
 │   ├── anwesenheit_register.php    # Karten „Zusagen“/„Absagen“ nach Register (Ausrückung, Live-Aktualisierung)
 │   ├── mitglied_laufbahn.php       # Karte „Laufbahn“ in der Mitglied-Detailseite
-│   ├── bmv_bezeichnungen_standard.php  # Standardnamen zu den BMV-Nummern
+│   ├── bmv_bezeichnungen_standard.php  # Standardnamen, bis die Namen aus dem BMV geholt sind
 │   ├── fest_tabs.php               # Reiter der Fest-Unterseiten
 │   └── mail_konto_formular.php     # Dialog Postfach anlegen/bearbeiten
 │
@@ -137,7 +137,7 @@ syncopa/
 ├── rollen.php, rolle_bearbeiten.php, berechtigungen_bearbeiten.php, berechtigungen_matrix.php
 ├── stammdaten.php                   # Register, Instrumententypen, Ausrückungstypen, Mitgliedsarten, Nummernkreise
 ├── ehrungen.php                     # Anstehende und verliehene Ehrungen, Regeln
-├── bmv_daten.php                    # BMV Daten holen (Verein, Mitglieder, Noten, Inventar, Bezeichnungen)
+├── bmv_daten.php                    # BMV Daten holen (Verein, Mitglieder, Noten, Inventar)
 ├── bmv_jahresbericht.php            # BMV-Jahresbericht
 ├── bmv_mitglieder_vorschau.php      # nur noch Weiterleitung auf bmv_daten.php (alte Links)
 ├── mail.php, mail_konten.php, mail_kontakte.php, konto.php   # E-Mail-Programm, Funktions-Postfächer, Kontakte, Mein Konto

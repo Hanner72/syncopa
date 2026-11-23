@@ -1248,6 +1248,7 @@ CREATE TABLE IF NOT EXISTS `bmv_bezeichnungen` (
   `code` int NOT NULL,
   `name` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
   `instrument_typ_id` int DEFAULT NULL,
+  `anzeigen` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`art`,`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

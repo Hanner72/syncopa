@@ -46,7 +46,7 @@ Für jede Ehrung, die im Verein vorkommt, trägst du ein, nach wie vielen Mitgli
 - **Vorschlagen:** ausschalten bei alten Nummern, die nicht mehr vergeben werden. Sie zählen dann nur noch als „erhalten“.
 - Hat ein Mitglied schon eine Ehrung mit gleich vielen oder mehr Jahren, gelten die kleineren als erledigt.
 - Ehrennadeln und Verdienstkreuze hängen von Funktionen ab und werden nicht berechnet.
-- Fehlen Namen von Ehrungen, trägst du sie unter [BMV Daten holen → Bezeichnungen](bmv-daten.md#bezeichnungen) ein.
+- Die Namen der Ehrenzeichen kommen aus dem BMV (siehe [BMV Daten holen → Mitglieder](bmv-daten.md#mitglieder)).
 
 ### Was zählt als Mitgliedsjahr?
 

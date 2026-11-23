@@ -24,9 +24,11 @@ $bereiche = [
     'mitglieder'     => ['label' => 'Mitglieder',     'icon' => 'bi-people'],
     'noten'          => ['label' => 'Noten',          'icon' => 'bi-music-note-list'],
     'inventar'       => ['label' => 'Inventar',       'icon' => 'bi-box-seam'],
-    'bezeichnungen'  => ['label' => 'Bezeichnungen',  'icon' => 'bi-tags'],
 ];
 $bereich = $_GET['bereich'] ?? 'verein';
+if ($bereich === 'bezeichnungen') {
+    $bereich = 'mitglieder'; // früherer Reiter; die Namen kommen jetzt aus dem BMV, die Instrument-Zuordnung steht bei Mitglieder
+}
 if (!isset($bereiche[$bereich])) {
     $bereich = 'verein';
 }
@@ -97,17 +99,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $api->istKonfiguriert()) {
             Session::setFlashMessage('success', 'Noten übernommen: ' . $e['neu'] . ' neu, ' . $e['zusammen'] . ' zusammengeführt, '
                 . $e['ergaenzt'] . ' ergänzt, ' . $e['unveraendert'] . ' unverändert'
                 . ($e['uebersprungen'] ? ', ' . $e['uebersprungen'] . ' ohne Notenmaterial übersprungen' : '') . '.');
-        } elseif (($_POST['aktion'] ?? '') === 'bezeichnungen_speichern') {
-            $eingaben = $_POST['bezeichnung'] ?? [];
-            // Neue Nummer (z. B. eine Ehrung, die noch niemand im Verein hat)
-            $neuArt = $_POST['neu_art'] ?? '';
-            $neuCode = (int)($_POST['neu_code'] ?? 0);
-            if ($neuCode > 0 && isset(BmvZusatzdaten::BEZEICHNUNG_ARTEN[$neuArt])) {
-                $eingaben[$neuArt][$neuCode] = $_POST['neu_name'] ?? '';
-            }
-            BmvZusatzdaten::bezeichnungenSpeichern($eingaben);
-            BmvZusatzdaten::instrumentZuordnungSpeichern($_POST['instrument_typ'] ?? []);
-            Session::setFlashMessage('success', 'Bezeichnungen gespeichert.');
+        } elseif (($_POST['aktion'] ?? '') === 'instrumente_zuordnen') {
+            BmvZusatzdaten::instrumentZuordnungSpeichern((array)($_POST['instrument_typ'] ?? []));
+            Session::setFlashMessage('success', 'Zuordnung der Instrumente gespeichert.');
             header('Location: ' . $seitenUrl);
             exit;
         }
@@ -134,6 +128,7 @@ if (!$api->istKonfiguriert()) {
                 "SELECT COUNT(*) AS anzahl, MAX(bmv_import_am) AS zuletzt FROM noten WHERE bmv_noten_id IS NOT NULL"
             );
         } elseif ($bereich === 'mitglieder') {
+            BmvZusatzdaten::katalogeHolenFallsNoetig($api); // Namen zu Funktionen, Ehrungen usw. (einmal am Tag)
             $vorschau = BmvMitgliederSync::vorschau($api);
             $zusatzVergleich = BmvZusatzdaten::vergleich(BmvZusatzdaten::holen($api));
         }
@@ -157,21 +152,18 @@ if ($bereich === 'inventar') {
     );
 }
 
-if ($bereich === 'bezeichnungen') {
-    $fehler = null; // Bezeichnungen sind lokal und brauchen keine BMV-Verbindung
-    $verwendung = [];
+if ($bereich === 'mitglieder' && !$fehler) {
+    // BMV-Instrumente, die im Verein vorkommen oder schon zugeordnet sind, mit Anzahl der Einträge
+    $instrumentVerwendung = [];
     foreach (Database::getInstance()->fetchAll(
-        "SELECT art, code, COUNT(*) AS anzahl FROM bmv_mitglied_daten WHERE code IS NOT NULL GROUP BY art, code
-         UNION ALL SELECT 'bereich', bereich_code, COUNT(*) FROM bmv_mitglied_daten WHERE bereich_code IS NOT NULL GROUP BY bereich_code
-         UNION ALL SELECT 'instrument', instrument_code, COUNT(*) FROM bmv_mitglied_daten WHERE instrument_code IS NOT NULL GROUP BY instrument_code
-         UNION ALL SELECT 'instrument', bmv_code, COUNT(*) FROM mitglied_instrumente WHERE bmv_code IS NOT NULL GROUP BY bmv_code"
+        "SELECT instrument_code AS code, COUNT(*) AS anzahl FROM bmv_mitglied_daten WHERE instrument_code IS NOT NULL GROUP BY instrument_code
+         UNION ALL SELECT bmv_code, COUNT(*) FROM mitglied_instrumente WHERE bmv_code IS NOT NULL GROUP BY bmv_code"
     ) as $r) {
-        $verwendung[$r['art']][(int)$r['code']] = ($verwendung[$r['art']][(int)$r['code']] ?? 0) + (int)$r['anzahl'];
+        $instrumentVerwendung[(int)$r['code']] = ($instrumentVerwendung[(int)$r['code']] ?? 0) + (int)$r['anzahl'];
     }
-    $bezeichnungen = BmvZusatzdaten::bezeichnungen();          // gilt (eigene, sonst Standard)
-    $eigeneBezeichnungen = BmvZusatzdaten::eigeneBezeichnungen();
-    $standardBezeichnungen = BmvZusatzdaten::standardBezeichnungen();
     $instrumentZuordnung = BmvZusatzdaten::instrumentZuordnung();
+    $instrumentCodes = array_keys($instrumentVerwendung + $instrumentZuordnung);
+    usort($instrumentCodes, fn($a, $b) => strcasecmp(BmvZusatzdaten::name('instrument', $a), BmvZusatzdaten::name('instrument', $b)));
     $instrumentTypen = Database::getInstance()->fetchAll(
         "SELECT it.id, it.name, it.bmv_automatisch, r.name AS register_name FROM instrument_typen it
          LEFT JOIN register r ON r.id = it.register_id ORDER BY r.sortierung IS NULL, r.sortierung, it.name"
@@ -518,97 +510,6 @@ document.getElementById('notenSuche')?.addEventListener('input', function () {
 <form method="POST" id="inventarVerwerfen"><input type="hidden" name="aktion" value="inventar_verwerfen"></form>
 <?php endif; ?>
 
-<?php elseif ($bereich === 'bezeichnungen'): ?>
-<div class="alert alert-permanent alert-secondary small">
-    <i class="bi bi-tags"></i>
-    Der BMV liefert zu Ehrungen, Funktionen usw. nur Nummern. Syncopa bringt für die bekannten Nummern Standardnamen mit
-    (grau im leeren Feld) – trägst du selbst etwas ein, gilt dein Name. Ohne Namen erscheint z. B. „Ehrenzeichen Nr. 31“.
-    Einige Namen sind aus den Prüfungsurkunden vorbefüllt.
-    Bei den Instrumenten wählst du zusätzlich, welches Syncopa-Instrument dazugehört – so kommen BMV- und eigene Instrumente
-    in einer Liste zusammen. Mehrere BMV-Nummern dürfen dasselbe Syncopa-Instrument haben.<br>
-    Mitgliedsarten pflegst du unter <a href="stammdaten.php?tab=mitgliedsarten">Stammdaten → Mitgliedsarten</a>.
-</div>
-<?php if (!$verwendung): ?>
-<div class="alert alert-permanent alert-info">Noch keine Daten vorhanden. Bitte zuerst unter <a href="bmv_daten.php?bereich=mitglieder">Mitglieder</a> übernehmen.</div>
-<?php else: ?>
-<form method="POST">
-    <input type="hidden" name="aktion" value="bezeichnungen_speichern">
-    <div class="row">
-    <?php foreach (BmvZusatzdaten::BEZEICHNUNG_ARTEN as $art => $titel):
-        if ($art === 'mitgliedsart') continue; // eigener Katalog unter Stammdaten → Mitgliedsarten
-        $codes = array_keys(($verwendung[$art] ?? []) + ($bezeichnungen[$art] ?? []));
-        if (!$codes) continue;
-        sort($codes);
-        $offen = count(array_filter($codes, fn($c) => ($bezeichnungen[$art][$c] ?? '') === ''));
-        $istInstrument = $art === 'instrument'; ?>
-    <div class="<?php echo $istInstrument ? 'col-12' : 'col-lg-6'; ?>">
-        <div class="card mb-3">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><?php echo $titel; ?></h5>
-                <?php if ($offen): ?><span class="badge bg-warning text-dark"><?php echo $offen; ?> ohne Namen</span><?php endif; ?>
-            </div>
-            <div class="card-body p-0">
-                <table class="table table-sm align-middle mb-0">
-                    <thead><tr><th class="ps-3" style="width:70px">Nr.</th><th>Name im BMV</th><?php if ($istInstrument): ?><th>Syncopa-Instrument</th><?php endif; ?><th class="text-end pe-3" style="width:90px">Einträge</th></tr></thead>
-                    <tbody>
-                    <?php foreach ($codes as $code): ?>
-                    <tr>
-                        <td class="ps-3 text-muted"><?php echo (int)$code; ?></td>
-                        <td>
-                            <input type="text" class="form-control form-control-sm" maxlength="150"
-                                   name="bezeichnung[<?php echo $art; ?>][<?php echo (int)$code; ?>]"
-                                   value="<?php echo htmlspecialchars($eigeneBezeichnungen[$art][$code] ?? ''); ?>"
-                                   placeholder="<?php echo htmlspecialchars($standardBezeichnungen[$art][$code] ?? ''); ?>"
-                                   <?php if (!empty($standardBezeichnungen[$art][$code])): ?>title="Standardname: <?php echo htmlspecialchars($standardBezeichnungen[$art][$code]); ?> – gilt, solange das Feld leer ist"<?php endif; ?>>
-                        </td>
-                        <?php if ($istInstrument): ?>
-                        <td>
-                            <select class="form-select form-select-sm" name="instrument_typ[<?php echo (int)$code; ?>]">
-                                <option value="">– wird beim Holen automatisch zugeordnet –</option>
-                                <?php foreach ($instrumentTypen as $typ): ?>
-                                <option value="<?php echo (int)$typ['id']; ?>" <?php echo ($instrumentZuordnung[$code] ?? null) === (int)$typ['id'] ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($typ['name'] . ($typ['register_name'] ? ' (' . $typ['register_name'] . ')' : '') . ($typ['bmv_automatisch'] ? ' – neu aus BMV' : '')); ?>
-                                </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </td>
-                        <?php endif; ?>
-                        <td class="text-end pe-3 text-muted"><?php echo (int)($verwendung[$art][$code] ?? 0); ?></td>
-                    </tr>
-                    <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    <?php endforeach; ?>
-    </div>
-
-    <div class="card mb-3">
-        <div class="card-header"><h5 class="mb-0">Nummer hinzufügen</h5></div>
-        <div class="card-body">
-            <p class="text-muted small">Für Nummern, die im Verein noch niemand hat, z. B. ein Ehrenzeichen, das man selbst eintragen möchte.
-                Die Nummer findest du im BMV-Portal.</p>
-            <div class="row g-2">
-                <div class="col-md-4">
-                    <select class="form-select" name="neu_art">
-                        <?php foreach (BmvZusatzdaten::BEZEICHNUNG_ARTEN as $art => $titel): if ($art === 'mitgliedsart') continue; ?>
-                        <option value="<?php echo $art; ?>"><?php echo $titel; ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="col-md-2"><input type="number" class="form-control" name="neu_code" min="1" placeholder="Nr."></div>
-                <div class="col-md-6"><input type="text" class="form-control" name="neu_name" maxlength="150" placeholder="Name"></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="d-flex justify-content-end page-actions-sticky">
-        <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-save"></i> Bezeichnungen speichern</button>
-    </div>
-</form>
-<?php endif; ?>
-
 <?php else: /* Mitglieder */ ?>
 <div class="row mb-3">
     <?php
@@ -709,7 +610,8 @@ document.getElementById('notenSuche')?.addEventListener('input', function () {
     <div class="card-header"><h5 class="mb-0">Funktionen, Ehrungen, Instrumente, Prüfungen, Mitgliedsarten</h5></div>
     <div class="card-body">
         <p class="text-muted small">
-            Werden beim Übernehmen mitgeholt. Einträge, die im BMV gelöscht wurden, werden auch in Syncopa entfernt.
+            Werden beim Übernehmen mitgeholt, die Namen dazu kommen direkt aus den Namenslisten des BMV.
+            Einträge, die im BMV gelöscht wurden, werden auch in Syncopa entfernt.
             Eigene Einträge aus Syncopa bleiben erhalten; gibt es denselben Eintrag auch im BMV, wird er damit verknüpft.
         </p>
         <?php $offeneUebertragungen = BmvZusatzdaten::offeneUebertragungen(); if ($offeneUebertragungen['gesamt'] > 0): ?>
@@ -738,6 +640,54 @@ document.getElementById('notenSuche')?.addEventListener('input', function () {
         </div>
     </div>
 </div>
+
+<?php if ($instrumentCodes): ?>
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center" role="button"
+         data-bs-toggle="collapse" data-bs-target="#instrumentZuordnung" aria-expanded="false">
+        <h5 class="mb-0"><i class="bi bi-diagram-3"></i> Instrumente zuordnen</h5>
+        <span class="text-muted small"><?php echo count($instrumentCodes); ?> BMV-Instrumente <i class="bi bi-chevron-down"></i></span>
+    </div>
+    <div class="collapse" id="instrumentZuordnung">
+    <form method="POST">
+        <input type="hidden" name="aktion" value="instrumente_zuordnen">
+        <div class="card-body pb-0">
+            <p class="text-muted small mb-2">
+                Welches Syncopa-Instrument gehört zu welchem BMV-Instrument? So kommen BMV- und eigene Instrumente in einer Liste zusammen.
+                Mehrere BMV-Instrumente dürfen dasselbe Syncopa-Instrument haben. Ohne Zuordnung wird beim Holen ein Instrument mit gleichem Namen
+                genommen oder neu angelegt. Die Namen kommen aus dem BMV.
+            </p>
+        </div>
+        <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead><tr><th class="ps-3">Instrument im BMV</th><th>Syncopa-Instrument</th><th class="text-end pe-3" style="width:90px">Einträge</th></tr></thead>
+            <tbody>
+            <?php foreach ($instrumentCodes as $code): ?>
+            <tr>
+                <td class="ps-3"><?php echo htmlspecialchars(BmvZusatzdaten::name('instrument', $code)); ?> <span class="text-muted small">Nr. <?php echo (int)$code; ?></span></td>
+                <td>
+                    <select class="form-select form-select-sm" name="instrument_typ[<?php echo (int)$code; ?>]">
+                        <option value="">– wird beim Holen automatisch zugeordnet –</option>
+                        <?php foreach ($instrumentTypen as $typ): ?>
+                        <option value="<?php echo (int)$typ['id']; ?>" <?php echo ($instrumentZuordnung[$code] ?? null) === (int)$typ['id'] ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($typ['name'] . ($typ['register_name'] ? ' (' . $typ['register_name'] . ')' : '') . ($typ['bmv_automatisch'] ? ' – neu aus BMV' : '')); ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </td>
+                <td class="text-end pe-3 text-muted"><?php echo (int)($instrumentVerwendung[$code] ?? 0); ?></td>
+            </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+        </div>
+        <div class="card-body d-flex justify-content-end">
+            <button type="submit" class="btn btn-outline-primary"><i class="bi bi-save"></i> Zuordnung speichern</button>
+        </div>
+    </form>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php $zusatzAenderungen = $zusatzVergleich['neu'] + $zusatzVergleich['geaendert'] + $zusatzVergleich['entfernt']; ?>
 <form method="POST" class="d-flex justify-content-end"

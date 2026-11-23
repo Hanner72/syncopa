@@ -1,8 +1,8 @@
 <?php
 // includes/bmv_bezeichnungen_standard.php
 // Standardnamen zu den Nummern, die der BMV-Datenservice liefert (Funktionen, Instrumente, Prüfungen, Mitgliedsarten,
-// Ehrenzeichen). Der BMV gibt die Namenslisten (Setup*) für Vereinszugänge nicht frei, daher stehen sie hier.
-// Es sind nur Vorschläge: Was ein Verein unter „BMV Daten holen → Bezeichnungen“ selbst einträgt, hat Vorrang.
+// Ehrenzeichen). Die Namen werden inzwischen aus den Namenslisten des BMV (Setup*) geholt und haben Vorrang;
+// diese Liste gilt nur, solange sie noch nicht geholt wurden.
 // Ehrenzeichen sind Sache des Landesverbands und gelten nur für das jeweilige BMV-Land (Einstellung bmv_land).
 // Stand: 05.11.2026, erfasst vom MV Palfau (ST-16-013).
 
