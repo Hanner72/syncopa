@@ -47,6 +47,8 @@ class BmvZusatzdaten {
     private static ?array $verborgen = null;
     /** Ergebnis des letzten Abgleichs der Mitgliedsarten (siehe Mitgliedsart::mitBmvAbgleichen) */
     public static ?array $letzterMitgliedsartAbgleich = null;
+    /** Ergebnis des letzten Abgleichs von Registern und Instrumenten (siehe BmvInstrumente::abgleichen) */
+    public static ?array $letzterInstrumentAbgleich = null;
 
     // ------------------------------------------------------------------------------------------------
     // Aus dem BMV holen
@@ -332,37 +334,6 @@ class BmvZusatzdaten {
         return self::$instrumentZuordnung;
     }
 
-    /**
-     * Ändert die Zuordnung BMV-Instrumentnummer => Syncopa-Instrumentart ([code => typ-id]) und zieht die
-     * Einträge aus dem BMV mit um. Automatisch angelegte Instrumentarten, die danach niemand mehr nutzt, werden entfernt.
-     */
-    public static function instrumentZuordnungSpeichern(array $eingaben): void {
-        $db = Database::getInstance();
-        $alt = self::instrumentZuordnung();
-        foreach ($eingaben as $code => $typId) {
-            $code = (int)$code;
-            $typId = (int)$typId;
-            if ($typId <= 0 || ($alt[$code] ?? null) === $typId) continue;
-            $db->execute(
-                "INSERT INTO bmv_bezeichnungen (art, code, name, instrument_typ_id) VALUES ('instrument', ?, '', ?)
-                 ON DUPLICATE KEY UPDATE instrument_typ_id = VALUES(instrument_typ_id)",
-                [$code, $typId]
-            );
-            $db->execute(
-                "UPDATE mitglied_instrumente SET instrument_typ_id = ? WHERE bmv_code = ? AND bmv_eintrag_id IS NOT NULL",
-                [$typId, $code]
-            );
-        }
-        $db->execute(
-            "DELETE t FROM instrument_typen t
-             WHERE t.bmv_automatisch = 1
-               AND NOT EXISTS (SELECT 1 FROM mitglied_instrumente mi WHERE mi.instrument_typ_id = t.id)
-               AND NOT EXISTS (SELECT 1 FROM instrumente i WHERE i.instrument_typ_id = t.id)
-               AND NOT EXISTS (SELECT 1 FROM bmv_bezeichnungen b WHERE b.art = 'instrument' AND b.instrument_typ_id = t.id)"
-        );
-        self::$instrumentZuordnung = null;
-    }
-
     /** Namenslisten des BMV (Setup-Zugriffspunkte): Art => [Pfad, Feld mit dem Namen] */
     public const KATALOGE = [
         'funktion'     => ['/api/SetupFunktionen',     'funktion'],
@@ -405,6 +376,11 @@ class BmvZusatzdaten {
                 self::$letzterMitgliedsartAbgleich = Mitgliedsart::mitBmvAbgleichen($liste);
             }
         }
+        // Register und Instrumententypen (Stammdaten) aus dem BMV
+        try {
+            self::$letzterInstrumentAbgleich = BmvInstrumente::abgleichen($api);
+            self::$instrumentZuordnung = null;
+        } catch (\Throwable $e) { /* bisheriger Stand bleibt */ }
         if ($anzahl) {
             $db->execute(
                 "INSERT INTO einstellungen (schluessel, wert) VALUES ('katalog_bmv_stand', ?) ON DUPLICATE KEY UPDATE wert = VALUES(wert)",

@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.23.0]
+
+### Hinzugefügt
+
+- Mitglied bearbeiten: zum vorigen/nächsten Mitglied blättern (Pfeile oben rechts mit Position, Alt+←/Alt+→) in der Reihenfolge der Mitgliederliste inkl. Suche, Sortierung und Filter; Rückfrage bei ungespeicherten Änderungen; Knopf „Aktualisieren & nächstes“
+- Stammdaten → Register und Instrumententypen: Abgleich mit dem BMV (SetupRegister, SetupInstrumente) per Knopf „Mit BMV abgleichen“, beim Übernehmen der Mitglieder und einmal am Tag – die 15 BMV-Register ersetzen die bisherigen Register, alle 55 BMV-Instrumente werden angelegt bzw. mit vorhandenen Typen verknüpft (`classes/BmvInstrumente.php`)
+
+### Geändert
+
+- Register und Instrumententypen aus dem BMV sind in den Stammdaten gesperrt (Kennzeichen „BMV“); eigene Typen bleiben bearbeitbar
+- BMV Daten holen: die Karte „Instrumente zuordnen“ entfällt, die Zuordnung kommt aus dem BMV
+
+### Bugs
+
+- Stammdaten: Erfolgs- und Fehlermeldungen (z. B. „kann nicht gelöscht werden“) wurden nicht angezeigt
+
 ## [2.22.0]
 
 ### Hinzugefügt

@@ -457,8 +457,11 @@ CREATE TABLE IF NOT EXISTS `instrument_typen` (
   `name` varchar(100) NOT NULL,
   `register_id` int(11) DEFAULT NULL,
   `beschreibung` text DEFAULT NULL,
+  `bmv_automatisch` tinyint(1) NOT NULL DEFAULT 0,
+  `bmv_code` int DEFAULT NULL,
   PRIMARY KEY (`id`),
-  KEY `register_id` (`register_id`)
+  KEY `register_id` (`register_id`),
+  UNIQUE KEY `uk_instrument_typ_bmv` (`bmv_code`)
 ) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
@@ -693,7 +696,9 @@ CREATE TABLE IF NOT EXISTS `register` (
   `name` varchar(50) NOT NULL,
   `beschreibung` text DEFAULT NULL,
   `sortierung` int(11) DEFAULT 0,
-  PRIMARY KEY (`id`)
+  `bmv_code` int DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_register_bmv` (`bmv_code`)
 ) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --

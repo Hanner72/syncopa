@@ -56,6 +56,36 @@ if (in_array($action, ['mitgliedsarten_speichern', 'mitgliedsart_loeschen', 'mit
     exit;
 }
 
+// Register und Instrumententypen mit dem BMV abgleichen (SetupRegister / SetupInstrumente)
+if ($action === 'instrumente_bmv_abgleichen') {
+    $zurueck = ($_POST['tab'] ?? '') === 'register' ? 'register' : 'instrumenttypen';
+    try {
+        $bmvApi = new BmvApi();
+        if (!$bmvApi->istKonfiguriert()) {
+            throw new RuntimeException('Der BMV ist nicht eingerichtet (Einstellungen → BMV).');
+        }
+        Session::setFlashMessage('success', 'Mit dem BMV abgeglichen: ' . BmvInstrumente::meldung(BmvInstrumente::abgleichen($bmvApi)) . '.');
+    } catch (Throwable $e) {
+        Session::setFlashMessage('danger', 'Abgleich fehlgeschlagen, es wurde nichts geändert: ' . $e->getMessage());
+    }
+    header('Location: stammdaten.php?tab=' . $zurueck);
+    exit;
+}
+// Einträge aus dem BMV sind gesperrt (Name, Reihenfolge bzw. Register kommen aus dem BMV)
+$ausBmv = function (string $tabelle, $id) use ($db): bool {
+    return $id && (bool)$db->fetchOne("SELECT id FROM $tabelle WHERE id = ? AND bmv_code IS NOT NULL", [(int)$id]);
+};
+if (in_array($action, ['register_save', 'register_delete'], true) && $ausBmv('register', $_POST['id'] ?? null)) {
+    $error = 'Dieses Register kommt aus dem BMV und lässt sich nur dort ändern.';
+    $action = null;
+    $tab = 'register';
+}
+if (in_array($action, ['instrumenttyp_save', 'instrumenttyp_delete'], true) && $ausBmv('instrument_typen', $_POST['id'] ?? null)) {
+    $error = 'Dieses Instrument kommt aus dem BMV und lässt sich nur dort ändern.';
+    $action = null;
+    $tab = 'instrumenttypen';
+}
+
 // Register verarbeiten
 if ($action === 'register_save') {
     $id = $_POST['id'] ?? null;
@@ -175,6 +205,15 @@ if ($action === 'nummernkreise_save') {
 
 // ===================== DATEN LADEN =====================
 
+$bmvEingerichtetStamm = (new BmvApi())->istKonfiguriert();
+$bmvAbgleichKnopf = function (string $tab) use ($bmvEingerichtetStamm) {
+    if (!$bmvEingerichtetStamm) return '';
+    return '<form method="POST" class="d-inline"><input type="hidden" name="action" value="instrumente_bmv_abgleichen">'
+        . '<input type="hidden" name="tab" value="' . $tab . '">'
+        . '<button type="submit" class="btn btn-sm btn-outline-primary" title="Register und Instrumente aus dem BMV holen">'
+        . '<i class="bi bi-arrow-repeat"></i> Mit BMV abgleichen</button></form>';
+};
+$bmvBadge = '<span class="badge text-bg-light border ms-1" title="Kommt aus dem BMV – Name und Register werden dort gepflegt">BMV</span>';
 $register = $db->fetchAll("SELECT r.*, 
     (SELECT COUNT(*) FROM mitglieder WHERE register_id = r.id) as mitglieder_count,
     (SELECT COUNT(*) FROM instrument_typen WHERE register_id = r.id) as instrumente_count
@@ -208,6 +247,12 @@ function resolvePrefix(string $prefix): string {
     return $prefix;
 }
 
+// Meldungen dieser Anfrage (Speichern ohne Weiterleitung) als Hinweis anzeigen
+if ($error) {
+    Session::setFlashMessage('danger', $error);
+} elseif ($success) {
+    Session::setFlashMessage('success', $success);
+}
 include 'includes/header.php';
 ?>
 
@@ -265,9 +310,12 @@ include 'includes/header.php';
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-collection"></i> Register</span>
+                <div class="d-flex gap-2">
+                <?php echo $bmvAbgleichKnopf('register'); ?>
                 <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#registerModal" onclick="editRegister()">
                     <i class="bi bi-plus"></i> Neues Register
                 </button>
+                </div>
             </div>
             <div class="card-body">
                 <table class="table table-hover">
@@ -284,10 +332,11 @@ include 'includes/header.php';
                         <?php foreach ($register as $r): ?>
                         <tr>
                             <td><span class="badge bg-secondary"><?php echo $r['sortierung']; ?></span></td>
-                            <td><strong><?php echo htmlspecialchars($r['name']); ?></strong></td>
+                            <td><strong><?php echo htmlspecialchars($r['name']); ?></strong><?php if ($r['bmv_code'] !== null) echo $bmvBadge; ?></td>
                             <td><?php echo $r['mitglieder_count']; ?></td>
                             <td><?php echo $r['instrumente_count']; ?></td>
                             <td class="text-end">
+                                <?php if ($r['bmv_code'] === null): ?>
                                 <button class="btn btn-sm btn-primary" onclick="editRegister(<?php echo htmlspecialchars(json_encode($r)); ?>)">
                                     <i class="bi bi-pencil"></i>
                                 </button>
@@ -297,6 +346,7 @@ include 'includes/header.php';
                                     <input type="hidden" name="id" value="<?php echo $r['id']; ?>">
                                     <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></button>
                                 </form>
+                                <?php endif; ?>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -316,6 +366,10 @@ include 'includes/header.php';
                 <p class="small text-muted mb-0">
                     Register gruppieren Mitglieder und Instrumente nach Instrumentenfamilien 
                     (z.B. Holz, Blech, Schlagwerk). Die Sortierung bestimmt die Reihenfolge in Auswahllisten.
+                    <?php if ($bmvEingerichtetStamm): ?><br><br>
+                    Register mit <span class="badge text-bg-light border">BMV</span> kommen aus dem BMV (SetupRegister) und werden
+                    beim Holen der Mitglieder bzw. mit „Mit BMV abgleichen“ aktualisiert. Eigene Register kannst du zusätzlich anlegen.
+                    <?php endif; ?>
                 </p>
             </div>
         </div>
@@ -360,9 +414,12 @@ include 'includes/header.php';
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-music-note"></i> Instrumententypen</span>
+                <div class="d-flex gap-2">
+                <?php echo $bmvAbgleichKnopf('instrumenttypen'); ?>
                 <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#instrumentTypModal" onclick="editInstrumentTyp()">
                     <i class="bi bi-plus"></i> Neuer Typ
                 </button>
+                </div>
             </div>
             <div class="card-body">
                 <table class="table table-hover">
@@ -378,7 +435,7 @@ include 'includes/header.php';
                     <tbody>
                         <?php foreach ($instrumentTypen as $it): ?>
                         <tr>
-                            <td><strong><?php echo htmlspecialchars($it['name']); ?></strong></td>
+                            <td><strong><?php echo htmlspecialchars($it['name']); ?></strong><?php if ($it['bmv_code'] !== null) echo $bmvBadge; ?></td>
                             <td>
                                 <?php if ($it['register_name']): ?>
                                 <span class="badge bg-info"><?php echo htmlspecialchars($it['register_name']); ?></span>
@@ -389,6 +446,7 @@ include 'includes/header.php';
                             <td><?php echo $it['inventar_count']; ?></td>
                             <td><?php echo $it['spieler_count']; ?></td>
                             <td class="text-end">
+                                <?php if ($it['bmv_code'] === null): ?>
                                 <button class="btn btn-sm btn-primary" onclick="editInstrumentTyp(<?php echo htmlspecialchars(json_encode($it)); ?>)">
                                     <i class="bi bi-pencil"></i>
                                 </button>
@@ -398,6 +456,7 @@ include 'includes/header.php';
                                     <input type="hidden" name="id" value="<?php echo $it['id']; ?>">
                                     <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></button>
                                 </form>
+                                <?php endif; ?>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -417,6 +476,11 @@ include 'includes/header.php';
                 <p class="small text-muted mb-0">
                     Instrumententypen definieren die verschiedenen Instrumente (Trompete, Klarinette, etc.).
                     Sie werden einem Register zugeordnet und können bei Mitgliedern und im Inventar verwendet werden.
+                    <?php if ($bmvEingerichtetStamm): ?><br><br>
+                    Instrumente mit <span class="badge text-bg-light border">BMV</span> kommen aus dem BMV (SetupInstrumente) samt Register
+                    und werden beim Holen der Mitglieder bzw. mit „Mit BMV abgleichen“ aktualisiert – eine Zuordnung von Hand ist nicht nötig.
+                    Eigene Typen ohne Gegenstück im BMV (z. B. Lyra) kannst du weiter selbst pflegen.
+                    <?php endif; ?>
                 </p>
             </div>
         </div>

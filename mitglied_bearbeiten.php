@@ -138,6 +138,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             Session::setFlashMessage('success', 'Mitglied erfolgreich erstellt');
         }
+        // „Speichern & weiter“: gleich das nächste Mitglied bearbeiten
+        $weiterId = (int)($_POST['weiter_id'] ?? 0);
+        if ($isEdit && ($_POST['danach'] ?? '') === 'weiter' && $weiterId > 0 && $mitgliedObj->getById($weiterId)) {
+            header('Location: mitglied_bearbeiten.php?id=' . $weiterId);
+            exit;
+        }
         header('Location: mitglied_detail.php?id=' . $id);
         exit;
     } catch (Exception $e) {
@@ -145,16 +151,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Reihenfolge für „Vorige/Nächste“: wie die Mitgliederliste mit den gemerkten Filtern. Hat die Liste im Browser
+// eine eigene Reihenfolge gemerkt (Suche, Sortierung), nimmt das Skript unten diese.
+$navListe = [];
+if ($isEdit) {
+    $navFilter = $_SESSION['mitglieder_filter'] ?? [];
+    $navArgs = ['mitgliedsart' => $navFilter['mitgliedsart'] ?? 'mitglieder'];
+    if (($navFilter['register'] ?? '') !== '') $navArgs['register'] = $navFilter['register'];
+    foreach ($mitgliedObj->getAll($navArgs) as $m) {
+        $navListe[] = [(int)$m['id'], $m['nachname'] . ' ' . $m['vorname']];
+    }
+}
+
 include 'includes/header.php';
 ?>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="h2">
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <h1 class="h2 mb-0">
         <i class="bi bi-person"></i> <?php echo $isEdit ? 'Mitglied bearbeiten' : 'Neues Mitglied'; ?>
     </h1>
-    <a href="mitglieder.php" class="btn btn-secondary">
-        <i class="bi bi-arrow-left"></i> Zurück
-    </a>
+    <div class="d-flex align-items-center gap-2">
+        <?php if ($isEdit): ?>
+        <div class="btn-group d-none" id="mitgliedNav" role="group" aria-label="Zwischen Mitgliedern blättern">
+            <a class="btn btn-outline-secondary" id="navVorige" title="Voriges Mitglied (Alt+←)"><i class="bi bi-chevron-left"></i></a>
+            <span class="btn btn-outline-secondary disabled text-body" id="navPosition"></span>
+            <a class="btn btn-outline-secondary" id="navNaechste" title="Nächstes Mitglied (Alt+→)"><i class="bi bi-chevron-right"></i></a>
+        </div>
+        <?php endif; ?>
+        <a href="mitglieder.php" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Zurück
+        </a>
+    </div>
 </div>
 
 <?php if (isset($error)): ?>
@@ -538,6 +565,12 @@ include 'includes/header.php';
             <i class="bi bi-x"></i> Abbrechen
         </a>
         <div class="d-flex gap-2">
+            <?php if ($isEdit): ?>
+            <input type="hidden" name="weiter_id" id="weiterId" value="">
+            <button type="submit" name="danach" value="weiter" class="btn btn-outline-primary d-none" id="speichernWeiter">
+                <i class="bi bi-save"></i> Aktualisieren &amp; nächstes <i class="bi bi-chevron-right"></i>
+            </button>
+            <?php endif; ?>
             <button type="submit" class="btn btn-primary">
                 <i class="bi bi-save"></i> <?php echo $isEdit ? 'Aktualisieren' : 'Erstellen'; ?>
             </button>
@@ -546,3 +579,50 @@ include 'includes/header.php';
 </form>
 
 <?php include 'includes/footer.php'; ?>
+<?php if ($isEdit): ?>
+<script>
+// Vorige/Nächste: Reihenfolge der Mitgliederliste (Suche, Sortierung, Filter), sonst die vom Server
+(function () {
+    const aktuell = <?php echo (int)$id; ?>;
+    let liste = <?php echo json_encode($navListe, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG); ?>;
+    try {
+        const gemerkt = JSON.parse(sessionStorage.getItem('mitglieder_reihenfolge') || 'null');
+        if (Array.isArray(gemerkt) && gemerkt.some(e => e[0] === aktuell)) liste = gemerkt;
+    } catch (e) { /* Server-Reihenfolge */ }
+    const pos = liste.findIndex(e => e[0] === aktuell);
+    if (pos < 0 || liste.length < 2) return;
+
+    const form = document.querySelector('form.needs-validation');
+    let geaendert = false;
+    form.addEventListener('input', () => { geaendert = true; });
+    form.addEventListener('change', () => { geaendert = true; });
+
+    const knopf = (el, eintrag) => {
+        if (!eintrag) { el.classList.add('disabled'); el.setAttribute('aria-disabled', 'true'); return; }
+        el.href = 'mitglied_bearbeiten.php?id=' + eintrag[0];
+        el.title += ': ' + eintrag[1];
+        el.addEventListener('click', e => {
+            if (geaendert && !confirm('Die Änderungen sind noch nicht gespeichert. Verwerfen und zu ' + eintrag[1] + ' wechseln?')) e.preventDefault();
+        });
+    };
+    const vorige = liste[pos - 1], naechste = liste[pos + 1];
+    knopf(document.getElementById('navVorige'), vorige);
+    knopf(document.getElementById('navNaechste'), naechste);
+    document.getElementById('navPosition').textContent = (pos + 1) + ' / ' + liste.length;
+    document.getElementById('mitgliedNav').classList.remove('d-none');
+    if (naechste) {
+        document.getElementById('weiterId').value = naechste[0];
+        const weiter = document.getElementById('speichernWeiter');
+        weiter.title = 'Speichern und ' + naechste[1] + ' bearbeiten';
+        weiter.classList.remove('d-none');
+    }
+    // Alt+← / Alt+→
+    document.addEventListener('keydown', e => {
+        if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+        const ziel = e.key === 'ArrowLeft' ? 'navVorige' : e.key === 'ArrowRight' ? 'navNaechste' : null;
+        const el = ziel && document.getElementById(ziel);
+        if (el && !el.classList.contains('disabled')) { e.preventDefault(); el.click(); }
+    });
+})();
+</script>
+<?php endif; ?>
