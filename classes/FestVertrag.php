@@ -136,16 +136,33 @@ class FestVertrag {
     }
 
     /**
-     * Gesamthonorar-Summen pro Zahlungsstatus
+     * Honorar-Summen: 'gesamt' (alle außer stornierten, = bezahlt + offen), 'bezahlt' (bezahlte Verträge + Teilzahlungen),
+     * 'offen' (offene Verträge + Rest der Teilzahlungen), 'teilweise'/'storniert' (Honorar je Status)
      */
     public function getHonorarSummen(int $festId): array {
-        $sql = "SELECT zahlungsstatus, COALESCE(SUM(honorar), 0) as summe, COUNT(*) as anzahl
-                FROM fest_vertraege WHERE fest_id = ? GROUP BY zahlungsstatus";
-        $rows  = $this->db->fetchAll($sql, [$festId]);
-        $result = ['offen' => 0, 'teilweise' => 0, 'bezahlt' => 0, 'storniert' => 0, 'gesamt' => 0];
-        foreach ($rows as $row) {
-            $result[$row['zahlungsstatus']] = (float)$row['summe'];
-            $result['gesamt'] += (float)$row['summe'];
+        $rows = $this->db->fetchAll(
+            "SELECT zahlungsstatus, honorar, bezahlt_betrag FROM fest_vertraege WHERE fest_id = ?",
+            [$festId]
+        );
+        $result = ['offen' => 0.0, 'teilweise' => 0.0, 'bezahlt' => 0.0, 'storniert' => 0.0, 'gesamt' => 0.0];
+        foreach ($rows as $v) {
+            $honorar = (float)($v['honorar'] ?? 0);
+            if ($v['zahlungsstatus'] !== 'storniert') $result['gesamt'] += $honorar;
+            switch ($v['zahlungsstatus']) {
+                case 'bezahlt':
+                    $result['bezahlt'] += $honorar;
+                    break;
+                case 'teilweise':
+                    $result['teilweise'] += $honorar;
+                    $result['bezahlt'] += min($honorar, (float)($v['bezahlt_betrag'] ?? 0));
+                    $result['offen'] += self::offenerBetrag($v);
+                    break;
+                case 'storniert':
+                    $result['storniert'] += $honorar;
+                    break;
+                default:
+                    $result['offen'] += $honorar;
+            }
         }
         return $result;
     }

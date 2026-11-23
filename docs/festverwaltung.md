@@ -254,7 +254,7 @@ Hier werden Verträge mit Musikgruppen, Bands oder anderen Künstlern verwaltet,
 
 Ein bereits hochgeladenes Vertragsdokument kann jederzeit über den Download-Button abgerufen werden; ein neuer Upload ersetzt automatisch das alte Dokument.
 
-Die Übersicht zeigt Gesamthonorar, offene und bereits bezahlte Summen sowie die Gesamtanzahl der Verträge.
+Die Übersicht zeigt Gesamthonorar, offene und bereits bezahlte Summen sowie die Gesamtanzahl der Verträge. Bei „Teilweise bezahlt“ zählt der bezahlte Teilbetrag zu **Bezahlt** und der Rest zu **Offen**. Stornierte Verträge zählen nicht zum Gesamthonorar – Offen und Bezahlt ergeben zusammen das Gesamthonorar.
 
 ---
 

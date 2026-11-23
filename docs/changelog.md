@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.23.1]
+
+### Bugs
+
+- Festverwaltung → Verträge: Teilzahlungen wurden in den Karten „Bezahlt“ und „Offen“ nicht berücksichtigt – jetzt zählt der bezahlte Teilbetrag zu „Bezahlt“ und der Rest zu „Offen“
+- Festverwaltung → Verträge: „Gesamt Honorar“ enthält keine stornierten Verträge mehr (Offen + Bezahlt = Gesamt)
+
 ## [2.23.0]
 
 ### Hinzugefügt
