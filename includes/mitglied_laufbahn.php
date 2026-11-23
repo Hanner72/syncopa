@@ -257,8 +257,8 @@ $leer = function (string $text) {
     };
     $hinweisBezeichnungen = function (string $art) {
         if (!BmvZusatzdaten::auswahl($art) && Session::isAdmin()) {
-            echo '<div class="form-text text-warning">Noch keine Auswahl vorhanden. Namen kommen aus dem BMV bzw. unter '
-                . '<a href="bmv_daten.php?bereich=bezeichnungen">BMV Daten holen → Bezeichnungen</a>.</div>';
+            echo '<div class="form-text text-warning">Noch keine Auswahl vorhanden. Die Namen kommen aus dem BMV, sobald '
+                . '<a href="bmv_daten.php?bereich=mitglieder">BMV Daten holen → Mitglieder</a> geöffnet wird.</div>';
         }
     };
 ?>

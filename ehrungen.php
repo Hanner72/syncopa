@@ -189,7 +189,7 @@ include 'includes/header.php';
                 Hat ein Mitglied schon eine Ehrung mit gleich vielen oder mehr Jahren, gelten die kleineren als erledigt.
                 „Vorschlagen“ ausschalten bei alten Nummern, die nicht mehr vergeben werden: Sie zählen dann nur als erhalten.
                 Ehrennadeln und Verdienstkreuze hängen von Funktionen ab und werden nicht berechnet.
-                Fehlen Namen, kannst du sie unter <a href="bmv_daten.php?bereich=bezeichnungen">BMV Daten holen → Bezeichnungen</a> eintragen.
+                Die Namen der Ehrenzeichen kommen aus dem BMV (beim Öffnen von <a href="bmv_daten.php?bereich=mitglieder">BMV Daten holen → Mitglieder</a>).
             </p>
             <?php if (!$ehrungCodes): ?>
             <div class="alert alert-permanent alert-info mb-0">Noch keine Ehrungen vorhanden. Bitte zuerst die Mitglieder aus dem BMV übernehmen.</div>

@@ -772,6 +772,9 @@ function isActive($page, $pages, $current) {
                     <li><a class="nav-link <?php echo $currentPage === 'server' ? 'active' : ''; ?>" href="server.php">
                         <i class="bi bi-hdd-network"></i> Server
                     </a></li>
+                    <li><a class="nav-link <?php echo $currentPage === 'bmv_apitest' ? 'active' : ''; ?>" href="bmv_apitest.php">
+                        <i class="bi bi-plug"></i> BMV-API testen
+                    </a></li>
                     <?php endif; ?>
                 </ul>
             </div>

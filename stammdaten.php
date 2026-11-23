@@ -19,9 +19,24 @@ $success = null;
 // ===================== VERARBEITUNG =====================
 
 // Mitgliedsarten verarbeiten (ersetzen den früheren Mitgliedsstatus, siehe classes/Mitgliedsart.php)
-if (in_array($action, ['mitgliedsarten_speichern', 'mitgliedsart_loeschen'], true)) {
+if (in_array($action, ['mitgliedsarten_speichern', 'mitgliedsart_loeschen', 'mitgliedsarten_bmv_abgleichen'], true)) {
     try {
-        if ($action === 'mitgliedsart_loeschen') {
+        if ($action === 'mitgliedsarten_bmv_abgleichen') {
+            $bmvApi = new BmvApi();
+            if (!$bmvApi->istKonfiguriert()) {
+                throw new RuntimeException('Der BMV ist nicht eingerichtet (Einstellungen → BMV).');
+            }
+            $geholt = BmvZusatzdaten::katalogeHolen($bmvApi);
+            $abgleich = BmvZusatzdaten::$letzterMitgliedsartAbgleich;
+            if (!isset($geholt['mitgliedsart']) || $abgleich === null) {
+                throw new RuntimeException('Die Mitgliedsarten konnten nicht aus dem BMV geholt werden.');
+            }
+            $teile = [];
+            if ($abgleich['neu']) $teile[] = 'neu angelegt: ' . implode(', ', $abgleich['neu']) . ' (bitte „zählt als aktiv“ und „beitragspflichtig“ prüfen)';
+            foreach ($abgleich['umgestellt'] as $name => $nr) $teile[] = '„' . $name . '“ auf die BMV-Nummer umgestellt (' . $nr . ')';
+            foreach ($abgleich['umbenannt'] as $alt => $neu) $teile[] = '„' . $alt . '“ heißt jetzt „' . $neu . '“';
+            Session::setFlashMessage('success', 'Mit dem BMV abgeglichen' . ($teile ? ': ' . implode('; ', $teile) . '.' : ' – alles stimmt überein.'));
+        } elseif ($action === 'mitgliedsart_loeschen') {
             Mitgliedsart::loeschen((int)($_POST['code'] ?? 0));
             Session::setFlashMessage('success', 'Mitgliedsart gelöscht.');
         } else {
@@ -490,6 +505,8 @@ include 'includes/header.php';
 
 <?php elseif ($tab === 'mitgliedsarten'):
     $arten = Mitgliedsart::alle();
+    $bmvNummern = Mitgliedsart::bmvNummern();
+    $bmvEingerichtet = (new BmvApi())->istKonfiguriert();
     $anzahl = Mitgliedsart::anzahlJeArt();
     $farbAuswahl = function (string $name, string $wert) {
         $html = '<select class="form-select form-select-sm" name="' . $name . '">';
@@ -508,7 +525,18 @@ include 'includes/header.php';
     werden nie an den BMV übertragen und zählen nicht bei Beiträgen, Ehrungen und Statistik.<br>
     <strong>Nr.</strong> ist die Nummer im BMV. Für Arten, die es im BMV (noch) nicht gibt, eine eigene Nummer ab <?php echo Mitgliedsart::EIGENE_NUMMERN_AB; ?>
     verwenden; sie lässt sich später auf die BMV-Nummer ändern, alle Einträge werden mit umgestellt.
+    <?php if ($bmvEingerichtet): ?><br>
+    <strong>Abgleich mit dem BMV</strong> (Namensliste SetupMitgliederart, auch automatisch beim Holen der Mitglieder):
+    Namen kommen aus dem BMV, fehlende Arten werden angelegt, eine eigene Art mit gleichem Namen wird auf die BMV-Nummer umgestellt.
+    Deine Einstellungen (aktiv, Beitrag, Farbe …) bleiben.
+    <?php endif; ?>
 </div>
+<?php if ($bmvEingerichtet): ?>
+<form method="POST" class="d-flex justify-content-end mb-3">
+    <input type="hidden" name="action" value="mitgliedsarten_bmv_abgleichen">
+    <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-arrow-repeat"></i> Mit BMV abgleichen</button>
+</form>
+<?php endif; ?>
 
 <form method="POST">
     <input type="hidden" name="action" value="mitgliedsarten_speichern">
@@ -518,31 +546,41 @@ include 'includes/header.php';
             <table class="table align-middle mb-0">
                 <thead>
                     <tr>
-                        <th class="ps-3" style="width:90px">Nr.</th>
+                        <th class="ps-2" style="width:28px"></th>
+                        <th style="width:90px">Nr.</th>
                         <th>Name</th>
                         <th class="text-center" data-bs-toggle="tooltip" title="Erscheint bei Proben, Ausrückungen, Instrument- und Uniformausgabe, Festen und in der Statistik">Zählt als aktiv <i class="bi bi-question-circle text-muted"></i></th>
                         <th class="text-center">Beitragspflichtig</th>
                         <th class="text-center" data-bs-toggle="tooltip" title="Kein Vereinsmitglied (z. B. Gastmusiker/in): spielt nur in den zugeordneten Formationen mit, wird nie an den BMV übertragen, zählt nicht bei Beiträgen, Ehrungen und Statistik">Gast <i class="bi bi-question-circle text-muted"></i></th>
                         <th style="width:130px" data-bs-toggle="tooltip" title="Leer = Standardbeitrag aus den Einstellungen">Beitrag € <i class="bi bi-question-circle text-muted"></i></th>
                         <th style="width:130px">Farbe</th>
-                        <th style="width:90px">Reihenf.</th>
                         <th class="text-end">Mitglieder</th>
                         <th class="pe-3"></th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="mitgliedsartenListe">
                 <?php foreach ($arten as $code => $a): $f = "art[$code]"; ?>
-                <tr>
-                    <td class="ps-3"><input type="number" min="1" class="form-control form-control-sm" name="<?php echo $f; ?>[code]" value="<?php echo $code; ?>"></td>
+                <tr data-code="<?php echo $code; ?>">
+                    <td class="ps-2"><i class="bi bi-grip-vertical ma-griff" title="Ziehen zum Sortieren"></i>
+                        <input type="hidden" class="ma-sort" name="<?php echo $f; ?>[sortierung]" value="<?php echo (int)$a['sortierung']; ?>"></td>
+                    <td><input type="number" min="1" class="form-control form-control-sm" name="<?php echo $f; ?>[code]" value="<?php echo $code; ?>"></td>
                     <td>
+                        <div class="d-flex align-items-center gap-2">
                         <input type="text" class="form-control form-control-sm" name="<?php echo $f; ?>[name]" value="<?php echo htmlspecialchars($a['name']); ?>" maxlength="100" required>
+                        <?php if ($bmvNummern): ?>
+                            <?php if (isset($bmvNummern[$code])): ?>
+                            <span class="badge text-bg-light border" title="Diese Nummer gibt es im BMV">BMV</span>
+                            <?php elseif (!$a['gast']): ?>
+                            <span class="badge text-bg-light border text-muted" title="Diese Nummer gibt es im BMV nicht (eigene Mitgliedsart)">eigene</span>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                        </div>
                     </td>
                     <td class="text-center"><input type="checkbox" class="form-check-input" name="<?php echo $f; ?>[aktiv]" value="1" <?php echo $a['aktiv'] ? 'checked' : ''; ?>></td>
                     <td class="text-center"><input type="checkbox" class="form-check-input" name="<?php echo $f; ?>[beitragspflichtig]" value="1" <?php echo $a['beitragspflichtig'] ? 'checked' : ''; ?>></td>
                     <td class="text-center"><input type="checkbox" class="form-check-input" name="<?php echo $f; ?>[gast]" value="1" <?php echo $a['gast'] ? 'checked' : ''; ?>></td>
                     <td><input type="number" step="0.01" min="0" class="form-control form-control-sm" name="<?php echo $f; ?>[beitrag]" value="<?php echo $a['beitrag'] !== null ? htmlspecialchars($a['beitrag']) : ''; ?>" placeholder="Standard"></td>
                     <td><?php echo $farbAuswahl($f . '[farbe]', $a['farbe']); ?></td>
-                    <td><input type="number" class="form-control form-control-sm" name="<?php echo $f; ?>[sortierung]" value="<?php echo (int)$a['sortierung']; ?>"></td>
                     <td class="text-end">
                         <?php echo Mitgliedsart::badge($code); ?>
                         <span class="ms-1"><?php echo (int)($anzahl[$code] ?? 0); ?></span>
@@ -553,15 +591,17 @@ include 'includes/header.php';
                     </td>
                 </tr>
                 <?php endforeach; ?>
+                </tbody>
+                <tbody>
                 <tr class="table-light">
-                    <td class="ps-3"><input type="number" min="1" class="form-control form-control-sm" name="neu[code]" placeholder="<?php echo Mitgliedsart::naechsteEigeneNummer(); ?>" value="<?php echo Mitgliedsart::naechsteEigeneNummer(); ?>"></td>
+                    <td class="ps-2"><input type="hidden" name="neu[sortierung]" value="<?php echo $arten ? max(array_map(fn($a) => (int)$a['sortierung'], $arten)) + 10 : 10; ?>"></td>
+                    <td><input type="number" min="1" class="form-control form-control-sm" name="neu[code]" placeholder="<?php echo Mitgliedsart::naechsteEigeneNummer(); ?>" value="<?php echo Mitgliedsart::naechsteEigeneNummer(); ?>"></td>
                     <td><input type="text" class="form-control form-control-sm" name="neu[name]" maxlength="100" placeholder="Neue Mitgliedsart, z. B. Ehrenobmann"></td>
                     <td class="text-center"><input type="checkbox" class="form-check-input" name="neu[aktiv]" value="1"></td>
                     <td class="text-center"><input type="checkbox" class="form-check-input" name="neu[beitragspflichtig]" value="1"></td>
                     <td class="text-center"><input type="checkbox" class="form-check-input" name="neu[gast]" value="1"></td>
                     <td><input type="number" step="0.01" min="0" class="form-control form-control-sm" name="neu[beitrag]" placeholder="Standard"></td>
                     <td><?php echo $farbAuswahl('neu[farbe]', 'secondary'); ?></td>
-                    <td><input type="number" class="form-control form-control-sm" name="neu[sortierung]" value="100"></td>
                     <td colspan="2" class="text-muted small pe-3">wird beim Speichern angelegt</td>
                 </tr>
                 </tbody>
@@ -573,6 +613,39 @@ include 'includes/header.php';
         <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Mitgliedsarten speichern</button>
     </div>
 </form>
+<style>
+    .ma-griff { cursor: grab; color: var(--bs-secondary-color); touch-action: none; }
+    .ma-griff:hover { color: var(--bs-body-color); }
+    .ma-geist { opacity: .45; background: rgba(var(--bs-primary-rgb), .08) !important; }
+    .ma-gewaehlt { box-shadow: 0 4px 14px rgba(0,0,0,.18); }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script>
+// Drag & Drop: Reihenfolge der Mitgliedsarten sofort speichern
+(function () {
+    var tbody = document.getElementById('mitgliedsartenListe');
+    if (!tbody || !window.Sortable || tbody.children.length < 2) return;
+    var vorher;
+    new Sortable(tbody, {
+        handle: '.ma-griff', animation: 150, ghostClass: 'ma-geist', chosenClass: 'ma-gewaehlt',
+        onStart: function () { vorher = Array.from(tbody.children); },
+        onEnd: function (evt) {
+            if (evt.oldIndex === evt.newIndex) return;
+            var codes = Array.from(tbody.querySelectorAll('tr[data-code]')).map(function (tr) { return +tr.dataset.code; });
+            fetch('api/mitgliedsarten_sortieren.php', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codes: codes })
+            }).then(function (r) { return r.json(); }).then(function (d) {
+                if (!d.success) throw new Error(d.error || 'Speichern fehlgeschlagen.');
+                tbody.querySelectorAll('tr[data-code]').forEach(function (tr) { tr.querySelector('.ma-sort').value = d.sortierung[tr.dataset.code]; });
+                if (window.showToast) showToast('Reihenfolge gespeichert.', 'success');
+            }).catch(function (e) {
+                vorher.forEach(function (tr) { tbody.appendChild(tr); }); // alte Reihenfolge wiederherstellen
+                if (window.showToast) showToast(e.message || 'Speichern fehlgeschlagen.', 'danger'); else alert(e.message);
+            });
+        }
+    });
+})();
+</script>
 <?php foreach ($arten as $code => $a): ?>
 <form method="POST" id="artLoeschen<?php echo $code; ?>" class="d-none">
     <input type="hidden" name="action" value="mitgliedsart_loeschen">

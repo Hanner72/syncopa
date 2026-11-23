@@ -68,6 +68,40 @@ class BmvApi {
         return $data;
     }
 
+    /**
+     * Für die API-Testseite: GET-Abruf ohne Ausnahme bei Fehlern.
+     * $pfad z. B. /api/Musiker oder /api/SetupPrüfungen/3, $query ohne „?“.
+     * Liefert ['code', 'ms', 'bytes', 'body' (Text oder false), 'fehler' (Text oder ''), 'header'].
+     */
+    public function abrufRoh(string $pfad, string $query = ''): array {
+        if (!preg_match('#^/api/[\p{L}\p{N}_./ -]+$#u', $pfad) || str_contains($pfad, '..')) {
+            throw new RuntimeException('Ungültiger Pfad. Erlaubt sind nur Pfade wie /api/Musiker oder /api/Musiker/123.');
+        }
+        // Pfadteile kodieren (z. B. „SetupPrüfungen“), die Struktur bleibt erhalten
+        $url = $this->baseUrl . implode('/', array_map('rawurlencode', explode('/', $pfad)))
+             . ($query !== '' ? '?' . ltrim($query, '?') : '');
+        $start = microtime(true);
+        [$code, $body, $err, $header] = $this->anfrage($url, $this->kopfzeilen());
+        return ['code' => $code, 'ms' => (int)round((microtime(true) - $start) * 1000),
+                'bytes' => is_string($body) ? strlen($body) : 0, 'body' => $body, 'fehler' => $err, 'header' => $header];
+    }
+
+    /** Beschreibung aller Zugriffspunkte (OpenAPI/Swagger) des BMV-Datenservice – öffentlich, ohne Anmeldung */
+    public function swagger(): array {
+        [$code, $body, $err] = $this->anfrage($this->baseUrl . '/swagger/v2/swagger.json', ['Accept: application/json']);
+        if ($body === false || $code !== 200) {
+            throw new RuntimeException('Die API-Beschreibung (swagger.json) konnte nicht geladen werden'
+                . ($err !== '' ? ': ' . $err : ' (HTTP ' . $code . ')') . '.');
+        }
+        $d = json_decode($body, true);
+        if (!is_array($d) || !isset($d['paths'])) throw new RuntimeException('Die API-Beschreibung hat ein unerwartetes Format.');
+        return $d;
+    }
+
+    public function getBaseUrl(): string {
+        return $this->baseUrl;
+    }
+
     private function kopfzeilen(): array {
         return [
             'Authorization: Basic ' . base64_encode($this->getLogin() . ':' . $this->passwort),

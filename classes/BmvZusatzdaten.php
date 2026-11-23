@@ -7,7 +7,8 @@
 // - Eigene Einträge sind frei bearbeitbar und mit sync_status 'neu' für die spätere Übertragung vorgemerkt.
 // - Taucht ein eigener Eintrag später auch im BMV auf, wird er mit dem BMV-Eintrag verknüpft (BMV hat Vorrang).
 // Speicherort: Instrumente in mitglied_instrumente (die „Gespielten Instrumente“, auch von anderen Modulen
-// genutzt), alles andere in bmv_mitglied_daten. Der BMV liefert nur Nummern; Namen stehen in bmv_bezeichnungen.
+// genutzt), alles andere in bmv_mitglied_daten. Die Einträge enthalten nur Nummern; die Namen kommen aus den
+// Namenslisten des BMV (Setup-Zugriffspunkte) und stehen in bmv_bezeichnungen.
 
 class BmvZusatzdaten {
 
@@ -43,6 +44,9 @@ class BmvZusatzdaten {
 
     private static ?array $bezeichnungen = null;
     private static ?array $instrumentZuordnung = null;
+    private static ?array $verborgen = null;
+    /** Ergebnis des letzten Abgleichs der Mitgliedsarten (siehe Mitgliedsart::mitBmvAbgleichen) */
+    public static ?array $letzterMitgliedsartAbgleich = null;
 
     // ------------------------------------------------------------------------------------------------
     // Aus dem BMV holen
@@ -94,7 +98,7 @@ class BmvZusatzdaten {
      */
     public static function uebernehmen(BmvApi $api, ?array $daten = null): array {
         $daten = $daten ?? self::holen($api);
-        self::bezeichnungenVorbefuellen($api, $daten); // zuerst, damit neue Instrumente ihren Namen bekommen
+        self::katalogeHolen($api); // zuerst, damit neue Instrumente ihren Namen bekommen
         $vergleich = self::vergleich($daten);
 
         $db = Database::getInstance();
@@ -359,63 +363,67 @@ class BmvZusatzdaten {
         self::$instrumentZuordnung = null;
     }
 
+    /** Namenslisten des BMV (Setup-Zugriffspunkte): Art => [Pfad, Feld mit dem Namen] */
+    public const KATALOGE = [
+        'funktion'     => ['/api/SetupFunktionen',     'funktion'],
+        'bereich'      => ['/api/SetupBereich',        'bereich'],
+        'ehrung'       => ['/api/SetupEhrenzeichen',   'bezeichnung'],
+        'instrument'   => ['/api/SetupInstrumente',    'instrument'],
+        'pruefung'     => ['/api/SetupPrüfungen',      'bezeichnung'],
+        'mitgliedsart' => ['/api/SetupMitgliederart',  'mitgliederart'],
+    ];
+
     /**
-     * Legt für jede vorkommende Nummer einen Eintrag in bmv_bezeichnungen an (Name leer) und befüllt,
-     * was sich ermitteln lässt: Bereiche aus SetupBereich, Prüfungen und Instrumente aus den Prüfungsurkunden.
-     * Vom Verein eingetragene Namen werden nie überschrieben.
+     * Holt die Namen zu allen Nummern aus den Namenslisten des BMV und speichert sie in bmv_bezeichnungen.
+     * Der BMV ist maßgeblich: vorhandene Namen werden überschrieben. „anzeigen“ = 0 heißt, der BMV bietet die
+     * Nummer nicht mehr zur Auswahl an (z. B. alte Ehrenzeichen). Gibt die Zahl der Namen je Art zurück.
+     * Fehlt eine Liste (z. B. keine Freigabe), bleibt der bisherige Stand dieser Art erhalten.
      */
-    public static function bezeichnungenVorbefuellen(BmvApi $api, array $daten): void {
-        $gefunden = [];
-        foreach ($daten as $art => $datensaetze) {
-            $codeFeld = self::ARTEN[$art]['code'];
-            foreach ($datensaetze as $r) {
-                if (isset($r[$codeFeld]) && $r[$codeFeld] !== '') {
-                    $gefunden[$art][(int)$r[$codeFeld]] ??= '';
-                }
-                if ($art === 'funktion' && isset($r['bereich_ID'])) {
-                    $gefunden['bereich'][(int)$r['bereich_ID']] ??= '';
-                }
-                if ($art === 'pruefung') {
-                    if (!empty($r['instrument_ID'])) {
-                        $gefunden['instrument'][(int)$r['instrument_ID']] ??= '';
-                    }
-                    $urkunde = (string)($r['urkundentext'] ?? '');
-                    $abzeichen = self::urkundenFeld($urkunde, 'Leistungsabzeichen');
-                    if ($abzeichen !== '' && isset($r['prüfungsbezeichnung_ID'])) {
-                        $gefunden['pruefung'][(int)$r['prüfungsbezeichnung_ID']] = $abzeichen;
-                    }
-                    $instrument = self::urkundenFeld($urkunde, 'Instrument');
-                    if ($instrument !== '' && !empty($r['instrument_ID'])) {
-                        $gefunden['instrument'][(int)$r['instrument_ID']] = $instrument;
-                    }
-                }
+    public static function katalogeHolen(BmvApi $api): array {
+        $db = Database::getInstance();
+        $anzahl = [];
+        foreach (self::KATALOGE as $art => [$pfad, $feld]) {
+            try {
+                $liste = $api->get($pfad);
+            } catch (\Throwable $e) {
+                continue;
+            }
+            $anzahl[$art] = 0;
+            foreach ($liste as $r) {
+                $name = trim((string)($r[$feld] ?? ''));
+                if (!isset($r['id']) || $name === '') continue;
+                $anzeigen = array_key_exists('anzeigen', $r) && $r['anzeigen'] !== null ? (int)(bool)$r['anzeigen'] : null;
+                $db->execute(
+                    "INSERT INTO bmv_bezeichnungen (art, code, name, anzeigen) VALUES (?, ?, ?, ?)
+                     ON DUPLICATE KEY UPDATE name = VALUES(name), anzeigen = VALUES(anzeigen)",
+                    [$art, (int)$r['id'], mb_substr($name, 0, 150), $anzeigen]
+                );
+                $anzahl[$art]++;
+            }
+            if ($art === 'mitgliedsart') {
+                // Katalog unter Stammdaten → Mitgliedsarten mit dem BMV abgleichen
+                self::$letzterMitgliedsartAbgleich = Mitgliedsart::mitBmvAbgleichen($liste);
             }
         }
-        try {
-            foreach ($api->get('/api/SetupBereich') as $b) {
-                $gefunden['bereich'][(int)$b['id']] = trim((string)($b['bereich'] ?? ''));
-            }
-        } catch (\Throwable $e) { /* Bereiche sind optional */ }
-
-        $db = Database::getInstance();
-        foreach ($gefunden as $art => $codes) {
-            foreach ($codes as $code => $name) {
-                $db->execute(
-                    "INSERT INTO bmv_bezeichnungen (art, code, name) VALUES (?, ?, ?)
-                     ON DUPLICATE KEY UPDATE name = IF(name = '', VALUES(name), name)",
-                    [$art, $code, $name]
-                );
-            }
+        if ($anzahl) {
+            $db->execute(
+                "INSERT INTO einstellungen (schluessel, wert) VALUES ('katalog_bmv_stand', ?) ON DUPLICATE KEY UPDATE wert = VALUES(wert)",
+                [date('Y-m-d H:i:s')]
+            );
         }
         self::$bezeichnungen = null;
+        self::$verborgen = null;
+        return $anzahl;
     }
 
-    /** Liest ein Feld aus dem Urkunden-XML (als Text, ohne XML-Parser wegen falscher utf-16-Angabe) */
-    private static function urkundenFeld(string $xml, string $feld): string {
-        if ($xml === '' || !preg_match('#<' . $feld . '>(.*?)</' . $feld . '>#s', $xml, $m)) {
-            return '';
+    /** Namenslisten holen, wenn sie älter als einen Tag sind (Fehler werden ignoriert, es gilt dann der alte Stand) */
+    public static function katalogeHolenFallsNoetig(BmvApi $api): void {
+        $stand = Database::getInstance()->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = 'katalog_bmv_stand'");
+        if (empty($stand['wert']) || strtotime($stand['wert']) < time() - 86400) {
+            try {
+                self::katalogeHolen($api);
+            } catch (\Throwable $e) { /* alter Stand bleibt */ }
         }
-        return trim(html_entity_decode($m[1], ENT_QUOTES | ENT_XML1, 'UTF-8'));
     }
 
     // ------------------------------------------------------------------------------------------------
@@ -423,8 +431,8 @@ class BmvZusatzdaten {
     // ------------------------------------------------------------------------------------------------
 
     /**
-     * Alle Bezeichnungen: [art => [code => name]]. Eigene Einträge des Vereins haben Vorrang, sonst gilt der
-     * Standardname aus includes/bmv_bezeichnungen_standard.php (Ehrenzeichen nur für das eigene BMV-Land).
+     * Alle Bezeichnungen: [art => [code => name]]. Die Namen aus dem BMV haben Vorrang; solange sie noch nicht
+     * geholt wurden, gilt der Standardname aus includes/bmv_bezeichnungen_standard.php.
      */
     public static function bezeichnungen(): array {
         if (self::$bezeichnungen === null) {
@@ -449,7 +457,7 @@ class BmvZusatzdaten {
         return self::$bezeichnungen;
     }
 
-    /** Nur die vom Verein eingetragenen bzw. beim Holen gefundenen Bezeichnungen: [art => [code => name]] */
+    /** Die aus dem BMV geholten Bezeichnungen: [art => [code => name]] */
     public static function eigeneBezeichnungen(): array {
         $liste = [];
         foreach (Database::getInstance()->fetchAll("SELECT art, code, name FROM bmv_bezeichnungen ORDER BY art, code") as $r) {
@@ -493,7 +501,9 @@ class BmvZusatzdaten {
             return array_map(fn($r) => $r['name'], Mitgliedsart::alle());
         }
         $liste = [];
+        $verborgen = self::verborgen()[$art] ?? [];
         foreach (self::bezeichnungen()[$art] ?? [] as $code => $name) {
+            if (isset($verborgen[$code])) continue;
             $liste[$code] = $name !== '' ? $name : self::name($art, $code);
         }
         uksort($liste, function ($a, $b) use ($art) {
@@ -504,19 +514,25 @@ class BmvZusatzdaten {
         return $liste;
     }
 
-    /** Speichert die vom Verein eingetragenen Namen: [art => [code => name]] */
-    public static function bezeichnungenSpeichern(array $eingaben): void {
-        $db = Database::getInstance();
-        foreach ($eingaben as $art => $codes) {
-            if (!isset(self::BEZEICHNUNG_ARTEN[$art]) || !is_array($codes)) continue;
-            foreach ($codes as $code => $name) {
-                $db->execute(
-                    "INSERT INTO bmv_bezeichnungen (art, code, name) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE name = VALUES(name)",
-                    [$art, (int)$code, mb_substr(trim((string)$name), 0, 150)]
-                );
+    /**
+     * Nummern, die der BMV nicht mehr zur Auswahl anbietet und die im Verein niemand hat: [art => [code => true]].
+     * Bereits vergebene Nummern bleiben auswählbar, damit vorhandene Einträge bearbeitet werden können.
+     */
+    private static function verborgen(): array {
+        if (self::$verborgen === null) {
+            self::$verborgen = [];
+            foreach (Database::getInstance()->fetchAll(
+                "SELECT b.art, b.code FROM bmv_bezeichnungen b
+                 WHERE b.anzeigen = 0
+                   AND NOT EXISTS (SELECT 1 FROM bmv_mitglied_daten d WHERE d.art = b.art AND d.code = b.code)
+                   AND NOT EXISTS (SELECT 1 FROM bmv_mitglied_daten d WHERE b.art = 'bereich' AND d.bereich_code = b.code)
+                   AND NOT EXISTS (SELECT 1 FROM bmv_mitglied_daten d WHERE b.art = 'instrument' AND d.instrument_code = b.code)
+                   AND NOT EXISTS (SELECT 1 FROM mitglied_instrumente mi WHERE b.art = 'instrument' AND mi.bmv_code = b.code)"
+            ) as $r) {
+                self::$verborgen[$r['art']][(int)$r['code']] = true;
             }
         }
-        self::$bezeichnungen = null;
+        return self::$verborgen;
     }
 
     // ------------------------------------------------------------------------------------------------

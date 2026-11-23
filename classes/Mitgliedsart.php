@@ -261,6 +261,89 @@ class Mitgliedsart {
         self::$alle = null;
     }
 
+    /**
+     * Gleicht den Katalog mit der Namensliste des BMV ab (SetupMitgliederart: [['id' => …, 'mitgliederart' => …], …]):
+     * - Gibt es die Nummer schon, bekommt sie den Namen aus dem BMV (Einstellungen wie „zählt als aktiv“ bleiben).
+     * - Gibt es eine eigene Art (Nummer ab EIGENE_NUMMERN_AB, kein Gast) mit gleichem Namen, wird sie auf die
+     *   BMV-Nummer umgestellt – samt aller Zeiträume und Mitglieder.
+     * - Sonst wird die Art angelegt (zählt nicht als aktiv, nicht beitragspflichtig – bitte in den Stammdaten prüfen).
+     * Gibt zurück, was geändert wurde: ['neu' => [Namen], 'umbenannt' => [alt => neu], 'umgestellt' => [Name => 'alt → neu']].
+     */
+    public static function mitBmvAbgleichen(array $bmvListe): array {
+        $ergebnis = ['neu' => [], 'umbenannt' => [], 'umgestellt' => []];
+        $db = Database::getInstance();
+        foreach ($bmvListe as $r) {
+            $code = (int)($r['id'] ?? 0);
+            $name = mb_substr(trim((string)($r['mitgliederart'] ?? '')), 0, 100);
+            if ($code <= 0 || $name === '') continue;
+            $alle = self::alle();
+            if (isset($alle[$code])) {
+                if ($alle[$code]['name'] !== $name) {
+                    $db->execute("UPDATE mitgliedsarten SET name = ? WHERE code = ?", [$name, $code]);
+                    $ergebnis['umbenannt'][$alle[$code]['name']] = $name;
+                    self::$alle = null;
+                }
+                continue;
+            }
+            $eigene = null;
+            foreach ($alle as $c => $a) {
+                if ($c >= self::EIGENE_NUMMERN_AB && !$a['gast'] && mb_strtolower(trim($a['name'])) === mb_strtolower($name)) {
+                    $eigene = $a;
+                    break;
+                }
+            }
+            if ($eigene) {
+                $alterCode = (int)$eigene['code'];
+                self::speichern(['code' => $code, 'name' => $name] + $eigene, $alterCode);
+                $ergebnis['umgestellt'][$name] = $alterCode . ' → ' . $code;
+                continue;
+            }
+            $db->execute(
+                "INSERT INTO mitgliedsarten (code, name, aktiv, beitragspflichtig, gast, farbe, sortierung) VALUES (?, ?, 0, 0, 0, 'secondary', 100)",
+                [$code, $name]
+            );
+            $ergebnis['neu'][] = $name;
+            self::$alle = null;
+        }
+        return $ergebnis;
+    }
+
+    /** Nummern, die es laut Namensliste im BMV gibt: [code => true] (leer, solange die Liste noch nicht geholt wurde) */
+    public static function bmvNummern(): array {
+        $liste = [];
+        foreach (Database::getInstance()->fetchAll("SELECT code FROM bmv_bezeichnungen WHERE art = 'mitgliedsart' AND name <> ''") as $r) {
+            $liste[(int)$r['code']] = true;
+        }
+        return $liste;
+    }
+
+    /**
+     * Neue Reihenfolge (Drag & Drop in den Stammdaten): $codes muss alle Mitgliedsarten enthalten.
+     * Vergibt 10, 20, 30 … und gibt [code => sortierung] zurück.
+     */
+    public static function anordnen(array $codes): array {
+        $codes = array_values(array_unique(array_map('intval', $codes)));
+        $vorhanden = array_keys(self::alle());
+        if (count($codes) !== count($vorhanden) || array_diff($codes, $vorhanden)) {
+            throw new RuntimeException('Die Liste ist nicht mehr aktuell. Bitte die Seite neu laden.');
+        }
+        $db = Database::getInstance();
+        $ergebnis = [];
+        $db->beginTransaction();
+        try {
+            foreach ($codes as $i => $code) {
+                $ergebnis[$code] = ($i + 1) * 10;
+                $db->execute("UPDATE mitgliedsarten SET sortierung = ? WHERE code = ?", [$ergebnis[$code], $code]);
+            }
+            $db->commit();
+        } catch (\Throwable $e) {
+            $db->rollback();
+            throw $e;
+        }
+        self::$alle = null;
+        return $ergebnis;
+    }
+
     /** Löscht eine Mitgliedsart, wenn sie in keinem Zeitraum vorkommt */
     public static function loeschen(int $code): void {
         $db = Database::getInstance();

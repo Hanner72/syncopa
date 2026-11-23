@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.22.0]
+
+### Hinzugefügt
+
+- System → BMV-API testen (nur Administratoren, `bmv_apitest.php`): alle Lese-Zugriffspunkte des BMV live aus der API-Beschreibung, Markierung „neu“ und „in Syncopa“, einzeln oder alle prüfen, Tabellenansicht mit Suche, Filter, CSV und JSON – Zugangsdaten aus den Einstellungen
+- Stammdaten → Mitgliedsarten: Abgleich mit dem BMV (SetupMitgliederart) per Knopf und automatisch beim Holen der Mitglieder – Namen aus dem BMV, fehlende Arten werden angelegt, eigene Arten mit gleichem Namen auf die BMV-Nummer umgestellt; Kennzeichen „BMV“ / „eigene“
+- Stammdaten → Mitgliedsarten: Reihenfolge per Drag & Drop, wird sofort gespeichert (`api/mitgliedsarten_sortieren.php`)
+
+### Geändert
+
+- BMV Daten holen: Namen zu Funktionen, Bereichen, Ehrenzeichen, Instrumenten, Prüfungen und Mitgliedsarten kommen direkt aus den Namenslisten des BMV (Setup-Zugriffspunkte), beim Übernehmen und einmal am Tag beim Öffnen des Reiters „Mitglieder“; der Reiter „Bezeichnungen“ entfällt
+- BMV Daten holen: Zuordnung BMV-Instrument → Syncopa-Instrument als aufklappbare Karte im Reiter „Mitglieder“
+- Eigene Einträge beim Mitglied (Laufbahn): Auswahl enthält alle Nummern des BMV; Nummern, die der BMV nicht mehr anbietet, nur wenn sie im Verein schon vorkommen
+
 ## [2.21.0]
 
 ### Hinzugefügt

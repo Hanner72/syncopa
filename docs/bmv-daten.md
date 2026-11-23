@@ -9,7 +9,7 @@ Jeder Bereich zeigt zuerst eine **Vorschau**, was sich ändern würde. Übernomm
 | Recht „BMV Online“ | Was geht |
 |---|---|
 | Lesen | Vorschau aller Bereiche ansehen |
-| Schreiben | Daten übernehmen, Inventar-Datei hochladen, Bezeichnungen speichern |
+| Schreiben | Daten übernehmen, Inventar-Datei hochladen, Instrumente zuordnen |
 
 > 💡 Der Menüpunkt erscheint nur, wenn unter [Einstellungen → BMV](einstellungen.md#bmv-anbindung) die Anbindung aktiv ist und die Zugangsdaten eingetragen sind. Ohne Anbindung gibt es unter **Verband** nur den [BMV-Jahresbericht](bmv-jahresbericht.md).
 
@@ -30,6 +30,10 @@ Die Vorschau ist in drei Gruppen geteilt:
 | **Nur in Syncopa** | Die Mitglieder werden nur markiert, **nicht gelöscht** |
 
 Mitgeholt werden außerdem **Funktionen, Ehrungen, Instrumente, Prüfungen und Mitgliedsarten**. Einträge, die im BMV gelöscht wurden, werden auch in Syncopa entfernt. Eigene Einträge aus Syncopa bleiben erhalten; gibt es denselben Eintrag auch im BMV, wird er damit verknüpft. Einträge aus dem BMV sind beim Mitglied gesperrt und lassen sich nur im BMV ändern.
+
+Die **Namen** zu Funktionen, Bereichen, Ehrenzeichen, Instrumenten, Prüfungen und Mitgliedsarten holt Syncopa aus den Namenslisten des BMV (Zugriffspunkte `SetupFunktionen`, `SetupEhrenzeichen` usw.). Das geschieht beim Übernehmen und höchstens einmal am Tag beim Öffnen dieses Reiters. Der BMV ist dabei maßgeblich. Nummern, die der BMV nicht mehr zur Auswahl anbietet (z. B. alte Ehrenzeichen), erscheinen bei eigenen Einträgen nicht mehr in der Auswahl, außer ein Mitglied hat sie schon.
+
+**Instrumente zuordnen** (aufklappbar unter der Übersicht): Zu jedem BMV-Instrument, das im Verein vorkommt, wählst du das passende **Syncopa-Instrument**. So kommen BMV- und eigene Instrumente in einer Liste zusammen; mehrere BMV-Instrumente dürfen dasselbe Syncopa-Instrument haben. Ohne Zuordnung nimmt Syncopa beim Holen ein Instrument mit gleichem Namen oder legt eines an.
 
 Danach bestimmt die **laufende Mitgliedsart**, ob ein Mitglied als aktiv zählt (siehe [Mitgliedsarten](stammdaten.md#mitgliedsarten)). Die Ehrungen erscheinen unter [Ehrungen](ehrungen.md).
 
@@ -55,16 +59,6 @@ Das Vereinsinventar liefert die BMV-Schnittstelle nicht. Deshalb:
 5. **Übernehmen**
 
 Übernommen werden nur Einträge vom Typ „Instrument“. Werte, die in Syncopa schon eingetragen sind, bleiben erhalten – aus dem BMV werden nur leere Felder ergänzt. Die Zuteilung an Mitglieder läuft über das Mitglied im BMV bzw. Name und Geburtsdatum; ohne passendes Mitglied wird das Instrument ohne Zuteilung übernommen.
-
-## Bezeichnungen
-
-![BMV Bezeichnungen](screenshots/bmvdaten1.png)
-
-Der BMV liefert zu Ehrungen, Funktionen, Instrumenten und Prüfungen nur **Nummern**. Syncopa bringt für bekannte Nummern Standardnamen mit (grau im leeren Feld). Trägst du selbst einen Namen ein, gilt deiner. Ohne Namen erscheint z. B. „Ehrenzeichen Nr. 31“.
-
-- Bei Instrumenten wählst du zusätzlich das passende **Syncopa-Instrument**.
-- **Nummer hinzufügen:** für Nummern, die im Verein noch niemand hat (z. B. ein Ehrenzeichen, das man selbst eintragen möchte). Die Nummer steht im BMV-Portal.
-- Mitgliedsarten haben einen eigenen Katalog unter [Stammdaten → Mitgliedsarten](stammdaten.md#mitgliedsarten).
 
 ---
 
