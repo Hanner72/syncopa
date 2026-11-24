@@ -89,6 +89,13 @@ jobs:
             echo "Gesamt: $(jq "$offen | length" semgrep.sarif) – Einzelheiten unter **Security → Code scanning**."
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # Mit „nosemgrep“ ausgenommene Stellen stehen als „unterdrückt“ in der Datei – GitHub würde sie trotzdem melden
+      - name: Ausgenommene Stellen entfernen
+        if: always() && hashFiles('semgrep.sarif') != ''
+        run: |
+          jq '.runs |= map(.results |= map(select((.suppressions // []) | length == 0)))' semgrep.sarif > semgrep.gefiltert.sarif
+          mv semgrep.gefiltert.sarif semgrep.sarif
+
       - name: Ergebnisse an GitHub (Code scanning) übergeben
         if: always() && hashFiles('semgrep.sarif') != ''
         uses: github/codeql-action/upload-sarif@v4

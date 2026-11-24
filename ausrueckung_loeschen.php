@@ -33,10 +33,7 @@ try {
     Session::setFlashMessage('danger', 'Fehler beim Löschen: ' . $e->getMessage());
 }
 
-// Zurück nur auf eine eigene Seite (z. B. kalender.php), nie auf eine fremde Adresse
-$redirect = (string)($_GET['redirect'] ?? '');
-if (!preg_match('/^[a-z0-9_]+\.php(\?[A-Za-z0-9_=&%.\-]*)?$/', $redirect)) {
-    $redirect = 'ausrueckungen.php';
-}
-header('Location: ' . $redirect); // nosemgrep: syncopa-weiterleitung-mit-benutzereingabe – nur eigene Seiten, siehe Prüfung oben
+// Zurück nur auf eine bekannte eigene Seite, nie auf eine fremde Adresse
+$redirect = ($_GET['redirect'] ?? '') === 'kalender.php' ? 'kalender.php' : 'ausrueckungen.php';
+header('Location: ' . $redirect);
 exit;
