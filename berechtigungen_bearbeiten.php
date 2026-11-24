@@ -11,7 +11,7 @@ if (Session::getRole() !== 'admin') {
 }
 
 $db = Database::getInstance();
-$rolle_id = $_GET['rolle_id'] ?? null;
+$rolle_id = isset($_GET['rolle_id']) ? (int)$_GET['rolle_id'] : null;
 
 if (!$rolle_id) {
     Session::setFlashMessage('danger', 'Rolle nicht angegeben');

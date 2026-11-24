@@ -26,6 +26,7 @@ $db = Database::getInstance();
 $db->beginTransaction();
 try {
     foreach ($ids as $pos => $id) {
+        // nosemgrep: tainted-sql-string, syncopa-sql-mit-benutzereingabe – Tabellenname nur aus der festen Liste $tabellen
         $db->execute("UPDATE `$tabelle` SET sortierung = ? WHERE id = ?", [($pos + 1) * 10, $id]);
     }
     $db->commit();

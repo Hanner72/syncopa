@@ -104,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $api->istKonfiguriert()) {
     } catch (Throwable $e) {
         Session::setFlashMessage('danger', 'Übernahme fehlgeschlagen, es wurde nichts geändert: ' . $e->getMessage());
     }
-    header('Location: ' . $seitenUrl);
+    header('Location: ' . $seitenUrl); // nosemgrep: syncopa-weiterleitung-mit-benutzereingabe – $bereich ist oben gegen $bereiche geprüft
     exit;
 }
 

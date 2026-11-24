@@ -6,7 +6,7 @@ require_once 'includes.php';
 Session::requireLogin();
 Session::requirePermission('mitglieder', 'lesen');
 
-$id = $_GET['id'] ?? null;
+$id = isset($_GET['id']) ? (int)$_GET['id'] : null;
 if (!$id) {
     header('Location: mitglieder.php');
     exit;
@@ -132,16 +132,6 @@ include 'includes/header.php';
                     <dd class="col-sm-7"><?php echo htmlspecialchars($mitglied[$feld]); ?></dd>
                     <?php endforeach; ?>
 
-                    <?php // Kategorien kommen vom BMV als „;A;B;“
-                    $kategorien = array_filter(array_map('trim', explode(';', (string)($mitglied['bmv_kategorien'] ?? ''))));
-                    if ($kategorien): ?>
-                    <dt class="col-sm-5">Kategorien:</dt>
-                    <dd class="col-sm-7">
-                        <?php foreach ($kategorien as $kategorie): ?>
-                        <span class="badge bg-light text-dark border mb-1"><?php echo htmlspecialchars($kategorie); ?></span>
-                        <?php endforeach; ?>
-                    </dd>
-                    <?php endif; ?>
                 </dl>
             </div>
         </div>

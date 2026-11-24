@@ -12,7 +12,7 @@ Session::requirePermission('noten', 'lesen');
 header('Content-Type: application/json');
 
 // Noten-ID erforderlich
-$notenId = $_GET['noten_id'] ?? null;
+$notenId = isset($_GET['noten_id']) ? (int)$_GET['noten_id'] : null;
 if (!$notenId) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Noten-ID fehlt']);

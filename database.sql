@@ -582,7 +582,7 @@ CREATE TABLE IF NOT EXISTS `mitglieder` (
   `bmv_beruf` varchar(150) DEFAULT NULL,
   `bmv_firma` varchar(150) DEFAULT NULL,
   `bmv_bemerkung` text DEFAULT NULL,
-  `bmv_kategorien` varchar(255) DEFAULT NULL,
+  `bmv_kategorien` varchar(255) DEFAULT NULL COMMENT 'nicht mehr verwendet (alte BMV-Kategorien)',
   `bmv_exp_telnr1` tinyint(1) DEFAULT NULL,
   `bmv_exp_telnr2` tinyint(1) DEFAULT NULL,
   `bmv_exp_email1` tinyint(1) DEFAULT NULL,

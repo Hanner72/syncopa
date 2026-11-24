@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$id = $_POST['id'] ?? null;
+$id = isset($_POST['id']) ? (int)$_POST['id'] : null;
 if (!$id) {
     Session::setFlashMessage('danger', 'Kein Benutzer angegeben.');
     header('Location: index.php');

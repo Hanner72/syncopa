@@ -66,4 +66,5 @@
 * **🔧 Technisch**
   * [Datenbankstruktur](datenbank.md)
   * [Dateistruktur](dateistruktur.md)
+  * [Sicherheitsprüfung (SAST)](sicherheitspruefung.md)
   * [Changelog](changelog.md)

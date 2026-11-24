@@ -35,7 +35,7 @@ if (isset($_GET['ist_vorlage']) && $_GET['ist_vorlage'] !== '') {
 }
 
 // Ansicht: kategorie | station | lieferant
-$ansicht = in_array($_GET['ansicht'] ?? '', ['kategorie','station','lieferant']) ? $_GET['ansicht'] : 'kategorie';
+$ansicht = ['kategorie' => 'kategorie', 'station' => 'station', 'lieferant' => 'lieferant'][$_GET['ansicht'] ?? ''] ?? 'kategorie';
 
 if ($ansicht === 'station') {
     $grouped = $eObj->getByFestGroupedByStation($festId, $filter);

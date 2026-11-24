@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$ausrueckungId = $_POST['ausrueckung_id'] ?? null;
+$ausrueckungId = isset($_POST['ausrueckung_id']) ? (int)$_POST['ausrueckung_id'] : null;
 $status = $_POST['status'] ?? null;
 $grund = $_POST['grund'] ?? null;
 

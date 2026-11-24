@@ -1,0 +1,9 @@
+# Von der Sicherheitsprüfung (Semgrep) ausgenommen: fremde Bibliotheken, Hilfe, Testdaten, Datenbank-Skripte
+vendor/
+assets/js/libs/
+docs/
+uploads/
+mnt/
+vorstellung-*/
+*.min.js
+*.sql

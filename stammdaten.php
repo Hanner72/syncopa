@@ -88,7 +88,7 @@ if (in_array($action, ['instrumenttyp_save', 'instrumenttyp_delete'], true) && $
 
 // Register verarbeiten
 if ($action === 'register_save') {
-    $id = $_POST['id'] ?? null;
+    $id = isset($_POST['id']) ? (int)$_POST['id'] : null;
     $name = trim($_POST['name'] ?? '');
     $sortierung = (int)($_POST['sortierung'] ?? 0);
     
@@ -111,7 +111,7 @@ if ($action === 'register_save') {
 }
 
 if ($action === 'register_delete') {
-    $id = $_POST['id'] ?? null;
+    $id = isset($_POST['id']) ? (int)$_POST['id'] : null;
     if ($id) {
         $count = $db->fetchOne("SELECT COUNT(*) as cnt FROM mitglieder WHERE register_id = ?", [$id]);
         if ($count['cnt'] > 0) {
@@ -126,7 +126,7 @@ if ($action === 'register_delete') {
 
 // Instrumententypen verarbeiten
 if ($action === 'instrumenttyp_save') {
-    $id = $_POST['id'] ?? null;
+    $id = isset($_POST['id']) ? (int)$_POST['id'] : null;
     $name = trim($_POST['name'] ?? '');
     $register_id = $_POST['register_id'] ?: null;
     
@@ -149,7 +149,7 @@ if ($action === 'instrumenttyp_save') {
 }
 
 if ($action === 'instrumenttyp_delete') {
-    $id = $_POST['id'] ?? null;
+    $id = isset($_POST['id']) ? (int)$_POST['id'] : null;
     if ($id) {
         $countInstr = $db->fetchOne("SELECT COUNT(*) as cnt FROM instrumente WHERE instrument_typ_id = ?", [$id]);
         $countMitgl = $db->fetchOne("SELECT COUNT(*) as cnt FROM mitglied_instrumente WHERE instrument_typ_id = ?", [$id]);
