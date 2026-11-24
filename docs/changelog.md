@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.24.1]
+
+### Geändert
+
+- Sicherheitsprüfung: Mit „nosemgrep“ ausgenommene Stellen werden nicht mehr an GitHub Code Scanning gemeldet
+- Kassabuch-Sortierung, Ausrückung löschen, BMV Daten holen: ohne Ausnahmen sicher geschrieben (fester SQL-Text je Art, Rücksprung nur auf bekannte Seiten, maskierter Reiter-Name)
+
 ## [2.24.0]
 
 ### Hinzugefügt

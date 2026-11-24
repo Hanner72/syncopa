@@ -32,7 +32,7 @@ if ($bereich === 'bezeichnungen') {
 if (!isset($bereiche[$bereich])) {
     $bereich = 'verein';
 }
-$seitenUrl = 'bmv_daten.php?bereich=' . $bereich;
+$seitenUrl = 'bmv_daten.php?bereich=' . urlencode($bereich); // $bereich ist oben gegen $bereiche geprüft
 
 $api    = new BmvApi();
 $fehler = null;
@@ -104,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $api->istKonfiguriert()) {
     } catch (Throwable $e) {
         Session::setFlashMessage('danger', 'Übernahme fehlgeschlagen, es wurde nichts geändert: ' . $e->getMessage());
     }
-    header('Location: ' . $seitenUrl); // nosemgrep: syncopa-weiterleitung-mit-benutzereingabe – $bereich ist oben gegen $bereiche geprüft
+    header('Location: ' . $seitenUrl);
     exit;
 }
 
