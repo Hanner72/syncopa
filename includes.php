@@ -587,7 +587,7 @@ require_once __DIR__ . '/classes/FestAbrechnung.php';
         "ALTER TABLE mitglieder ADD COLUMN bmv_beruf VARCHAR(150) NULL",
         "ALTER TABLE mitglieder ADD COLUMN bmv_firma VARCHAR(150) NULL",
         "ALTER TABLE mitglieder ADD COLUMN bmv_bemerkung TEXT NULL",
-        "ALTER TABLE mitglieder ADD COLUMN bmv_kategorien VARCHAR(255) NULL",
+        "ALTER TABLE mitglieder ADD COLUMN bmv_kategorien VARCHAR(255) NULL", // nicht mehr verwendet, alter Inhalt bleibt
         "ALTER TABLE mitglieder ADD COLUMN bmv_exp_telnr1 TINYINT(1) NULL",
         "ALTER TABLE mitglieder ADD COLUMN bmv_exp_telnr2 TINYINT(1) NULL",
         "ALTER TABLE mitglieder ADD COLUMN bmv_exp_email1 TINYINT(1) NULL",

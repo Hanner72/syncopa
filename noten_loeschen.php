@@ -12,7 +12,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
 }
 Session::requirePermission('noten', 'loeschen');
 
-$id = $_GET['id'] ?? null;
+$id = isset($_GET['id']) ? (int)$_GET['id'] : null;
 if (!$id) {
     header('Location: noten.php');
     exit;

@@ -22,7 +22,7 @@ if (!Session::checkPermission('uniformen', 'lesen')) {
     exit;
 }
 
-$mitgliedId = $_GET['id'] ?? null;
+$mitgliedId = isset($_GET['id']) ? (int)$_GET['id'] : null;
 if (!$mitgliedId) {
     http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Mitglied-ID fehlt']);

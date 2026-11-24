@@ -211,10 +211,17 @@ $alleNotenbucher = $db->fetchAll("
 $selectedBuch = isset($_GET['buch']) ? (int)$_GET['buch'] : 0;
 
 // Noten laden – nur Noten mit gesplitteten Stimmen-PDFs
-$formationCond = $formationId
-    ? "AND (n.formation_id = {$formationId} OR n.formation_id IS NULL)"
-    : "";
-$buchJoin  = $selectedBuch ? "JOIN notenbuch_noten nbn ON nbn.noten_id = n.id AND nbn.notenbuch_id = {$selectedBuch}" : "";
+$notenParams = [];
+$buchJoin  = "";
+if ($selectedBuch) {
+    $buchJoin = "JOIN notenbuch_noten nbn ON nbn.noten_id = n.id AND nbn.notenbuch_id = ?";
+    $notenParams[] = $selectedBuch;
+}
+$formationCond = "";
+if ($formationId) {
+    $formationCond = "AND (n.formation_id = ? OR n.formation_id IS NULL)";
+    $notenParams[] = (int)$formationId;
+}
 $buchOrder = $selectedBuch ? "nbn.reihenfolge, " : "";
 $alleNoten = $db->fetchAll(
     "SELECT n.id, n.titel, n.komponist,
@@ -226,7 +233,8 @@ $alleNoten = $db->fetchAll(
          WHERE nd.noten_id = n.id AND nd.beschreibung LIKE '[stimme]%'
      )
      {$formationCond}
-     ORDER BY {$buchOrder}n.titel"
+     ORDER BY {$buchOrder}n.titel",
+    $notenParams
 );
 
 include 'includes/header.php';

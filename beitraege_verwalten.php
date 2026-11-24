@@ -15,7 +15,7 @@ foreach ($einstellungen as $e) {
     $settings[$e['schluessel']] = $e['wert'];
 }
 
-$jahr = $_GET['jahr'] ?? date('Y');
+$jahr = (int)($_GET['jahr'] ?? date('Y'));
 
 // Beiträge generieren für ein Jahr
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_beitraege'])) {

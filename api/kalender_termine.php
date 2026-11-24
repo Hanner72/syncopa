@@ -70,7 +70,7 @@ try {
                 throw new Exception('Keine Berechtigung zum Bearbeiten von Terminen');
             }
             
-            $id = $_POST['id'] ?? null;
+            $id = isset($_POST['id']) ? (int)$_POST['id'] : null;
             if (!$id) {
                 throw new Exception('Termin-ID fehlt');
             }
@@ -113,7 +113,7 @@ try {
             break;
             
         case 'get':
-            $id = $_GET['id'] ?? null;
+            $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
             if (!$id) {
                 throw new Exception('Termin-ID fehlt');
             }

@@ -18,7 +18,7 @@ if (Session::getRole() !== 'admin' && !Session::checkPermission('ausrueckungen',
     exit;
 }
 
-$id = $_GET['id'] ?? null;
+$id = isset($_GET['id']) ? (int)$_GET['id'] : null;
 if (!$id) {
     header('Location: ausrueckungen.php');
     exit;
@@ -33,6 +33,10 @@ try {
     Session::setFlashMessage('danger', 'Fehler beim Löschen: ' . $e->getMessage());
 }
 
-$redirect = $_GET['redirect'] ?? 'ausrueckungen.php';
-header('Location: ' . $redirect);
+// Zurück nur auf eine eigene Seite (z. B. kalender.php), nie auf eine fremde Adresse
+$redirect = (string)($_GET['redirect'] ?? '');
+if (!preg_match('/^[a-z0-9_]+\.php(\?[A-Za-z0-9_=&%.\-]*)?$/', $redirect)) {
+    $redirect = 'ausrueckungen.php';
+}
+header('Location: ' . $redirect); // nosemgrep: syncopa-weiterleitung-mit-benutzereingabe – nur eigene Seiten, siehe Prüfung oben
 exit;

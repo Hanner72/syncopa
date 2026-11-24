@@ -5,7 +5,7 @@ require_once 'includes.php';
 Session::requireLogin();
 Session::requirePermission('uniformen', 'lesen');
 
-$mitgliedId = $_GET['id'] ?? null;
+$mitgliedId = isset($_GET['id']) ? (int)$_GET['id'] : null;
 if (!$mitgliedId) {
     header('Location: uniformen.php');
     exit;

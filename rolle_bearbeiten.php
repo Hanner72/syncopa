@@ -11,7 +11,7 @@ if (Session::getRole() !== 'admin') {
 }
 
 $db = Database::getInstance();
-$id = $_GET['id'] ?? null;
+$id = isset($_GET['id']) ? (int)$_GET['id'] : null;
 $isEdit = !empty($id);
 
 if ($isEdit) {

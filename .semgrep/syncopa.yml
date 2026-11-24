@@ -1,0 +1,271 @@
+# Eigene Semgrep-Regeln für Syncopa (Sicherheitsprüfung / SAST)
+# Ergänzen die allgemeinen Regeln p/php, p/security-audit und p/secrets, siehe .github/workflows/sast.yml.
+# Alle Regeln verfolgen Benutzereingaben ($_GET, $_POST, …) bis zu einer gefährlichen Stelle (taint).
+# Funktionen wie trim() oder substr() geben Benutzereingaben ungeprüft weiter – sie gelten wegen
+# taint_assume_safe_functions aber als unbedenklich; deshalb sind die wichtigsten hier als Weitergabe eingetragen.
+# Falscher Alarm an einer geprüften Stelle: Kommentar „// nosemgrep: <regel-id>“ in die Zeile, mit Begründung.
+
+rules:
+  - id: syncopa-sql-mit-benutzereingabe
+    mode: taint
+    options:
+      # Ergebnisse von Funktionen (z. B. Datensatz aus getById($id)), Array-Zugriffe über eine feste Liste
+      # ($erlaubt[$_GET['art']]), Zahlen und Vergleiche gelten als unbedenklich – sonst wäre fast jede Zeile ein Fund
+      taint_assume_safe_functions: true
+      taint_assume_safe_indexes: true
+      taint_assume_safe_numbers: true
+      taint_assume_safe_booleans: true
+      taint_assume_safe_comparisons: true
+    languages: [php]
+    severity: ERROR
+    message: >-
+      Benutzereingabe landet im SQL-Text. Werte immer als ?-Platzhalter in $params übergeben
+      ($db->fetchAll($sql, [$wert])). Spalten- oder Sortiernamen nur aus einer festen Liste übernehmen.
+    metadata:
+      category: security
+      cwe: "CWE-89: SQL Injection"
+    pattern-sources:
+      - pattern-either:
+          - pattern: $_GET
+          - pattern: $_POST
+          - pattern: $_REQUEST
+          - pattern: $_COOKIE
+          - pattern: file_get_contents('php://input')
+      # trim(), substr() usw. geben Eingaben unverändert weiter
+      - patterns:
+          - pattern: $FUNKTION(...)
+          - metavariable-regex:
+              metavariable: $FUNKTION
+              regex: ^(trim|ltrim|rtrim|substr|mb_substr|strtolower|strtoupper|mb_strtolower|mb_strtoupper|ucfirst|ucwords|str_replace|str_ireplace|preg_replace|sprintf|vsprintf|implode|join|urldecode|rawurldecode|base64_decode|html_entity_decode|htmlspecialchars_decode|stripslashes|strval|nl2br|str_pad|strrev|array_values|reset|end|current)$
+          - pattern-either:
+              - pattern: $FUNKTION(..., <... $_GET ...>, ...)
+              - pattern: $FUNKTION(..., <... $_POST ...>, ...)
+              - pattern: $FUNKTION(..., <... $_REQUEST ...>, ...)
+              - pattern: $FUNKTION(..., <... $_COOKIE ...>, ...)
+    pattern-sanitizers:
+      - pattern-either:
+          - pattern: (int) $X
+          - pattern: (float) $X
+          - pattern: (bool) $X
+          - pattern: intval(...)
+          - pattern: floatval(...)
+    pattern-sinks:
+      - patterns:
+          - pattern: $DB->$METHODE($SQL, ...)
+          - metavariable-regex:
+              metavariable: $METHODE
+              regex: ^(execute|fetchAll|fetchOne|fetchColumn|query|prepare|exec)$
+          - focus-metavariable: $SQL
+
+  - id: syncopa-ausgabe-ohne-maskierung
+    mode: taint
+    options:
+      # Ergebnisse von Funktionen (z. B. Datensatz aus getById($id)), Array-Zugriffe über eine feste Liste
+      # ($erlaubt[$_GET['art']]), Zahlen und Vergleiche gelten als unbedenklich – sonst wäre fast jede Zeile ein Fund
+      taint_assume_safe_functions: true
+      taint_assume_safe_indexes: true
+      taint_assume_safe_numbers: true
+      taint_assume_safe_booleans: true
+      taint_assume_safe_comparisons: true
+    languages: [php]
+    severity: WARNING
+    message: >-
+      Benutzereingabe wird ohne Maskierung ausgegeben (XSS). htmlspecialchars() verwenden,
+      bei Zahlen (int), in JavaScript json_encode().
+    metadata:
+      category: security
+      cwe: "CWE-79: Cross-site Scripting"
+    pattern-sources:
+      - pattern-either:
+          - pattern: $_GET
+          - pattern: $_POST
+          - pattern: $_REQUEST
+          - pattern: $_COOKIE
+          - pattern: $_SERVER['PHP_SELF']
+          - pattern: $_SERVER['REQUEST_URI']
+          - pattern: $_SERVER['QUERY_STRING']
+      # trim(), substr() usw. geben Eingaben unverändert weiter
+      - patterns:
+          - pattern: $FUNKTION(...)
+          - metavariable-regex:
+              metavariable: $FUNKTION
+              regex: ^(trim|ltrim|rtrim|substr|mb_substr|strtolower|strtoupper|mb_strtolower|mb_strtoupper|ucfirst|ucwords|str_replace|str_ireplace|preg_replace|sprintf|vsprintf|implode|join|urldecode|rawurldecode|base64_decode|html_entity_decode|htmlspecialchars_decode|stripslashes|strval|nl2br|str_pad|strrev|array_values|reset|end|current)$
+          - pattern-either:
+              - pattern: $FUNKTION(..., <... $_GET ...>, ...)
+              - pattern: $FUNKTION(..., <... $_POST ...>, ...)
+              - pattern: $FUNKTION(..., <... $_REQUEST ...>, ...)
+              - pattern: $FUNKTION(..., <... $_COOKIE ...>, ...)
+    pattern-sanitizers:
+      - pattern-either:
+          - pattern: htmlspecialchars(...)
+          - pattern: htmlentities(...)
+          - pattern: json_encode(...)
+          - pattern: urlencode(...)
+          - pattern: rawurlencode(...)
+          - pattern: number_format(...)
+          - pattern: (int) $X
+          - pattern: (float) $X
+          - pattern: intval(...)
+    pattern-sinks:
+      - pattern: echo $X;
+      - pattern: print($X)
+      - pattern: printf(...)
+
+  - id: syncopa-shell-mit-benutzereingabe
+    mode: taint
+    options:
+      # Ergebnisse von Funktionen (z. B. Datensatz aus getById($id)), Array-Zugriffe über eine feste Liste
+      # ($erlaubt[$_GET['art']]), Zahlen und Vergleiche gelten als unbedenklich – sonst wäre fast jede Zeile ein Fund
+      taint_assume_safe_functions: true
+      taint_assume_safe_indexes: true
+      taint_assume_safe_numbers: true
+      taint_assume_safe_booleans: true
+      taint_assume_safe_comparisons: true
+    languages: [php]
+    severity: ERROR
+    message: >-
+      Benutzereingabe oder Upload-Dateiname landet in einem Shell-Befehl. Jedes Argument mit
+      escapeshellarg() maskieren.
+    metadata:
+      category: security
+      cwe: "CWE-78: OS Command Injection"
+    pattern-sources:
+      - pattern-either:
+          - pattern: $_GET
+          - pattern: $_POST
+          - pattern: $_REQUEST
+          - pattern: $_COOKIE
+          - pattern: $_FILES
+      # trim(), substr() usw. geben Eingaben unverändert weiter
+      - patterns:
+          - pattern: $FUNKTION(...)
+          - metavariable-regex:
+              metavariable: $FUNKTION
+              regex: ^(trim|ltrim|rtrim|substr|mb_substr|strtolower|strtoupper|mb_strtolower|mb_strtoupper|ucfirst|ucwords|str_replace|str_ireplace|preg_replace|sprintf|vsprintf|implode|join|urldecode|rawurldecode|base64_decode|html_entity_decode|htmlspecialchars_decode|stripslashes|strval|nl2br|str_pad|strrev|array_values|reset|end|current)$
+          - pattern-either:
+              - pattern: $FUNKTION(..., <... $_GET ...>, ...)
+              - pattern: $FUNKTION(..., <... $_POST ...>, ...)
+              - pattern: $FUNKTION(..., <... $_REQUEST ...>, ...)
+              - pattern: $FUNKTION(..., <... $_COOKIE ...>, ...)
+    pattern-sanitizers:
+      - pattern-either:
+          - pattern: escapeshellarg(...)
+          - pattern: (int) $X
+          - pattern: intval(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: exec($BEFEHL, ...)
+              - pattern: shell_exec($BEFEHL)
+              - pattern: system($BEFEHL, ...)
+              - pattern: passthru($BEFEHL, ...)
+              - pattern: popen($BEFEHL, ...)
+              - pattern: proc_open($BEFEHL, ...)
+          - focus-metavariable: $BEFEHL
+
+  - id: syncopa-dateipfad-mit-benutzereingabe
+    mode: taint
+    options:
+      # Ergebnisse von Funktionen (z. B. Datensatz aus getById($id)), Array-Zugriffe über eine feste Liste
+      # ($erlaubt[$_GET['art']]), Zahlen und Vergleiche gelten als unbedenklich – sonst wäre fast jede Zeile ein Fund
+      taint_assume_safe_functions: true
+      taint_assume_safe_indexes: true
+      taint_assume_safe_numbers: true
+      taint_assume_safe_booleans: true
+      taint_assume_safe_comparisons: true
+    languages: [php]
+    severity: WARNING
+    message: >-
+      Benutzereingabe bestimmt einen Dateipfad (Path Traversal, z. B. „../../config.php“).
+      Nur basename() oder eine ID aus der Datenbank verwenden und den Pfad selbst zusammensetzen.
+    metadata:
+      category: security
+      cwe: "CWE-22: Path Traversal"
+    pattern-sources:
+      - pattern-either:
+          - pattern: $_GET
+          - pattern: $_POST
+          - pattern: $_REQUEST
+          - pattern: $_COOKIE
+      # trim(), substr() usw. geben Eingaben unverändert weiter
+      - patterns:
+          - pattern: $FUNKTION(...)
+          - metavariable-regex:
+              metavariable: $FUNKTION
+              regex: ^(trim|ltrim|rtrim|substr|mb_substr|strtolower|strtoupper|mb_strtolower|mb_strtoupper|ucfirst|ucwords|str_replace|str_ireplace|preg_replace|sprintf|vsprintf|implode|join|urldecode|rawurldecode|base64_decode|html_entity_decode|htmlspecialchars_decode|stripslashes|strval|nl2br|str_pad|strrev|array_values|reset|end|current)$
+          - pattern-either:
+              - pattern: $FUNKTION(..., <... $_GET ...>, ...)
+              - pattern: $FUNKTION(..., <... $_POST ...>, ...)
+              - pattern: $FUNKTION(..., <... $_REQUEST ...>, ...)
+              - pattern: $FUNKTION(..., <... $_COOKIE ...>, ...)
+    pattern-sanitizers:
+      - pattern-either:
+          - pattern: basename(...)
+          - pattern: (int) $X
+          - pattern: intval(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: readfile($PFAD, ...)
+              - pattern: file_get_contents($PFAD, ...)
+              - pattern: file_put_contents($PFAD, ...)
+              - pattern: fopen($PFAD, ...)
+              - pattern: unlink($PFAD, ...)
+              - pattern: file($PFAD, ...)
+              - pattern: include $PFAD;
+              - pattern: include_once $PFAD;
+              - pattern: require $PFAD;
+              - pattern: require_once $PFAD;
+          - focus-metavariable: $PFAD
+
+  - id: syncopa-weiterleitung-mit-benutzereingabe
+    mode: taint
+    options:
+      # Ergebnisse von Funktionen (z. B. Datensatz aus getById($id)), Array-Zugriffe über eine feste Liste
+      # ($erlaubt[$_GET['art']]), Zahlen und Vergleiche gelten als unbedenklich – sonst wäre fast jede Zeile ein Fund
+      taint_assume_safe_functions: true
+      taint_assume_safe_indexes: true
+      taint_assume_safe_numbers: true
+      taint_assume_safe_booleans: true
+      taint_assume_safe_comparisons: true
+    languages: [php]
+    severity: WARNING
+    message: >-
+      Benutzereingabe bestimmt das Ziel einer Weiterleitung (Open Redirect). Nur eigene Seiten erlauben,
+      z. B. mit einer festen Liste oder einer Prüfung auf relative Pfade ohne „//“.
+    metadata:
+      category: security
+      cwe: "CWE-601: Open Redirect"
+    pattern-sources:
+      - pattern-either:
+          - pattern: $_GET
+          - pattern: $_POST
+          - pattern: $_REQUEST
+          - pattern: $_SERVER['HTTP_REFERER']
+      # trim(), substr() usw. geben Eingaben unverändert weiter
+      - patterns:
+          - pattern: $FUNKTION(...)
+          - metavariable-regex:
+              metavariable: $FUNKTION
+              regex: ^(trim|ltrim|rtrim|substr|mb_substr|strtolower|strtoupper|mb_strtolower|mb_strtoupper|ucfirst|ucwords|str_replace|str_ireplace|preg_replace|sprintf|vsprintf|implode|join|urldecode|rawurldecode|base64_decode|html_entity_decode|htmlspecialchars_decode|stripslashes|strval|nl2br|str_pad|strrev|array_values|reset|end|current)$
+          - pattern-either:
+              - pattern: $FUNKTION(..., <... $_GET ...>, ...)
+              - pattern: $FUNKTION(..., <... $_POST ...>, ...)
+              - pattern: $FUNKTION(..., <... $_REQUEST ...>, ...)
+              - pattern: $FUNKTION(..., <... $_COOKIE ...>, ...)
+    pattern-sanitizers:
+      - pattern-either:
+          - pattern: (int) $X
+          - pattern: intval(...)
+          - pattern: urlencode(...)
+          - pattern: rawurlencode(...)
+          - pattern: http_build_query(...)
+    pattern-sinks:
+      - patterns:
+          - pattern: header($KOPF, ...)
+          - metavariable-regex:
+              metavariable: $KOPF
+              # nur wenn das Ziel direkt mit einer Variablen beginnt („Location: “ . $x oder "Location: $x"),
+              # bei 'Location: seite.php?id=' . $id ist das Ziel fest
+              regex: '(?is)^.?\s*location\s*:\s*([''"]\s*\.|\{?\$)'
+          - focus-metavariable: $KOPF

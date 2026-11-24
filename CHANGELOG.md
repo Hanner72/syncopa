@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.24.0]
+
+### Hinzugefügt
+
+- Automatische Sicherheitsprüfung (SAST) auf GitHub bei jedem Push, Pull Request und wöchentlich: PHP-Syntax aller Dateien und Semgrep mit allgemeinen PHP-/Sicherheitsregeln und eigenen Syncopa-Regeln (SQL, XSS, Shell, Dateipfad, Weiterleitung); jeder Fund macht den Lauf rot, Einzelheiten unter Security → Code scanning (`.github/workflows/sast.yml`, `.semgrep/syncopa.yml`, Hilfe: Sicherheitsprüfung)
+
+### Geändert
+
+- Mitglied bearbeiten / Detail: Feld „Kategorien (BMV)“ entfernt, wird beim Holen vom BMV nicht mehr übernommen (Spalte bleibt mit altem Inhalt)
+
+### Sicherheit
+
+- IDs aus Links und Formularen werden als Zahl gelesen (31 Stellen) – verhindert eingeschleusten HTML-/Skriptcode über präparierte Links (XSS)
+- Beitragsverwaltung: Jahr aus dem Link wird als Zahl gelesen (XSS)
+- Ausrückung löschen: Rücksprung nur noch auf eigene Seiten (keine Weiterleitung auf fremde Adressen)
+- Notenpult leiten: Notenabfrage mit Platzhaltern statt eingefügter Werte
+
 ## [2.23.1]
 
 ### Bugs

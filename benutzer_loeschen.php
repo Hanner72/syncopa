@@ -16,7 +16,7 @@ if (Session::getRole() !== 'admin') {
     exit;
 }
 
-$id = $_GET['id'] ?? null;
+$id = isset($_GET['id']) ? (int)$_GET['id'] : null;
 if (!$id || $id == Session::getUserId()) {
     Session::setFlashMessage('danger', 'Ungültige Aktion');
     header('Location: benutzer.php');

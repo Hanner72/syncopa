@@ -19,7 +19,7 @@ if (Session::getRole() !== 'admin' && !Session::checkPermission('ausrueckungen',
     exit;
 }
 
-$id = $_GET['id'] ?? null;
+$id = isset($_GET['id']) ? (int)$_GET['id'] : null;
 if (!$id) {
     Session::setFlashMessage('danger', 'Keine ID angegeben');
     header('Location: kalender.php');

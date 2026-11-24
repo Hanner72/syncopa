@@ -32,7 +32,6 @@ class BmvMitgliederSync {
         'bmv_beruf'         => ['beruf', 'text', true, 'Beruf'],
         'bmv_firma'         => ['firma', 'text', true, 'Firma'],
         'bmv_bemerkung'     => ['bemerkung', 'text', true, 'Bemerkung'],
-        'bmv_kategorien'    => ['kategorien', 'text', true, 'Kategorien'],
         'bmv_exp_telnr1'    => ['exp_Telnr1', 'bool', true, 'Freigabe Telefon 1'],
         'bmv_exp_telnr2'    => ['exp_Telnr2', 'bool', true, 'Freigabe Telefon 2'],
         'bmv_exp_email1'    => ['exp_email1', 'bool', true, 'Freigabe E-Mail 1'],

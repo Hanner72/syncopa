@@ -147,7 +147,10 @@ syncopa/
 ├── server.php                       # System → Server: Sicherheits-Checkliste (nur Admins)
 ├── shop.php                         # Shop für den Verein (Katalog, Warenkorb, Bestellung)
 ├── shop_verwaltung.php, shop_artikel_bearbeiten.php, shop_bestellungen.php, shop_installationen.php  # Shop-Katalog-Server (Admin)
-└── version_sync.php                 # Entwickler-Werkzeug: Version aus docs/changelog.md in alle Dateien übernehmen (Git-Hook)
+├── version_sync.php                 # Entwickler-Werkzeug: Version aus docs/changelog.md in alle Dateien übernehmen (Git-Hook)
+├── .github/workflows/sast.yml       # Automatische Sicherheitsprüfung auf GitHub (PHP-Syntax, Semgrep) – siehe Sicherheitsprüfung
+├── .semgrep/syncopa.yml             # Eigene Semgrep-Regeln (SQL, XSS, Shell, Dateipfad, Weiterleitung)
+└── .semgrepignore                   # Von der Sicherheitsprüfung ausgenommen (vendor, Bibliotheken, Hilfe)
 ```
 
 ---

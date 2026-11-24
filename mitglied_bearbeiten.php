@@ -8,7 +8,7 @@ Session::requireLogin();
 $mitgliedObj = new Mitglied();
 $db = Database::getInstance();
 
-$id = $_GET['id'] ?? null;
+$id = isset($_GET['id']) ? (int)$_GET['id'] : null;
 $isEdit = !empty($id);
 
 if ($isEdit) {
@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'notizen' => $_POST['notizen'] ?? null
     ];
     foreach (['bmv_anrede', 'bmv_titel', 'bmv_titeln', 'bmv_telefon2', 'bmv_fax', 'bmv_telefon_firma',
-              'bmv_email2', 'bmv_beruf', 'bmv_firma', 'bmv_bemerkung', 'bmv_kategorien'] as $feld) {
+              'bmv_email2', 'bmv_beruf', 'bmv_firma', 'bmv_bemerkung'] as $feld) {
         $data[$feld] = trim((string)($_POST[$feld] ?? '')) ?: null;
     }
     foreach (['bmv_exp_telnr1', 'bmv_exp_telnr2', 'bmv_exp_email1', 'bmv_exp_email2', 'bmv_exp_adresse', 'bmv_exp_internet'] as $feld) {
@@ -477,12 +477,6 @@ include 'includes/header.php';
                     });
                     </script>
                     <?php endif; ?>
-
-                    <div class="mb-3">
-                        <label for="bmv_kategorien" class="form-label">Kategorien (BMV)</label>
-                        <input type="text" class="form-control" id="bmv_kategorien" name="bmv_kategorien"
-                               value="<?php echo htmlspecialchars($mitglied['bmv_kategorien'] ?? ''); ?>">
-                    </div>
                 </div>
             </div>
             

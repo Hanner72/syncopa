@@ -11,7 +11,7 @@ Session::requireLogin();
 Session::requirePermission('noten', 'lesen');
 
 // Datei-ID erforderlich
-$dateiId = $_GET['id'] ?? null;
+$dateiId = isset($_GET['id']) ? (int)$_GET['id'] : null;
 if (!$dateiId) {
     http_response_code(400);
     die('Datei-ID fehlt');
