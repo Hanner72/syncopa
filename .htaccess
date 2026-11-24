@@ -1,0 +1,36 @@
+# Syncopa – Schutz für Dateien, die niemand direkt im Browser aufrufen soll.
+# Wird mit jedem Update mitgeliefert und überschreibt eine von Hand angelegte .htaccess in diesem Ordner.
+# Wirkt nur, wenn der Webserver .htaccess-Dateien beachtet (Apache: AllowOverride All; LiteSpeed/Plesk: Standard).
+
+# Keine Ordnerlisten anzeigen
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+
+# Immer verschlüsselt (https) – außer bei lokaler Entwicklung (localhost, IP-Adressen)
+# und hinter einem Proxy wie Cloudflare, der bereits verschlüsselt (X-Forwarded-Proto: https).
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$ [NC]
+RewriteCond %{HTTP_HOST} !^\d+\.\d+\.\d+\.\d+(:\d+)?$
+RewriteCond %{HTTP_HOST} !\.(test|local|localhost)(:\d+)?$ [NC]
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+# Versteckte Dateien und Ordner (.git, .githooks, .gitignore, .vscode …) sperren –
+# .well-known bleibt frei (wird für SSL-Zertifikate gebraucht)
+RewriteRule (^|/)\.(?!well-known(/|$)) - [F,L]
+
+# Programmteile, die nur von Syncopa selbst eingebunden werden
+RewriteRule ^(classes|includes|cron|vendor)(/|$) - [F,L]
+
+# Hilfs-, Entwickler- und Installationsdateien
+RewriteRule ^(database\.sql|version_sync\.php|install\.lock|config\.example\.php|config\.app\.php|config\.mailkey\.php|CHANGELOG\.md|README\.md|ENTWICKLUNG\.md)$ - [F,L]
+RewriteRule \.(sql|bak|log|lock)$ - [F,L]
+
+# Belege, BMV-Jahresberichte und Freigaben nur über Syncopa (mit Anmeldung)
+RewriteRule ^uploads/(belege|bmv_jahresberichte|mail_freigaben)(/|$) - [F,L]
+
+# In uploads/ niemals Programmcode ausführen
+RewriteRule ^uploads/.+\.(php\d?|phtml|phar|pht|cgi|pl)$ - [F,L]
+</IfModule>

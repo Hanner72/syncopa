@@ -17,7 +17,7 @@ if (!defined('GOOGLE_OAUTH_ENABLED') || !GOOGLE_OAUTH_ENABLED) {
 
 // Fehler von Google prüfen
 if (isset($_GET['error'])) {
-    Session::setFlashMessage('danger', 'Google Login abgebrochen: ' . htmlspecialchars($_GET['error']));
+    Session::setFlashMessage('danger', 'Google Login abgebrochen: ' . $_GET['error']);
     header('Location: login.php');
     exit;
 }
@@ -148,10 +148,24 @@ if ($benutzer) {
     $rolle = $standardRolle;
 }
 
+// Alle Rollen des Benutzers laden
+$userRollen = $db->fetchAll(
+    "SELECT r.id, r.name, r.ist_admin
+     FROM benutzer_rollen br
+     JOIN rollen r ON br.rolle_id = r.id
+     WHERE br.benutzer_id = ? AND r.aktiv = 1",
+    [$userId]
+);
+$rollenIds = array_column($userRollen, 'id');
+$istAdmin  = !empty(array_filter($userRollen, fn($r) => $r['ist_admin']));
+
 // Login durchführen
-Session::set('user_id', $userId);
-Session::set('username', $benutzername);
-Session::set('rolle', $rolle);
+Sicherheit::sitzungErneuern(); // neue Sitzungskennung nach der Anmeldung
+Session::set('user_id',   $userId);
+Session::set('username',  $benutzername);
+Session::set('rolle',     $rolle);
+Session::set('rollen_ids', $rollenIds);
+Session::set('ist_admin',  $istAdmin);
 
 // Letzten Login aktualisieren
 $db->execute("UPDATE benutzer SET letzter_login = NOW() WHERE id = ?", [$userId]);

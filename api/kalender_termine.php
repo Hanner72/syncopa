@@ -13,7 +13,8 @@ $canEdit = Session::checkPermission('ausrueckungen', 'schreiben');
 
 header('Content-Type: application/json');
 
-$action = $_POST['action'] ?? $_GET['action'] ?? null;
+// Ändernde Aktionen nur per POST (mit Prüfzeichen), lesen auch per GET
+$action = $_POST['action'] ?? (($_GET['action'] ?? null) === 'get' ? 'get' : null);
 $kalenderTermin = new KalenderTermin();
 
 try {
@@ -69,7 +70,7 @@ try {
                 throw new Exception('Keine Berechtigung zum Bearbeiten von Terminen');
             }
             
-            $id = $_POST['id'] ?? null;
+            $id = isset($_POST['id']) ? (int)$_POST['id'] : null;
             if (!$id) {
                 throw new Exception('Termin-ID fehlt');
             }
@@ -112,7 +113,7 @@ try {
             break;
             
         case 'get':
-            $id = $_GET['id'] ?? null;
+            $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
             if (!$id) {
                 throw new Exception('Termin-ID fehlt');
             }

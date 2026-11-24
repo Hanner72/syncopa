@@ -1,0 +1,104 @@
+# Automatische Sicherheitsprüfung (SAST) für Syncopa
+# - PHP-Syntax aller Dateien (php -l): ein Fehler macht den Lauf rot
+# - Semgrep mit allgemeinen PHP-/Sicherheitsregeln und den eigenen Regeln in .semgrep/syncopa.yml.
+#   Jeder Fund macht den Lauf rot (GitHub schickt eine Mail). Funde erscheinen unter Security → Code scanning
+#   und in der Zusammenfassung des Laufs. Ausgenommen sind zwei allgemeine Regeln mit fast nur falschem Alarm
+#   (echoed-request, tainted-filename) – Ausgaben und Dateipfade prüfen die eigenen Regeln genauer.
+#   Geprüfte Ausnahme im Code: Kommentar „// nosemgrep: <regel-id> – Begründung“.
+# Läuft bei jedem Push auf main und die Versions-Branches, bei Pull Requests, jeden Montag und per Hand.
+
+name: Sicherheitsprüfung
+
+on:
+  push:
+    branches: [main, 'v*']
+  pull_request:
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sast-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  php-syntax:
+    name: PHP-Syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Alle PHP-Dateien prüfen
+        run: |
+          php -v | head -1
+          fehler=0
+          anzahl=0
+          while IFS= read -r -d '' datei; do
+            anzahl=$((anzahl + 1))
+            if ! ausgabe=$(php -l "$datei" 2>&1); then
+              echo "::error file=$datei::$ausgabe"
+              fehler=$((fehler + 1))
+            fi
+          done < <(git ls-files -z -- '*.php' ':!:vendor/**')
+          echo "$anzahl Dateien geprüft, $fehler mit Fehlern"
+          echo "**PHP-Syntax:** $anzahl Dateien geprüft, $fehler mit Fehlern" >> "$GITHUB_STEP_SUMMARY"
+          test "$fehler" -eq 0
+
+  semgrep:
+    name: Semgrep
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Semgrep installieren
+        run: pipx install semgrep && semgrep --version
+
+      - name: Prüfen
+        run: |
+          semgrep scan \
+            --config p/php \
+            --config p/security-audit \
+            --config p/secrets \
+            --config .semgrep/syncopa.yml \
+            --exclude-rule php.lang.security.injection.echoed-request.echoed-request \
+            --exclude-rule php.lang.security.injection.tainted-filename.tainted-filename \
+            --metrics off \
+            --error \
+            --sarif-output semgrep.sarif \
+            --text
+
+      - name: Zusammenfassung
+        if: always() && hashFiles('semgrep.sarif') != ''
+        run: |
+          {
+            echo "### Semgrep"
+            echo ""
+            echo "| Stufe | Funde |"
+            echo "|---|---|"
+            # ohne die mit „nosemgrep“ bewusst ausgenommenen Stellen
+            offen='[.runs[].results[] | select((.suppressions // []) | length == 0)]'
+            jq -r "$offen"' | map(.level // "warning") | group_by(.) | map("| \(.[0]) | \(length) |") | .[]' semgrep.sarif
+            echo ""
+            echo "Gesamt: $(jq "$offen | length" semgrep.sarif) – Einzelheiten unter **Security → Code scanning**."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Mit „nosemgrep“ ausgenommene Stellen stehen als „unterdrückt“ in der Datei – GitHub würde sie trotzdem melden
+      - name: Ausgenommene Stellen entfernen
+        if: always() && hashFiles('semgrep.sarif') != ''
+        run: |
+          jq '.runs |= map(.results |= map(select((.suppressions // []) | length == 0)))' semgrep.sarif > semgrep.gefiltert.sarif
+          mv semgrep.gefiltert.sarif semgrep.sarif
+
+      - name: Ergebnisse an GitHub (Code scanning) übergeben
+        if: always() && hashFiles('semgrep.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep

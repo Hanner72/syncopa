@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             Session::setFlashMessage('success', 'Kategorie erfolgreich angelegt.');
             
         } elseif ($action === 'update') {
-            $id = $_POST['id'] ?? null;
+            $id = isset($_POST['id']) ? (int)$_POST['id'] : null;
             $data = [
                 'name' => trim($_POST['name'] ?? ''),
                 'beschreibung' => trim($_POST['beschreibung'] ?? '') ?: null,
@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             Session::setFlashMessage('success', 'Kategorie erfolgreich aktualisiert.');
             
         } elseif ($action === 'delete') {
-            $id = $_POST['id'] ?? null;
+            $id = isset($_POST['id']) ? (int)$_POST['id'] : null;
             $uniformObj->deleteKategorie($id);
             Session::setFlashMessage('success', 'Kategorie erfolgreich gelöscht.');
         }

@@ -1,5 +1,5 @@
 <?php
-// stammdaten.php - Verwaltung von Registern, Ausrückungstypen, Instrumententypen
+// stammdaten.php - Verwaltung von Registern, Ausrückungstypen, Instrumententypen, Mitgliedsarten
 require_once 'config.php';
 require_once 'includes.php';
 
@@ -18,9 +18,77 @@ $success = null;
 
 // ===================== VERARBEITUNG =====================
 
+// Mitgliedsarten verarbeiten (ersetzen den früheren Mitgliedsstatus, siehe classes/Mitgliedsart.php)
+if (in_array($action, ['mitgliedsarten_speichern', 'mitgliedsart_loeschen', 'mitgliedsarten_bmv_abgleichen'], true)) {
+    try {
+        if ($action === 'mitgliedsarten_bmv_abgleichen') {
+            $bmvApi = new BmvApi();
+            if (!$bmvApi->istKonfiguriert()) {
+                throw new RuntimeException('Der BMV ist nicht eingerichtet (Einstellungen → BMV).');
+            }
+            $geholt = BmvZusatzdaten::katalogeHolen($bmvApi);
+            $abgleich = BmvZusatzdaten::$letzterMitgliedsartAbgleich;
+            if (!isset($geholt['mitgliedsart']) || $abgleich === null) {
+                throw new RuntimeException('Die Mitgliedsarten konnten nicht aus dem BMV geholt werden.');
+            }
+            $teile = [];
+            if ($abgleich['neu']) $teile[] = 'neu angelegt: ' . implode(', ', $abgleich['neu']) . ' (bitte „zählt als aktiv“ und „beitragspflichtig“ prüfen)';
+            foreach ($abgleich['umgestellt'] as $name => $nr) $teile[] = '„' . $name . '“ auf die BMV-Nummer umgestellt (' . $nr . ')';
+            foreach ($abgleich['umbenannt'] as $alt => $neu) $teile[] = '„' . $alt . '“ heißt jetzt „' . $neu . '“';
+            Session::setFlashMessage('success', 'Mit dem BMV abgeglichen' . ($teile ? ': ' . implode('; ', $teile) . '.' : ' – alles stimmt überein.'));
+        } elseif ($action === 'mitgliedsart_loeschen') {
+            Mitgliedsart::loeschen((int)($_POST['code'] ?? 0));
+            Session::setFlashMessage('success', 'Mitgliedsart gelöscht.');
+        } else {
+            foreach ($_POST['art'] ?? [] as $alterCode => $e) {
+                Mitgliedsart::speichern($e, (int)$alterCode);
+            }
+            $neu = $_POST['neu'] ?? [];
+            if (trim((string)($neu['name'] ?? '')) !== '') {
+                Mitgliedsart::speichern($neu);
+            }
+            Session::setFlashMessage('success', 'Mitgliedsarten gespeichert.');
+        }
+    } catch (RuntimeException $e) {
+        Session::setFlashMessage('danger', $e->getMessage());
+    }
+    header('Location: stammdaten.php?tab=mitgliedsarten');
+    exit;
+}
+
+// Register und Instrumententypen mit dem BMV abgleichen (SetupRegister / SetupInstrumente)
+if ($action === 'instrumente_bmv_abgleichen') {
+    $zurueck = ($_POST['tab'] ?? '') === 'register' ? 'register' : 'instrumenttypen';
+    try {
+        $bmvApi = new BmvApi();
+        if (!$bmvApi->istKonfiguriert()) {
+            throw new RuntimeException('Der BMV ist nicht eingerichtet (Einstellungen → BMV).');
+        }
+        Session::setFlashMessage('success', 'Mit dem BMV abgeglichen: ' . BmvInstrumente::meldung(BmvInstrumente::abgleichen($bmvApi)) . '.');
+    } catch (Throwable $e) {
+        Session::setFlashMessage('danger', 'Abgleich fehlgeschlagen, es wurde nichts geändert: ' . $e->getMessage());
+    }
+    header('Location: stammdaten.php?tab=' . $zurueck);
+    exit;
+}
+// Einträge aus dem BMV sind gesperrt (Name, Reihenfolge bzw. Register kommen aus dem BMV)
+$ausBmv = function (string $tabelle, $id) use ($db): bool {
+    return $id && (bool)$db->fetchOne("SELECT id FROM $tabelle WHERE id = ? AND bmv_code IS NOT NULL", [(int)$id]);
+};
+if (in_array($action, ['register_save', 'register_delete'], true) && $ausBmv('register', $_POST['id'] ?? null)) {
+    $error = 'Dieses Register kommt aus dem BMV und lässt sich nur dort ändern.';
+    $action = null;
+    $tab = 'register';
+}
+if (in_array($action, ['instrumenttyp_save', 'instrumenttyp_delete'], true) && $ausBmv('instrument_typen', $_POST['id'] ?? null)) {
+    $error = 'Dieses Instrument kommt aus dem BMV und lässt sich nur dort ändern.';
+    $action = null;
+    $tab = 'instrumenttypen';
+}
+
 // Register verarbeiten
 if ($action === 'register_save') {
-    $id = $_POST['id'] ?? null;
+    $id = isset($_POST['id']) ? (int)$_POST['id'] : null;
     $name = trim($_POST['name'] ?? '');
     $sortierung = (int)($_POST['sortierung'] ?? 0);
     
@@ -43,7 +111,7 @@ if ($action === 'register_save') {
 }
 
 if ($action === 'register_delete') {
-    $id = $_POST['id'] ?? null;
+    $id = isset($_POST['id']) ? (int)$_POST['id'] : null;
     if ($id) {
         $count = $db->fetchOne("SELECT COUNT(*) as cnt FROM mitglieder WHERE register_id = ?", [$id]);
         if ($count['cnt'] > 0) {
@@ -58,7 +126,7 @@ if ($action === 'register_delete') {
 
 // Instrumententypen verarbeiten
 if ($action === 'instrumenttyp_save') {
-    $id = $_POST['id'] ?? null;
+    $id = isset($_POST['id']) ? (int)$_POST['id'] : null;
     $name = trim($_POST['name'] ?? '');
     $register_id = $_POST['register_id'] ?: null;
     
@@ -81,7 +149,7 @@ if ($action === 'instrumenttyp_save') {
 }
 
 if ($action === 'instrumenttyp_delete') {
-    $id = $_POST['id'] ?? null;
+    $id = isset($_POST['id']) ? (int)$_POST['id'] : null;
     if ($id) {
         $countInstr = $db->fetchOne("SELECT COUNT(*) as cnt FROM instrumente WHERE instrument_typ_id = ?", [$id]);
         $countMitgl = $db->fetchOne("SELECT COUNT(*) as cnt FROM mitglied_instrumente WHERE instrument_typ_id = ?", [$id]);
@@ -97,8 +165,55 @@ if ($action === 'instrumenttyp_delete') {
     $tab = 'instrumenttypen';
 }
 
+// Nummernkreise verarbeiten
+if ($action === 'nummernkreise_save') {
+    $typen = ['mitglieder', 'noten', 'instrumente', 'finanzen'];
+    try {
+        foreach ($typen as $typ) {
+            $prefix  = trim($_POST['prefix_' . $typ]  ?? '');
+            $stellen = (int)($_POST['stellen_' . $typ] ?? 3);
+            $stellen = max(1, min(10, $stellen));
+
+            // Prefix speichern (Y/y als Platzhalter behalten – wird bei Nummerngenerierung aufgelöst)
+            $db->execute(
+                "INSERT INTO einstellungen (schluessel, wert, beschreibung)
+                 VALUES (?, ?, ?)
+                 ON DUPLICATE KEY UPDATE wert = VALUES(wert)",
+                [
+                    'nummernkreis_' . $typ . '_prefix',
+                    $prefix,
+                    'Nummernkreis ' . ucfirst($typ) . ' – Präfix'
+                ]
+            );
+            $db->execute(
+                "INSERT INTO einstellungen (schluessel, wert, beschreibung)
+                 VALUES (?, ?, ?)
+                 ON DUPLICATE KEY UPDATE wert = VALUES(wert)",
+                [
+                    'nummernkreis_' . $typ . '_stellen',
+                    (string)$stellen,
+                    'Nummernkreis ' . ucfirst($typ) . ' – Stellen'
+                ]
+            );
+        }
+        $success = 'Nummernkreise erfolgreich gespeichert';
+    } catch (Exception $e) {
+        $error = 'Fehler beim Speichern: ' . $e->getMessage();
+    }
+    $tab = 'nummernkreise';
+}
+
 // ===================== DATEN LADEN =====================
 
+$bmvEingerichtetStamm = (new BmvApi())->istKonfiguriert();
+$bmvAbgleichKnopf = function (string $tab) use ($bmvEingerichtetStamm) {
+    if (!$bmvEingerichtetStamm) return '';
+    return '<form method="POST" class="d-inline"><input type="hidden" name="action" value="instrumente_bmv_abgleichen">'
+        . '<input type="hidden" name="tab" value="' . $tab . '">'
+        . '<button type="submit" class="btn btn-sm btn-outline-primary" title="Register und Instrumente aus dem BMV holen">'
+        . '<i class="bi bi-arrow-repeat"></i> Mit BMV abgleichen</button></form>';
+};
+$bmvBadge = '<span class="badge text-bg-light border ms-1" title="Kommt aus dem BMV – Name und Register werden dort gepflegt">BMV</span>';
 $register = $db->fetchAll("SELECT r.*, 
     (SELECT COUNT(*) FROM mitglieder WHERE register_id = r.id) as mitglieder_count,
     (SELECT COUNT(*) FROM instrument_typen WHERE register_id = r.id) as instrumente_count
@@ -111,6 +226,33 @@ $instrumentTypen = $db->fetchAll("SELECT it.*, r.name as register_name,
     LEFT JOIN register r ON it.register_id = r.id
     ORDER BY r.sortierung, it.name");
 
+// Nummernkreise aus einstellungen laden
+$nkTypen = ['mitglieder', 'noten', 'instrumente', 'finanzen'];
+$nkConfig = [];
+foreach ($nkTypen as $typ) {
+    $pRow = $db->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = ?", ['nummernkreis_' . $typ . '_prefix']);
+    $sRow = $db->fetchOne("SELECT wert FROM einstellungen WHERE schluessel = ?", ['nummernkreis_' . $typ . '_stellen']);
+    $nkConfig[$typ] = [
+        'prefix'  => $pRow ? $pRow['wert'] : ($typ === 'finanzen' ? 'Y-' : ''),
+        'stellen' => $sRow ? (int)$sRow['wert'] : 3,
+    ];
+}
+
+// Hilfsfunktion: Y/y → aktuelles Jahr auflösen (für Vorschau)
+function resolvePrefix(string $prefix): string {
+    $year = date('Y');
+    $yearShort = date('y');
+    $prefix = str_replace('Y', $year,      $prefix);
+    $prefix = str_replace('y', $yearShort, $prefix);
+    return $prefix;
+}
+
+// Meldungen dieser Anfrage (Speichern ohne Weiterleitung) als Hinweis anzeigen
+if ($error) {
+    Session::setFlashMessage('danger', $error);
+} elseif ($success) {
+    Session::setFlashMessage('success', $success);
+}
 include 'includes/header.php';
 ?>
 
@@ -149,6 +291,16 @@ include 'includes/header.php';
             <i class="bi bi-calendar-event"></i> Ausrückungstypen
         </a>
     </li>
+    <li class="nav-item">
+        <a class="nav-link <?php echo $tab === 'mitgliedsarten' ? 'active' : ''; ?>" href="?tab=mitgliedsarten">
+            <i class="bi bi-person-vcard"></i> Mitgliedsarten
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?php echo $tab === 'nummernkreise' ? 'active' : ''; ?>" href="?tab=nummernkreise">
+            <i class="bi bi-123"></i> Nummernkreise
+        </a>
+    </li>
 </ul>
 
 <?php if ($tab === 'register'): ?>
@@ -158,9 +310,12 @@ include 'includes/header.php';
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-collection"></i> Register</span>
+                <div class="d-flex gap-2">
+                <?php echo $bmvAbgleichKnopf('register'); ?>
                 <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#registerModal" onclick="editRegister()">
                     <i class="bi bi-plus"></i> Neues Register
                 </button>
+                </div>
             </div>
             <div class="card-body">
                 <table class="table table-hover">
@@ -177,10 +332,11 @@ include 'includes/header.php';
                         <?php foreach ($register as $r): ?>
                         <tr>
                             <td><span class="badge bg-secondary"><?php echo $r['sortierung']; ?></span></td>
-                            <td><strong><?php echo htmlspecialchars($r['name']); ?></strong></td>
+                            <td><strong><?php echo htmlspecialchars($r['name']); ?></strong><?php if ($r['bmv_code'] !== null) echo $bmvBadge; ?></td>
                             <td><?php echo $r['mitglieder_count']; ?></td>
                             <td><?php echo $r['instrumente_count']; ?></td>
                             <td class="text-end">
+                                <?php if ($r['bmv_code'] === null): ?>
                                 <button class="btn btn-sm btn-primary" onclick="editRegister(<?php echo htmlspecialchars(json_encode($r)); ?>)">
                                     <i class="bi bi-pencil"></i>
                                 </button>
@@ -190,6 +346,7 @@ include 'includes/header.php';
                                     <input type="hidden" name="id" value="<?php echo $r['id']; ?>">
                                     <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></button>
                                 </form>
+                                <?php endif; ?>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -209,6 +366,10 @@ include 'includes/header.php';
                 <p class="small text-muted mb-0">
                     Register gruppieren Mitglieder und Instrumente nach Instrumentenfamilien 
                     (z.B. Holz, Blech, Schlagwerk). Die Sortierung bestimmt die Reihenfolge in Auswahllisten.
+                    <?php if ($bmvEingerichtetStamm): ?><br><br>
+                    Register mit <span class="badge text-bg-light border">BMV</span> kommen aus dem BMV (SetupRegister) und werden
+                    beim Holen der Mitglieder bzw. mit „Mit BMV abgleichen“ aktualisiert. Eigene Register kannst du zusätzlich anlegen.
+                    <?php endif; ?>
                 </p>
             </div>
         </div>
@@ -253,9 +414,12 @@ include 'includes/header.php';
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-music-note"></i> Instrumententypen</span>
+                <div class="d-flex gap-2">
+                <?php echo $bmvAbgleichKnopf('instrumenttypen'); ?>
                 <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#instrumentTypModal" onclick="editInstrumentTyp()">
                     <i class="bi bi-plus"></i> Neuer Typ
                 </button>
+                </div>
             </div>
             <div class="card-body">
                 <table class="table table-hover">
@@ -271,7 +435,7 @@ include 'includes/header.php';
                     <tbody>
                         <?php foreach ($instrumentTypen as $it): ?>
                         <tr>
-                            <td><strong><?php echo htmlspecialchars($it['name']); ?></strong></td>
+                            <td><strong><?php echo htmlspecialchars($it['name']); ?></strong><?php if ($it['bmv_code'] !== null) echo $bmvBadge; ?></td>
                             <td>
                                 <?php if ($it['register_name']): ?>
                                 <span class="badge bg-info"><?php echo htmlspecialchars($it['register_name']); ?></span>
@@ -282,6 +446,7 @@ include 'includes/header.php';
                             <td><?php echo $it['inventar_count']; ?></td>
                             <td><?php echo $it['spieler_count']; ?></td>
                             <td class="text-end">
+                                <?php if ($it['bmv_code'] === null): ?>
                                 <button class="btn btn-sm btn-primary" onclick="editInstrumentTyp(<?php echo htmlspecialchars(json_encode($it)); ?>)">
                                     <i class="bi bi-pencil"></i>
                                 </button>
@@ -291,6 +456,7 @@ include 'includes/header.php';
                                     <input type="hidden" name="id" value="<?php echo $it['id']; ?>">
                                     <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></button>
                                 </form>
+                                <?php endif; ?>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -310,6 +476,11 @@ include 'includes/header.php';
                 <p class="small text-muted mb-0">
                     Instrumententypen definieren die verschiedenen Instrumente (Trompete, Klarinette, etc.).
                     Sie werden einem Register zugeordnet und können bei Mitgliedern und im Inventar verwendet werden.
+                    <?php if ($bmvEingerichtetStamm): ?><br><br>
+                    Instrumente mit <span class="badge text-bg-light border">BMV</span> kommen aus dem BMV (SetupInstrumente) samt Register
+                    und werden beim Holen der Mitglieder bzw. mit „Mit BMV abgleichen“ aktualisiert – eine Zuordnung von Hand ist nicht nötig.
+                    Eigene Typen ohne Gegenstück im BMV (z. B. Lyra) kannst du weiter selbst pflegen.
+                    <?php endif; ?>
                 </p>
             </div>
         </div>
@@ -351,7 +522,7 @@ include 'includes/header.php';
     </div>
 </div>
 
-<?php else: ?>
+<?php elseif ($tab === 'ausrueckungstypen'): ?>
 <!-- ==================== AUSRÜCKUNGSTYPEN ==================== -->
 <div class="row">
     <div class="col-lg-8">
@@ -395,6 +566,317 @@ include 'includes/header.php';
         </div>
     </div>
 </div>
+
+<?php elseif ($tab === 'mitgliedsarten'):
+    $arten = Mitgliedsart::alle();
+    $bmvNummern = Mitgliedsart::bmvNummern();
+    $bmvEingerichtet = (new BmvApi())->istKonfiguriert();
+    $anzahl = Mitgliedsart::anzahlJeArt();
+    $farbAuswahl = function (string $name, string $wert) {
+        $html = '<select class="form-select form-select-sm" name="' . $name . '">';
+        foreach (Mitgliedsart::FARBEN as $f => $text) {
+            $html .= '<option value="' . $f . '"' . ($f === $wert ? ' selected' : '') . '>' . $text . '</option>';
+        }
+        return $html . '</select>';
+    };
+?>
+<!-- ==================== MITGLIEDSARTEN ==================== -->
+<div class="alert alert-permanent alert-secondary small">
+    <i class="bi bi-info-circle"></i>
+    Die Mitgliedsart ersetzt den früheren Status (aktiv, passiv …). Welche Art ein Mitglied gerade hat, steht beim Mitglied
+    im Reiter <strong>Mitgliedsart</strong> – aus dem BMV oder selbst eingetragen. Ohne laufende Mitgliedsart gilt ein Mitglied als ausgetreten.<br>
+    <strong>Gast</strong> = kein Vereinsmitglied, z. B. Gastmusiker/innen: Sie spielen nur in den Formationen mit, denen sie zugeordnet sind,
+    werden nie an den BMV übertragen und zählen nicht bei Beiträgen, Ehrungen und Statistik.<br>
+    <strong>Nr.</strong> ist die Nummer im BMV. Für Arten, die es im BMV (noch) nicht gibt, eine eigene Nummer ab <?php echo Mitgliedsart::EIGENE_NUMMERN_AB; ?>
+    verwenden; sie lässt sich später auf die BMV-Nummer ändern, alle Einträge werden mit umgestellt.
+    <?php if ($bmvEingerichtet): ?><br>
+    <strong>Abgleich mit dem BMV</strong> (Namensliste SetupMitgliederart, auch automatisch beim Holen der Mitglieder):
+    Namen kommen aus dem BMV, fehlende Arten werden angelegt, eine eigene Art mit gleichem Namen wird auf die BMV-Nummer umgestellt.
+    Deine Einstellungen (aktiv, Beitrag, Farbe …) bleiben.
+    <?php endif; ?>
+</div>
+<?php if ($bmvEingerichtet): ?>
+<form method="POST" class="d-flex justify-content-end mb-3">
+    <input type="hidden" name="action" value="mitgliedsarten_bmv_abgleichen">
+    <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-arrow-repeat"></i> Mit BMV abgleichen</button>
+</form>
+<?php endif; ?>
+
+<form method="POST">
+    <input type="hidden" name="action" value="mitgliedsarten_speichern">
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-2" style="width:28px"></th>
+                        <th style="width:90px">Nr.</th>
+                        <th>Name</th>
+                        <th class="text-center" data-bs-toggle="tooltip" title="Erscheint bei Proben, Ausrückungen, Instrument- und Uniformausgabe, Festen und in der Statistik">Zählt als aktiv <i class="bi bi-question-circle text-muted"></i></th>
+                        <th class="text-center">Beitragspflichtig</th>
+                        <th class="text-center" data-bs-toggle="tooltip" title="Kein Vereinsmitglied (z. B. Gastmusiker/in): spielt nur in den zugeordneten Formationen mit, wird nie an den BMV übertragen, zählt nicht bei Beiträgen, Ehrungen und Statistik">Gast <i class="bi bi-question-circle text-muted"></i></th>
+                        <th style="width:130px" data-bs-toggle="tooltip" title="Leer = Standardbeitrag aus den Einstellungen">Beitrag € <i class="bi bi-question-circle text-muted"></i></th>
+                        <th style="width:130px">Farbe</th>
+                        <th class="text-end">Mitglieder</th>
+                        <th class="pe-3"></th>
+                    </tr>
+                </thead>
+                <tbody id="mitgliedsartenListe">
+                <?php foreach ($arten as $code => $a): $f = "art[$code]"; ?>
+                <tr data-code="<?php echo $code; ?>">
+                    <td class="ps-2"><i class="bi bi-grip-vertical ma-griff" title="Ziehen zum Sortieren"></i>
+                        <input type="hidden" class="ma-sort" name="<?php echo $f; ?>[sortierung]" value="<?php echo (int)$a['sortierung']; ?>"></td>
+                    <td><input type="number" min="1" class="form-control form-control-sm" name="<?php echo $f; ?>[code]" value="<?php echo $code; ?>"></td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                        <input type="text" class="form-control form-control-sm" name="<?php echo $f; ?>[name]" value="<?php echo htmlspecialchars($a['name']); ?>" maxlength="100" required>
+                        <?php if ($bmvNummern): ?>
+                            <?php if (isset($bmvNummern[$code])): ?>
+                            <span class="badge text-bg-light border" title="Diese Nummer gibt es im BMV">BMV</span>
+                            <?php elseif (!$a['gast']): ?>
+                            <span class="badge text-bg-light border text-muted" title="Diese Nummer gibt es im BMV nicht (eigene Mitgliedsart)">eigene</span>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                        </div>
+                    </td>
+                    <td class="text-center"><input type="checkbox" class="form-check-input" name="<?php echo $f; ?>[aktiv]" value="1" <?php echo $a['aktiv'] ? 'checked' : ''; ?>></td>
+                    <td class="text-center"><input type="checkbox" class="form-check-input" name="<?php echo $f; ?>[beitragspflichtig]" value="1" <?php echo $a['beitragspflichtig'] ? 'checked' : ''; ?>></td>
+                    <td class="text-center"><input type="checkbox" class="form-check-input" name="<?php echo $f; ?>[gast]" value="1" <?php echo $a['gast'] ? 'checked' : ''; ?>></td>
+                    <td><input type="number" step="0.01" min="0" class="form-control form-control-sm" name="<?php echo $f; ?>[beitrag]" value="<?php echo $a['beitrag'] !== null ? htmlspecialchars($a['beitrag']) : ''; ?>" placeholder="Standard"></td>
+                    <td><?php echo $farbAuswahl($f . '[farbe]', $a['farbe']); ?></td>
+                    <td class="text-end">
+                        <?php echo Mitgliedsart::badge($code); ?>
+                        <span class="ms-1"><?php echo (int)($anzahl[$code] ?? 0); ?></span>
+                    </td>
+                    <td class="pe-3 text-end">
+                        <button type="submit" form="artLoeschen<?php echo $code; ?>" class="btn btn-sm btn-link text-danger p-0" title="Löschen"
+                                onclick="return confirm('Mitgliedsart „<?php echo htmlspecialchars(addslashes($a['name'])); ?>“ löschen?');"><i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+                </tbody>
+                <tbody>
+                <tr class="table-light">
+                    <td class="ps-2"><input type="hidden" name="neu[sortierung]" value="<?php echo $arten ? max(array_map(fn($a) => (int)$a['sortierung'], $arten)) + 10 : 10; ?>"></td>
+                    <td><input type="number" min="1" class="form-control form-control-sm" name="neu[code]" placeholder="<?php echo Mitgliedsart::naechsteEigeneNummer(); ?>" value="<?php echo Mitgliedsart::naechsteEigeneNummer(); ?>"></td>
+                    <td><input type="text" class="form-control form-control-sm" name="neu[name]" maxlength="100" placeholder="Neue Mitgliedsart, z. B. Ehrenobmann"></td>
+                    <td class="text-center"><input type="checkbox" class="form-check-input" name="neu[aktiv]" value="1"></td>
+                    <td class="text-center"><input type="checkbox" class="form-check-input" name="neu[beitragspflichtig]" value="1"></td>
+                    <td class="text-center"><input type="checkbox" class="form-check-input" name="neu[gast]" value="1"></td>
+                    <td><input type="number" step="0.01" min="0" class="form-control form-control-sm" name="neu[beitrag]" placeholder="Standard"></td>
+                    <td><?php echo $farbAuswahl('neu[farbe]', 'secondary'); ?></td>
+                    <td colspan="2" class="text-muted small pe-3">wird beim Speichern angelegt</td>
+                </tr>
+                </tbody>
+            </table>
+            </div>
+        </div>
+    </div>
+    <div class="d-flex justify-content-end mt-3 page-actions-sticky">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Mitgliedsarten speichern</button>
+    </div>
+</form>
+<style>
+    .ma-griff { cursor: grab; color: var(--bs-secondary-color); touch-action: none; }
+    .ma-griff:hover { color: var(--bs-body-color); }
+    .ma-geist { opacity: .45; background: rgba(var(--bs-primary-rgb), .08) !important; }
+    .ma-gewaehlt { box-shadow: 0 4px 14px rgba(0,0,0,.18); }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script>
+// Drag & Drop: Reihenfolge der Mitgliedsarten sofort speichern
+(function () {
+    var tbody = document.getElementById('mitgliedsartenListe');
+    if (!tbody || !window.Sortable || tbody.children.length < 2) return;
+    var vorher;
+    new Sortable(tbody, {
+        handle: '.ma-griff', animation: 150, ghostClass: 'ma-geist', chosenClass: 'ma-gewaehlt',
+        onStart: function () { vorher = Array.from(tbody.children); },
+        onEnd: function (evt) {
+            if (evt.oldIndex === evt.newIndex) return;
+            var codes = Array.from(tbody.querySelectorAll('tr[data-code]')).map(function (tr) { return +tr.dataset.code; });
+            fetch('api/mitgliedsarten_sortieren.php', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codes: codes })
+            }).then(function (r) { return r.json(); }).then(function (d) {
+                if (!d.success) throw new Error(d.error || 'Speichern fehlgeschlagen.');
+                tbody.querySelectorAll('tr[data-code]').forEach(function (tr) { tr.querySelector('.ma-sort').value = d.sortierung[tr.dataset.code]; });
+                if (window.showToast) showToast('Reihenfolge gespeichert.', 'success');
+            }).catch(function (e) {
+                vorher.forEach(function (tr) { tbody.appendChild(tr); }); // alte Reihenfolge wiederherstellen
+                if (window.showToast) showToast(e.message || 'Speichern fehlgeschlagen.', 'danger'); else alert(e.message);
+            });
+        }
+    });
+})();
+</script>
+<?php foreach ($arten as $code => $a): ?>
+<form method="POST" id="artLoeschen<?php echo $code; ?>" class="d-none">
+    <input type="hidden" name="action" value="mitgliedsart_loeschen">
+    <input type="hidden" name="code" value="<?php echo $code; ?>">
+</form>
+<?php endforeach; ?>
+
+<?php else: ?>
+<!-- ==================== NUMMERNKREISE ==================== -->
+<?php
+$nkBadgeClass = [
+    'mitglieder' => 'bg-secondary',
+    'noten'      => 'bg-primary',
+    'instrumente'=> 'bg-warning text-dark',
+    'finanzen'   => 'bg-success',
+];
+$nkLabel = [
+    'mitglieder' => 'Mitglieder',
+    'noten'      => 'Noten',
+    'instrumente'=> 'Instrumente',
+    'finanzen'   => 'Belege (Kassabuch)',
+];
+$nkIcon = [
+    'mitglieder' => 'bi-people',
+    'noten'      => 'bi-music-note-list',
+    'instrumente'=> 'bi-trumpet',
+    'finanzen'   => 'bi-receipt',
+];
+?>
+<form method="POST">
+    <input type="hidden" name="action" value="nummernkreise_save">
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-123"></i> Nummernkreise konfigurieren
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-4">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Präfix-Platzhalter:</strong>
+                        <code>Y</code> = aktuelles Jahr 4-stellig (<?php echo date('Y'); ?>),
+                        <code>y</code> = aktuelles Jahr 2-stellig (<?php echo date('y'); ?>).
+                        Beispiel: <code>Iy</code> ergibt <code>I<?php echo date('y'); ?>001</code>
+                    </div>
+
+                    <table class="table align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:160px">Bereich</th>
+                                <th>Präfix</th>
+                                <th style="width:140px">Stellen (Zahl)</th>
+                                <th>Vorschau nächste Nr.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($nkTypen as $typ): ?>
+                            <?php
+                                $prefix  = $nkConfig[$typ]['prefix'];
+                                $stellen = $nkConfig[$typ]['stellen'];
+                                $resolvedPrefix = resolvePrefix($prefix);
+                                $preview = $resolvedPrefix . str_pad('1', $stellen, '0', STR_PAD_LEFT);
+                            ?>
+                            <tr>
+                                <td>
+                                    <span class="badge <?php echo $nkBadgeClass[$typ]; ?>">
+                                        <i class="bi <?php echo $nkIcon[$typ]; ?>"></i>
+                                        <?php echo $nkLabel[$typ]; ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm" style="max-width:180px">
+                                        <input type="text"
+                                               class="form-control nk-prefix-input"
+                                               name="prefix_<?php echo $typ; ?>"
+                                               value="<?php echo htmlspecialchars($prefix); ?>"
+                                               data-typ="<?php echo $typ; ?>"
+                                               maxlength="20"
+                                               placeholder="z.B. M, NY, Iy">
+                                    </div>
+                                </td>
+                                <td>
+                                    <input type="number"
+                                           class="form-control form-control-sm nk-stellen-input"
+                                           name="stellen_<?php echo $typ; ?>"
+                                           value="<?php echo $stellen; ?>"
+                                           data-typ="<?php echo $typ; ?>"
+                                           min="1" max="10"
+                                           style="width:90px">
+                                </td>
+                                <td>
+                                    <code class="nk-preview" id="preview_<?php echo $typ; ?>">
+                                        <?php echo htmlspecialchars($preview); ?>
+                                    </code>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer text-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Nummernkreise speichern
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card bg-light mb-3">
+                <div class="card-body">
+                    <h6><i class="bi bi-info-circle"></i> Hinweise</h6>
+                    <p class="small text-muted mb-2">
+                        Der <strong>Präfix</strong> wird vor die fortlaufende Nummer gestellt.
+                        Die Anzahl der <strong>Stellen</strong> bestimmt, wie breit die Zahl mit führenden Nullen aufgefüllt wird.
+                    </p>
+                    <ul class="small text-muted mb-0 ps-3">
+                        <li><code>Y</code> → <?php echo date('Y'); ?> (4-stelliges Jahr)</li>
+                        <li><code>y</code> → <?php echo date('y'); ?> (2-stelliges Jahr)</li>
+                        <li>Stellen 3 + Präfix <code>M</code> → <code>M001</code></li>
+                        <li>Stellen 4 + Präfix <code>Ny</code> → <code>N<?php echo date('y'); ?>0001</code></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card border-warning">
+                <div class="card-body">
+                    <h6 class="text-warning"><i class="bi bi-exclamation-triangle"></i> Achtung</h6>
+                    <p class="small text-muted mb-0">
+                        Änderungen am Präfix oder den Stellen wirken sich nur auf <strong>neu angelegte</strong> Datensätze aus.
+                        Bestehende Nummern bleiben unverändert.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+(function () {
+    const yearFull  = '<?php echo date('Y'); ?>';
+    const yearShort = '<?php echo date('y'); ?>';
+
+    function resolvePrefix(prefix) {
+        return prefix.replace(/Y/g, yearFull).replace(/y/g, yearShort);
+    }
+
+    function updatePreview(typ) {
+        const prefixInput  = document.querySelector('.nk-prefix-input[data-typ="' + typ + '"]');
+        const stellenInput = document.querySelector('.nk-stellen-input[data-typ="' + typ + '"]');
+        const previewEl    = document.getElementById('preview_' + typ);
+
+        if (!prefixInput || !stellenInput || !previewEl) return;
+
+        const resolved = resolvePrefix(prefixInput.value);
+        const stellen  = Math.max(1, Math.min(10, parseInt(stellenInput.value) || 3));
+        previewEl.textContent = resolved + String(1).padStart(stellen, '0');
+    }
+
+    document.querySelectorAll('.nk-prefix-input, .nk-stellen-input').forEach(function (el) {
+        el.addEventListener('input', function () {
+            updatePreview(this.dataset.typ);
+        });
+    });
+})();
+</script>
+
 <?php endif; ?>
 
 <script>

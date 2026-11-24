@@ -11,7 +11,7 @@ Session::requireLogin();
 Session::requirePermission('noten', 'lesen');
 
 // Datei-ID erforderlich
-$dateiId = $_GET['id'] ?? null;
+$dateiId = isset($_GET['id']) ? (int)$_GET['id'] : null;
 if (!$dateiId) {
     http_response_code(400);
     die('Datei-ID fehlt');
@@ -31,15 +31,19 @@ $fileName = $dateiInfo['name'];
 $fileType = $dateiInfo['type'];
 $fileSize = $dateiInfo['size'];
 
-// Headers für Download
-header('Content-Description: File Transfer');
+$isView = isset($_GET['view']) && $_GET['view'] === '1';
+$disposition = $isView ? 'inline' : 'attachment';
+
 header('Content-Type: ' . $fileType);
-header('Content-Disposition: attachment; filename="' . $fileName . '"');
-header('Content-Transfer-Encoding: binary');
-header('Expires: 0');
-header('Cache-Control: must-revalidate');
-header('Pragma: public');
+header('Content-Disposition: ' . $disposition . '; filename="' . $fileName . '"');
 header('Content-Length: ' . $fileSize);
+if (!$isView) {
+    header('Content-Description: File Transfer');
+    header('Content-Transfer-Encoding: binary');
+    header('Expires: 0');
+    header('Cache-Control: must-revalidate');
+    header('Pragma: public');
+}
 
 // Output Buffer leeren
 ob_clean();

@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$id = $_POST['id'] ?? null;
+$id = isset($_POST['id']) ? (int)$_POST['id'] : null;
 if (!$id) {
     Session::setFlashMessage('danger', 'Kein Benutzer angegeben.');
     header('Location: index.php');
@@ -54,6 +54,6 @@ $db->execute(
     [Session::getUserId(), 'benutzer_befoerdern', 'Benutzer ' . $benutzer['benutzername'] . ' wurde zum Mitglied befördert', $_SERVER['REMOTE_ADDR']]
 );
 
-Session::setFlashMessage('success', 'Benutzer "' . htmlspecialchars($benutzer['benutzername']) . '" wurde erfolgreich zum Mitglied befördert.');
+Session::setFlashMessage('success', 'Benutzer "' . $benutzer['benutzername'] . '" wurde erfolgreich zum Mitglied befördert.');
 header('Location: index.php');
 exit;

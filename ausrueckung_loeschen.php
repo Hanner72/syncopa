@@ -4,6 +4,13 @@ require_once 'includes.php';
 
 Session::requireLogin();
 
+// Löschen nur über ein bestätigtes Formular (POST mit Prüfzeichen) – ein einfacher Link reicht nicht
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+    Session::setFlashMessage('danger', 'Bitte über die Schaltfläche „Löschen“ löschen.');
+    header('Location: ausrueckungen.php');
+    exit;
+}
+
 // Admin oder Lösch-Berechtigung erforderlich
 if (Session::getRole() !== 'admin' && !Session::checkPermission('ausrueckungen', 'loeschen')) {
     Session::setFlashMessage('danger', 'Keine Berechtigung zum Löschen');
@@ -11,7 +18,7 @@ if (Session::getRole() !== 'admin' && !Session::checkPermission('ausrueckungen',
     exit;
 }
 
-$id = $_GET['id'] ?? null;
+$id = isset($_GET['id']) ? (int)$_GET['id'] : null;
 if (!$id) {
     header('Location: ausrueckungen.php');
     exit;
@@ -26,6 +33,7 @@ try {
     Session::setFlashMessage('danger', 'Fehler beim Löschen: ' . $e->getMessage());
 }
 
-$redirect = $_GET['redirect'] ?? 'ausrueckungen.php';
+// Zurück nur auf eine bekannte eigene Seite, nie auf eine fremde Adresse
+$redirect = ($_GET['redirect'] ?? '') === 'kalender.php' ? 'kalender.php' : 'ausrueckungen.php';
 header('Location: ' . $redirect);
 exit;
